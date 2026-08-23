@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { LogOut, Moon, Sun } from 'lucide-react';
+import { Fingerprint, LogOut, Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,6 +15,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   SidebarInset,
   SidebarProvider,
@@ -92,24 +101,37 @@ export default function AppLayout() {
                 </h1>
               </div>
               <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
-                <select
-                  aria-label={t(translations.layouts.workspaceFallback)}
-                  className="hidden h-9 max-w-52 rounded-xl border border-border/70 bg-card px-3 text-xs font-semibold shadow-sm md:block"
-                  value={activeWorkspace?.id ?? ''}
-                  onChange={(event) =>
+                <Select
+                  value={activeWorkspace?.id}
+                  onValueChange={(workspaceId) =>
                     setActiveWorkspace(
                       workspacesQuery.data?.find(
-                        (workspace) => workspace.id === event.target.value,
+                        (workspace) => workspace.id === workspaceId,
                       ),
                     )
                   }
                 >
-                  {workspacesQuery.data?.map((workspace) => (
-                    <option key={workspace.id} value={workspace.id}>
-                      {workspace.name}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger
+                    aria-label={t(translations.layouts.workspaceFallback)}
+                    className="hidden max-w-52 bg-card shadow-sm md:flex"
+                  >
+                    <SelectValue
+                      placeholder={t(translations.layouts.workspaceFallback)}
+                    />
+                  </SelectTrigger>
+                  <SelectContent align="end" position="popper">
+                    <SelectGroup>
+                      <SelectLabel>
+                        {t(translations.layouts.workspaceFallback)}
+                      </SelectLabel>
+                      {workspacesQuery.data?.map((workspace) => (
+                        <SelectItem key={workspace.id} value={workspace.id}>
+                          {workspace.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
                 <Button
                   aria-label={t(
                     isDarkTheme
@@ -153,18 +175,40 @@ export default function AppLayout() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     aria-label={t(translations.layouts.accountMenu)}
+                    className="w-80 p-2"
                   >
-                    <DropdownMenuLabel>
-                      <p className="truncate text-sm font-bold">
-                        {user?.name ?? t(translations.layouts.account)}
-                      </p>
-                      <p className="truncate pt-0.5 text-xs font-normal text-muted-foreground">
-                        {user?.email}
-                      </p>
+                    <DropdownMenuLabel className="p-2">
+                      <div className="flex items-center gap-3">
+                        <img
+                          alt=""
+                          className="size-12 shrink-0 rounded-2xl border border-border/70 object-cover shadow-sm"
+                          src={
+                            user?.avatar ||
+                            '/assets/brand/taskory-hub-logo.png'
+                          }
+                        />
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold tracking-tight">
+                            {user?.name ?? t(translations.layouts.account)}
+                          </p>
+                          <p className="truncate text-xs font-normal text-muted-foreground">
+                            {user?.email}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-3 rounded-xl border border-border/70 bg-muted/50 px-3 py-2.5">
+                        <div className="flex items-center gap-2 text-[0.6875rem] font-semibold tracking-wide text-muted-foreground uppercase">
+                          <Fingerprint aria-hidden="true" className="size-3.5" />
+                          {t(translations.layouts.discord)}
+                        </div>
+                        <p className="mt-1 truncate font-mono text-xs font-semibold text-foreground">
+                          {user?.discordUserId ?? '—'}
+                        </p>
+                      </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
+                      className="justify-center py-2.5 text-destructive focus:bg-destructive/10 focus:text-destructive"
                       onSelect={() => void handleLogout()}
                     >
                       <LogOut aria-hidden="true" />

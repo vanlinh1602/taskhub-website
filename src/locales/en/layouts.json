@@ -1,6 +1,8 @@
 {
   "account": "Account",
   "accountMenu": "Account menu",
+  "discord": "Discord",
+  "discordUserId": "Discord user ID: {{discordUserId}}",
   "navigation": "Navigation",
   "openAccountMenu": "Open account menu",
   "sidebarHint": "Your workspace",

@@ -3,6 +3,7 @@ export type User = {
   name: string;
   username: string;
   email: string;
+  discordUserId: string;
   gender: string;
   avatar: string;
   phone: string;

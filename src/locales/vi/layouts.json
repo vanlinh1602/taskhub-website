@@ -1,6 +1,8 @@
 {
   "account": "Tài khoản",
   "accountMenu": "Menu tài khoản",
+  "discord": "Discord",
+  "discordUserId": "Discord user ID: {{discordUserId}}",
   "navigation": "Điều hướng",
   "openAccountMenu": "Mở menu tài khoản",
   "sidebarHint": "Không gian làm việc của bạn",
