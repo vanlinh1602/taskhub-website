@@ -1,0 +1,18 @@
+{
+  "application": {
+    "alt": "Mascot Banana Bud đang sửa một thiết bị mầm cây nhỏ",
+    "description": "Có một trục trặc nhỏ khi tải trang này. Bạn hãy thử lại hoặc quay về trang chủ nhé.",
+    "home": "Về trang chủ",
+    "label": "CÓ LỖI XẢY RA",
+    "reload": "Thử lại",
+    "title": "Ôi, Bud đang sửa một chút!"
+  },
+  "login": "Không thể đăng nhập",
+  "notFound": {
+    "alt": "Mascot Banana Bud đang bối rối xem bản đồ",
+    "description": "Trang bạn đang tìm không tồn tại hoặc đã được chuyển đi. Mình cùng về trang chủ nhé?",
+    "home": "Về trang chủ",
+    "title": "Ôi, Bud đi lạc mất rồi!"
+  },
+  "unknown": "Đã xảy ra lỗi không xác định."
+}

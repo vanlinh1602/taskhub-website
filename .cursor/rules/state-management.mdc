@@ -1,0 +1,229 @@
+# State Management Guidelines
+
+## Overview
+The project uses a combination of React Query for server state and Zustand for client state management.
+
+## React Query (Server State)
+
+### Query Hooks Pattern
+```typescript
+export const useComics = (query: QueryComics, enabled: boolean = true) => {
+  return useQuery({
+    queryKey: ['comics', query],
+    queryFn: () => getComics(query),
+    staleTime: 1000 * 60 * 60, // 1 hour
+    enabled,
+  });
+};
+```
+
+### Mutation Hooks Pattern
+```typescript
+export const useUpdateComic = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, comic }: { id: number; comic: Partial<ComicUpdate> }) =>
+      updateComic(id, comic),
+    onSuccess: (_any, { id }) => {
+      // Invalidate related queries
+      queryClient.invalidateQueries({ queryKey: ['comic', id] });
+      queryClient.invalidateQueries({ queryKey: ['comics'] });
+
+      // Show success toast
+      toast.success(title: t(translations.updateStatus.success),{
+        description: t(translations.updateStatus.success),
+      });
+    },
+    onError: (error: any) => {
+      toas.error(title: t(translations.updateStatus.error),{
+        description: formatError(error),
+      });
+    },
+  });
+};
+```
+
+### Query Key Patterns
+- Use descriptive, nested keys
+- Include parameters that affect the query
+- Use consistent naming across features
+```typescript
+// Good query keys
+['comics', query]
+['comic', id]
+['chapters', comicId]
+['chapter', chapterId, edit]
+['user', userId]
+['userSettings', userId]
+```
+
+### Cache Management
+- Set appropriate `staleTime` for different data types
+- Use `invalidateQueries` to refresh data
+- Implement optimistic updates when appropriate
+- Use `setQueryData` for immediate cache updates
+
+## Zustand (Client State)
+
+### Store Pattern
+```typescript
+import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
+
+export const useUserStore = create<UserStore & UserStoreActions>()(
+  devtools((set, get) => ({
+    // State
+    user: undefined,
+    handling: false,
+
+    // Actions
+    authUser: async () => {
+      set({ handling: true });
+      try {
+        // Authentication logic
+        set({ user: userData, handling: false });
+      } catch (error) {
+        set({ handling: false });
+        throw error;
+      }
+    },
+
+    logout: async () => {
+      set({ handling: true });
+      try {
+        // Logout logic
+        set({ user: undefined, handling: false });
+      } catch (error) {
+        set({ handling: false });
+        throw error;
+      }
+    },
+  }))
+);
+```
+
+### Store Usage
+```typescript
+import { useShallow } from 'zustand/shallow';
+
+const Component = () => {
+  const { user, authUser } = useUserStore(
+    useShallow((state) => ({
+      user: state.user,
+      authUser: state.authUser,
+    }))
+  );
+
+  // Component logic
+};
+```
+
+## Page State Management
+
+### Zustand for Page State
+```typescript
+export const useComicsPageStore = create<
+  ComicsPageStore & ComicsPageStoreActions
+>()(
+  devtools((set) => ({
+    // Page state
+    homePage: {
+      totalPages: 0,
+      currentPage: 1,
+    },
+    searchPage: {
+      totalPages: 0,
+      currentPage: 1,
+      query: defaultQuery,
+    },
+
+    // Actions
+    updatePageValue: (key, value) =>
+      set((state) => ({
+        [key]: {
+          ...state[key],
+          ...value,
+        },
+      })),
+  }))
+);
+```
+
+## State Organization
+
+### Feature-Based Organization
+- Place hooks in `src/features/[feature]/hooks/`
+- Export from `index.ts` for clean imports
+- Separate query and mutation hooks
+- Keep related state together
+
+### Global State vs Local State
+- **React Query**: Server state, API data, cached responses
+- **Zustand**: User preferences, UI state, authentication
+- **Local State**: Component-specific state, form data
+
+## Best Practices
+
+### React Query
+- Use descriptive query keys
+- Set appropriate cache times
+- Handle loading and error states
+- Implement proper error handling
+- Use optimistic updates for better UX
+
+### Zustand
+- Keep stores focused and small
+- Use `useShallow` for performance
+- Implement proper TypeScript types
+- Use devtools for debugging
+- Separate state and actions
+
+### Performance
+- Use `useShallow` to prevent unnecessary re-renders
+- Implement proper memoization
+- Use `enabled` option to control query execution
+- Set appropriate `staleTime` and `cacheTime`
+
+## Examples from Codebase
+```typescript
+// Good: Query hook with proper typing
+export const useComic = (id: number) => {
+  return useQuery({
+    queryKey: ['comic', id],
+    queryFn: () => getComic(id),
+    staleTime: 1000 * 60 * 60, // 1 hour
+    enabled: !!id,
+  });
+};
+
+// Good: Mutation with proper error handling
+export const useDeleteComic = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: number) => deleteComic(id),
+    onSuccess: (result) => {
+      if (result) {
+        queryClient.invalidateQueries({ queryKey: ['comics'] });
+      }
+    },
+    onError: (error: any) => {
+      toast.error(t(translations.updateStatus.error), {
+        description: formatError(error),
+      });
+    },
+  });
+};
+
+// Good: Zustand store with proper typing
+export const useUserStore = create<UserStore & UserStoreActions>()(
+  devtools((set) => ({
+    // State and actions
+  }))
+);
+```
+description:
+globs:
+alwaysApply: false
+---

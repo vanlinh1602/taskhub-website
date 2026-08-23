@@ -1,0 +1,33 @@
+import type { ConvertedToObjectType, TranslationJsonType } from './types';
+import viAuth from './vi/auth.json';
+import viCommon from './vi/common.json';
+import viDashboard from './vi/dashboard.json';
+import viErrors from './vi/errors.json';
+import viNavigation from './vi/navigation.json';
+
+const vi = {
+  auth: viAuth,
+  common: viCommon,
+  dashboard: viDashboard,
+  errors: viErrors,
+  navigation: viNavigation,
+} satisfies TranslationJsonType;
+
+function convertValue(value: unknown, currentKey: string): unknown {
+  if (typeof value !== 'object' || value === null) {
+    return currentKey;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, childValue]) => {
+      const childKey = currentKey ? `${currentKey}.${key}` : key;
+      return [key, convertValue(childValue, childKey)];
+    }),
+  );
+}
+
+export function convertLanguageJsonToObject(json: TranslationJsonType): ConvertedToObjectType<TranslationJsonType> {
+  return convertValue(json, '') as ConvertedToObjectType<TranslationJsonType>;
+}
+
+export const translations = convertLanguageJsonToObject(vi);

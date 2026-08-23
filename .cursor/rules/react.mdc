@@ -1,0 +1,165 @@
+---
+description: React app architecture, patterns, and conventions
+globs:
+alwaysApply: true
+---
+
+React app conventions for this repo. Pairs with `typescript.mdc`. Keep this file to rules that are not obvious from `package.json`, `tsconfig*.json`, or existing framework defaults.
+
+## Stack
+
+- **HTTP client**: `apisauce` via the `backendService` singleton from `src/services/`. Never instantiate a new `Api` inside a feature.
+- **Server state**: TanStack React Query v5 with IndexedDB persistence.
+- **Client state**: Zustand v5 with `devtools` + `immer`.
+- **Auth**: Firebase + session cookies.
+- **i18n**: `react-i18next`; Vietnamese (`vi`) is the fallback language.
+- **UI**: shadcn/ui (Radix Nova) + Tailwind CSS v4. Add primitives with `npx shadcn@latest add <name>`.
+- **Router**: React Router v6.
+- **Bundling**: Vite 6. Configure future Module Federation remotes in `vite.config.ts` and verify host + remote builds separately.
+
+## Path Aliases
+
+Always import via aliases. **Never use `../../` going up more than one level.**
+
+| Alias        | Maps to          |
+| ------------ | ---------------- |
+| `components` | `src/components` |
+| `features`   | `src/features`   |
+| `pages`      | `src/pages`      |
+| `services`   | `src/services`   |
+| `types`      | `src/types`      |
+| `utils`      | `src/utils`      |
+| `locales`    | `src/locales`    |
+| `icons`      | `src/icons`      |
+| `configs`    | `src/configs`    |
+
+## Feature Layout
+
+```
+src/features/[name]/
+├── apis/
+├── components/
+├── hooks/
+├── types/
+│   ├── index.ts
+│   ├── entity.ts
+│   └── store.ts
+└── utils/
+```
+
+- Page-route components live in `src/pages/<Section>/<Name>/index.tsx` and may compose feature hooks/components directly. **Never** place route page components inside `src/features/`.
+- Feature helper functions and pure utilities live in `src/features/[name]/utils/`; do not create `lib/` folders for feature code.
+- Feature type modules live under `src/features/[name]/types/`; do not add root-level `types.ts`, `edit-types.ts`, or other `*-types.ts` files directly under a feature.
+
+## Files And Exports
+
+- **Components**: every public/top-level component is a PascalCase directory with `index.tsx`, for example `SearchInput/index.tsx`. Private sub-components may be PascalCase files inside that directory. Exception: shadcn primitives in `src/components/ui/` stay kebab-case files with named exports.
+- **Hooks / APIs / types / utils**: camelCase filenames, for example `hooks/user.ts`, `apis/user.ts`, `types/store.ts`.
+- **Components**: default export. **Hooks / APIs / types / utils**: named exports.
+- Every `components/` folder has an `index.tsx` barrel re-exporting public components as `export { default as ComponentName } from './ComponentName';`.
+- Every `apis/`, `hooks/`, and `types/` folder has an `index.ts` barrel re-exporting public API. Shared type variants belong in sibling files under `types/`, for example `types/edit.ts`, and are re-exported from `types/index.ts`.
+
+## Types
+
+- Global helpers are declared in `src/types/global.d.ts`: `CustomObject<T>`, `WithId<T>`, `WithoutId<T>`, `WithApiResult<T>`, `WithOnComplete<T>`, `WithPagination<T>`.
+- API pagination helpers come from `src/types/api.ts` via the `types` alias.
+- Entity types live in `features/[name]/types/entity.ts`. Payload types should derive from entities with `Omit`, `Pick`, and `Partial` when practical.
+- Store state/action interfaces live in `features/[name]/types/store.ts`.
+- Enums use `ENUM_` prefix + domain in UPPERCASE, string-literal values matching the API contract, and UPPERCASE members. Keep them in the feature's `types/` folder alongside the entity that uses them.
+- Component props stay in the component file unless shared by multiple files. Extend shadcn primitive props with `Omit` to remove props the component controls.
+
+## Components
+
+- Component body order: hooks -> derived state (`useMemo`) -> handlers -> return.
+- Sub-components import only from their parent directory or aliases. Only the top-level component is exported from the feature barrel.
+- Never hardcode user-visible strings; use `translations` and `useTranslation()`.
+- For i18n keys, always use typed keys from `translations` (for example `t(translations.auth.permissionDenied)`) instead of raw string paths (for example `t('auth.permissionDenied')`).
+- Surface user-facing failures with `toast.error()` from `sonner`. Pipe errors through `formatError(error)` from `utils/formatError`; do not manually parse error shapes or use raw `console.error` for user-facing errors.
+
+## shadcn/ui
+
+- Default to shadcn primitives in `src/components/ui/` for Buttons, Inputs, Selects, Dialogs/Sheets, Tables, and Forms. Add them with the CLI; do not hand-roll equivalents.
+- Keep generated UI files as kebab-case named exports (`button.tsx` → `import { Button } from '@/components/ui/button'`). This is the only exception to PascalCase component directories.
+- Compose class names with `cn()` from `@/lib/utils`. Put app-only helpers in `src/utils/`; `src/lib/` is reserved for shadcn helpers.
+- Icons come from `lucide-react`.
+- Theme tokens live as CSS variables in `src/index.css` (`:root` / `.dark` / `@theme inline`). Do not add a parallel theme file.
+- Dark mode uses the `.dark` class via `next-themes` `ThemeProvider`.
+
+## Styling
+
+Use styling in this order:
+
+1. shadcn variants/props for primitive appearance, size, and supported layout.
+2. Tailwind classes in JSX for normal layout, spacing, responsive behavior, typography, colors, sizing, and simple states.
+3. CSS modules only when shadcn/Tailwind becomes awkward or less readable.
+
+CSS modules are allowed for pseudo-elements, keyframes/animations, complex selectors, styling nested third-party or shadcn DOM when props are not enough, repeated component-specific visual systems, complex grids/layouts that are clearer as named classes, and page/component-scoped CSS variables.
+
+- Place CSS modules next to the component/page as `index.module.css`.
+- Avoid global CSS for feature/component styling.
+- Avoid inline `style={{}}` except for truly dynamic runtime values or CSS variables.
+- Avoid `@apply`; keep normal Tailwind utilities in JSX.
+- Avoid arbitrary Tailwind values like `w-[137px]` unless the value is genuinely design-specific.
+
+## Public Assets
+
+- Keep runtime-served static assets under `public/assets/`; do not add image files directly to `public/`.
+- Organize assets by purpose: `brand/` for logos and identity artwork, `icons/` for favicons and device icons, `illustrations/` for product and empty-state artwork, and `social/` for Open Graph, Twitter, and campaign images.
+- Name asset files in lowercase kebab-case based on their purpose. Avoid temporary or implementation-version suffixes such as `-v1`, unless multiple versions must be served concurrently.
+- When adding, moving, renaming, or removing a public asset, update every reference in source code, HTML metadata, manifests, stylesheets, and documentation in the same change. Search for old paths before completing the work.
+- Use root-relative URLs for public assets, for example `/assets/illustrations/empty-transactions.png`.
+
+## State
+
+- Server data belongs in React Query. Global UI/session/preferences belong in Zustand. Local UI state belongs in `useState` / `useReducer`.
+- Never use Zustand for data that belongs in React Query.
+- Query keys should be stable and hierarchical: `['entity']`, `['entity', id]`, `['entity', 'list', filter]`, `['entity', 'metadata', key]`.
+- Use the same key shape in `useQuery` and `queryClient.invalidateQueries`.
+- Default cache durations: lists/indexes `staleTime` 24h; metadata 30d; snapshots/history 7d; `gcTime` `Infinity` for persisted data unless the data should expire.
+- Zustand stores wrap `create()` with `devtools()`, use Immer `produce()` for nested updates, provide `initialState`, use `handling: boolean` for async operations, and call `set(updater, false, { type: 'storeName/actionName' })`.
+- One store per feature, under `features/[name]/hooks/state.ts` or `hooks/[name].ts`. Use `useShallow` for multi-value reads.
+
+## APIs
+
+- API functions live in `features/[name]/apis/`, are async and typed, and throw on non-ok results.
+- Call `backendService` (which returns `WithApiResult<T>`). Never instantiate a new `Api`.
+- Unwrap with a positive `ok` check, then throw `new Error(formatError(response))`. Do not throw `response.kind`, a raw status string, or a manually parsed error message.
+
+```ts
+import { backendService } from '@/services';
+import formatError from '@/utils/formatError';
+
+export async function getExample(id: string): Promise<Example> {
+  const response = await backendService.get<Example>(`api/examples/${encodeURIComponent(id)}`);
+
+  if (response.kind === 'ok') {
+    return response.data;
+  }
+
+  throw new Error(formatError(response));
+}
+```
+
+- Build paginated query strings with `URLSearchParams`.
+- Use `backendService.download()` for downloads and `backendService.upload()` for uploads.
+- Avoid N+1 request patterns; use an existing batch hook/loader or add a debounced batch loader for repeated metadata/entity lookups.
+
+## Locale Files
+
+- Store translations by feature in matching `src/locales/en/{feature}.json` and
+  `src/locales/vi/{feature}.json` files. Do not create monolithic `en.json` or `vi.json` files.
+- Register every feature file under the single `translation` namespace in `src/locales/i18n.ts` and
+  include its Vietnamese file in `src/locales/translations.ts` and `src/locales/types.ts`.
+- Update matching Vietnamese and English feature files together and keep their key structures
+  identical.
+- Maintain alphabetical order for feature filenames and for keys at every nesting level in
+  `src/locales/**`.
+- Components use typed keys such as `t(translations.auth.title)`; never pass raw key paths such as
+  `t('auth.title')`.
+
+## Routing
+
+- React Router v6 with `createBrowserRouter`.
+- Page components are lazy-loaded: `const Page = React.lazy(() => import('./Page'))`.
+- Protected routes use `AuthorizedRoute`.
+- Auth state comes from `useUserStore`.

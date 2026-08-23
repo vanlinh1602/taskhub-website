@@ -1,0 +1,119 @@
+.brandPanel {
+  background:
+    linear-gradient(145deg, color-mix(in oklch, var(--secondary) 72%, transparent), transparent 58%),
+    linear-gradient(25deg, color-mix(in oklch, var(--accent) 55%, transparent), transparent 62%);
+}
+
+.glow {
+  position: absolute;
+  top: -12rem;
+  right: -9rem;
+  width: 30rem;
+  height: 30rem;
+  border-radius: 9999px;
+  background: color-mix(in oklch, var(--primary) 16%, transparent);
+  filter: blur(6px);
+}
+
+.leaf {
+  position: absolute;
+  width: 5rem;
+  height: 2.5rem;
+  border: 1px solid color-mix(in oklch, var(--primary) 25%, transparent);
+  border-radius: 100% 0 100% 0;
+  background: color-mix(in oklch, var(--secondary) 55%, transparent);
+}
+
+.leafOne {
+  right: 9%;
+  bottom: 8%;
+  rotate: 18deg;
+  animation: drift 7s ease-in-out infinite;
+}
+
+.leafTwo {
+  top: 23%;
+  left: -1.5rem;
+  rotate: -32deg;
+  animation: drift 8s ease-in-out 1s infinite reverse;
+}
+
+.mascot {
+  position: relative;
+  padding: 1.5rem;
+  animation: float 5s ease-in-out infinite;
+}
+
+.mascotHalo {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: color-mix(in oklch, var(--accent) 72%, transparent);
+  filter: blur(12px);
+}
+
+.reveal {
+  animation: reveal 650ms ease-out both;
+}
+
+.revealDelayed {
+  animation: reveal 650ms ease-out 150ms both;
+}
+
+.spinner {
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid color-mix(in oklch, var(--primary-foreground) 35%, transparent);
+  border-top-color: var(--primary-foreground);
+  border-radius: 9999px;
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(1deg);
+  }
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(8px, -12px);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leafOne,
+  .leafTwo,
+  .mascot,
+  .reveal,
+  .revealDelayed,
+  .spinner {
+    animation-duration: 1ms;
+    animation-iteration-count: 1;
+  }
+}
