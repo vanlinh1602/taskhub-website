@@ -1,0 +1,11 @@
+{
+  "account": "Account",
+  "accountMenu": "Account menu",
+  "navigation": "Navigation",
+  "openAccountMenu": "Open account menu",
+  "sidebarHint": "Your workspace",
+  "switchToDark": "Switch to dark mode",
+  "switchToLight": "Switch to light mode",
+  "toggleSidebar": "Toggle sidebar",
+  "workspaceFallback": "Taskory Hub"
+}

@@ -3,6 +3,7 @@ import viAuth from './vi/auth.json';
 import viCommon from './vi/common.json';
 import viDashboard from './vi/dashboard.json';
 import viErrors from './vi/errors.json';
+import viLayouts from './vi/layouts.json';
 import viNavigation from './vi/navigation.json';
 
 const vi = {
@@ -10,6 +11,7 @@ const vi = {
   common: viCommon,
   dashboard: viDashboard,
   errors: viErrors,
+  layouts: viLayouts,
   navigation: viNavigation,
 } satisfies TranslationJsonType;
 
@@ -26,7 +28,9 @@ function convertValue(value: unknown, currentKey: string): unknown {
   );
 }
 
-export function convertLanguageJsonToObject(json: TranslationJsonType): ConvertedToObjectType<TranslationJsonType> {
+export function convertLanguageJsonToObject(
+  json: TranslationJsonType,
+): ConvertedToObjectType<TranslationJsonType> {
   return convertValue(json, '') as ConvertedToObjectType<TranslationJsonType>;
 }
 

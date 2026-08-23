@@ -6,19 +6,35 @@ import enAuth from './en/auth.json';
 import enCommon from './en/common.json';
 import enDashboard from './en/dashboard.json';
 import enErrors from './en/errors.json';
+import enLayouts from './en/layouts.json';
 import enNavigation from './en/navigation.json';
 import viAuth from './vi/auth.json';
 import viCommon from './vi/common.json';
 import viDashboard from './vi/dashboard.json';
 import viErrors from './vi/errors.json';
+import viLayouts from './vi/layouts.json';
 import viNavigation from './vi/navigation.json';
 
 export const translationsJson = {
   en: {
-    translation: { auth: enAuth, common: enCommon, dashboard: enDashboard, errors: enErrors, navigation: enNavigation },
+    translation: {
+      auth: enAuth,
+      common: enCommon,
+      dashboard: enDashboard,
+      errors: enErrors,
+      layouts: enLayouts,
+      navigation: enNavigation,
+    },
   },
   vi: {
-    translation: { auth: viAuth, common: viCommon, dashboard: viDashboard, errors: viErrors, navigation: viNavigation },
+    translation: {
+      auth: viAuth,
+      common: viCommon,
+      dashboard: viDashboard,
+      errors: viErrors,
+      layouts: viLayouts,
+      navigation: viNavigation,
+    },
   },
 };
 

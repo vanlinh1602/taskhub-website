@@ -1,7 +1,8 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 
 import { LoadingScreen } from '@/components/loading-screen';
+import { AppLayout, DEFAULT_PROTECTED_PATH } from '@/features/layouts';
 import FirebaseAuthObserver from '@/features/user/components/FirebaseAuthObserver';
 
 import AuthRouter from './AuthRouter';
@@ -19,7 +20,13 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
 
           <Route path="/" element={<AuthRouter />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route element={<AppLayout />}>
+              <Route
+                index
+                element={<Navigate to={DEFAULT_PROTECTED_PATH} replace />}
+              />
+              <Route path="dashboard" element={<DashboardPage />} />
+            </Route>
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

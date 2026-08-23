@@ -1,0 +1,11 @@
+{
+  "account": "Tài khoản",
+  "accountMenu": "Menu tài khoản",
+  "navigation": "Điều hướng",
+  "openAccountMenu": "Mở menu tài khoản",
+  "sidebarHint": "Không gian làm việc của bạn",
+  "switchToDark": "Chuyển sang giao diện tối",
+  "switchToLight": "Chuyển sang giao diện sáng",
+  "toggleSidebar": "Mở hoặc đóng thanh bên",
+  "workspaceFallback": "Taskory Hub"
+}
