@@ -1,4 +1,4 @@
-## Banana Bud Website — Coding Rules
+## Taskory Hub Website — Coding Rules
 
 Before any code change, read these (all are `alwaysApply: true` for Cursor):
 

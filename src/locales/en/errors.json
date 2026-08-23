@@ -1,18 +1,18 @@
 {
   "application": {
-    "alt": "The Banana Bud mascot repairing a small sprout device",
+    "alt": "Taskory Hub illustration for an application error",
     "description": "A small hiccup happened while loading this page. Please try again or head back home.",
     "home": "Back to home",
     "label": "SOMETHING WENT WRONG",
     "reload": "Try again",
-    "title": "Oops, Bud is fixing a little thing!"
+    "title": "Something needs your attention"
   },
   "login": "Unable to sign in",
   "notFound": {
-    "alt": "The Banana Bud mascot looking confused while reading a map",
+    "alt": "Taskory Hub illustration for a missing page",
     "description": "The page you are looking for does not exist or has moved. Let's head back home together.",
     "home": "Back to home",
-    "title": "Oops, Bud got a little lost!"
+    "title": "We could not find that page"
   },
   "unknown": "An unexpected error occurred."
 }

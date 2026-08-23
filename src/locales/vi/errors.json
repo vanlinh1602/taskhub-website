@@ -1,18 +1,18 @@
 {
   "application": {
-    "alt": "Mascot Banana Bud đang sửa một thiết bị mầm cây nhỏ",
+    "alt": "Minh họa Taskory Hub cho lỗi ứng dụng",
     "description": "Có một trục trặc nhỏ khi tải trang này. Bạn hãy thử lại hoặc quay về trang chủ nhé.",
     "home": "Về trang chủ",
     "label": "CÓ LỖI XẢY RA",
     "reload": "Thử lại",
-    "title": "Ôi, Bud đang sửa một chút!"
+    "title": "Có một việc cần bạn chú ý"
   },
   "login": "Không thể đăng nhập",
   "notFound": {
-    "alt": "Mascot Banana Bud đang bối rối xem bản đồ",
+    "alt": "Minh họa Taskory Hub cho trang không tìm thấy",
     "description": "Trang bạn đang tìm không tồn tại hoặc đã được chuyển đi. Mình cùng về trang chủ nhé?",
     "home": "Về trang chủ",
-    "title": "Ôi, Bud đi lạc mất rồi!"
+    "title": "Không tìm thấy trang bạn yêu cầu"
   },
   "unknown": "Đã xảy ra lỗi không xác định."
 }

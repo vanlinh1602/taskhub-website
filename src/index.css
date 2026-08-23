@@ -58,80 +58,80 @@
   font-family: 'Be Vietnam Pro', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  --background: oklch(0.985 0.018 105);
-  --foreground: oklch(0.22 0.045 112);
-  --card: oklch(0.995 0.012 100 / 94%);
-  --card-foreground: oklch(0.22 0.045 112);
-  --primary: oklch(0.48 0.115 116);
-  --primary-foreground: oklch(0.99 0.01 105);
-  --secondary: oklch(0.925 0.06 125);
-  --secondary-foreground: oklch(0.28 0.075 120);
-  --muted: oklch(0.95 0.035 112);
-  --muted-foreground: oklch(0.4 0.055 112);
-  --accent: oklch(0.935 0.085 91);
-  --accent-foreground: oklch(0.29 0.075 98);
-  --border: oklch(0.865 0.045 116);
-  --ring: oklch(0.48 0.115 116);
-  --canvas-glow-primary: oklch(0.87 0.105 126 / 60%);
-  --canvas-glow-accent: oklch(0.91 0.105 91 / 55%);
-  --soft-shadow: 0 16px 40px -24px oklch(0.36 0.08 115 / 30%);
-  --control-shadow: 0 8px 20px -12px oklch(0.34 0.1 115 / 38%);
-  --popover: oklch(0.995 0.012 100 / 96%);
-  --popover-foreground: oklch(0.22 0.045 112);
+  --background: oklch(0.985 0.012 230);
+  --foreground: oklch(0.24 0.045 245);
+  --card: oklch(0.995 0.008 230 / 94%);
+  --card-foreground: oklch(0.24 0.045 245);
+  --primary: oklch(0.54 0.12 239);
+  --primary-foreground: oklch(0.99 0.008 230);
+  --secondary: oklch(0.925 0.045 220);
+  --secondary-foreground: oklch(0.31 0.07 239);
+  --muted: oklch(0.95 0.022 230);
+  --muted-foreground: oklch(0.43 0.045 241);
+  --accent: oklch(0.93 0.05 202);
+  --accent-foreground: oklch(0.31 0.075 225);
+  --border: oklch(0.865 0.026 230);
+  --ring: oklch(0.54 0.12 239);
+  --canvas-glow-primary: oklch(0.87 0.08 225 / 60%);
+  --canvas-glow-accent: oklch(0.91 0.065 202 / 55%);
+  --soft-shadow: 0 16px 40px -24px oklch(0.36 0.07 240 / 26%);
+  --control-shadow: 0 8px 20px -12px oklch(0.34 0.09 239 / 34%);
+  --popover: oklch(0.995 0.008 230 / 96%);
+  --popover-foreground: oklch(0.24 0.045 245);
   --destructive: oklch(0.577 0.245 27.325);
-  --input: oklch(0.865 0.045 116);
-  --chart-1: oklch(0.48 0.115 116);
-  --chart-2: oklch(0.75 0.13 91);
-  --chart-3: oklch(0.62 0.12 145);
-  --chart-4: oklch(0.7 0.14 50);
+  --input: oklch(0.865 0.026 230);
+  --chart-1: oklch(0.54 0.12 239);
+  --chart-2: oklch(0.68 0.11 215);
+  --chart-3: oklch(0.62 0.1 195);
+  --chart-4: oklch(0.65 0.11 275);
   --chart-5: oklch(0.55 0.1 250);
   --radius: 0.75rem;
-  --sidebar: oklch(0.97 0.03 112);
-  --sidebar-foreground: oklch(0.22 0.045 112);
-  --sidebar-primary: oklch(0.48 0.115 116);
-  --sidebar-primary-foreground: oklch(0.99 0.01 105);
-  --sidebar-accent: oklch(0.935 0.085 91);
-  --sidebar-accent-foreground: oklch(0.29 0.075 98);
-  --sidebar-border: oklch(0.865 0.045 116);
-  --sidebar-ring: oklch(0.48 0.115 116);
+  --sidebar: oklch(0.97 0.02 230);
+  --sidebar-foreground: oklch(0.24 0.045 245);
+  --sidebar-primary: oklch(0.54 0.12 239);
+  --sidebar-primary-foreground: oklch(0.99 0.008 230);
+  --sidebar-accent: oklch(0.93 0.05 202);
+  --sidebar-accent-foreground: oklch(0.31 0.075 225);
+  --sidebar-border: oklch(0.865 0.026 230);
+  --sidebar-ring: oklch(0.54 0.12 239);
 }
 
 .dark {
-  --background: oklch(0.24 0.035 116);
-  --foreground: oklch(0.94 0.025 105);
-  --card: oklch(0.285 0.04 116 / 95%);
-  --card-foreground: oklch(0.94 0.025 105);
-  --primary: oklch(0.75 0.13 116);
-  --primary-foreground: oklch(0.22 0.045 112);
-  --secondary: oklch(0.35 0.065 122);
-  --secondary-foreground: oklch(0.92 0.04 112);
-  --muted: oklch(0.32 0.04 116);
-  --muted-foreground: oklch(0.74 0.045 108);
-  --accent: oklch(0.37 0.07 91);
-  --accent-foreground: oklch(0.93 0.045 94);
-  --border: oklch(0.56 0.055 116 / 45%);
-  --ring: oklch(0.75 0.13 116);
-  --canvas-glow-primary: oklch(0.5 0.11 126 / 28%);
-  --canvas-glow-accent: oklch(0.5 0.1 91 / 22%);
-  --soft-shadow: 0 18px 48px -24px oklch(0.11 0.025 116 / 65%);
-  --control-shadow: 0 8px 22px -12px oklch(0.11 0.025 116 / 75%);
-  --popover: oklch(0.285 0.04 116 / 96%);
-  --popover-foreground: oklch(0.94 0.025 105);
+  --background: oklch(0.24 0.03 245);
+  --foreground: oklch(0.94 0.018 230);
+  --card: oklch(0.285 0.035 245 / 95%);
+  --card-foreground: oklch(0.94 0.018 230);
+  --primary: oklch(0.75 0.11 220);
+  --primary-foreground: oklch(0.22 0.04 245);
+  --secondary: oklch(0.35 0.055 235);
+  --secondary-foreground: oklch(0.92 0.025 225);
+  --muted: oklch(0.32 0.035 245);
+  --muted-foreground: oklch(0.74 0.035 225);
+  --accent: oklch(0.37 0.06 205);
+  --accent-foreground: oklch(0.93 0.035 210);
+  --border: oklch(0.56 0.045 235 / 45%);
+  --ring: oklch(0.75 0.11 220);
+  --canvas-glow-primary: oklch(0.5 0.09 220 / 28%);
+  --canvas-glow-accent: oklch(0.5 0.08 200 / 22%);
+  --soft-shadow: 0 18px 48px -24px oklch(0.11 0.02 245 / 65%);
+  --control-shadow: 0 8px 22px -12px oklch(0.11 0.02 245 / 75%);
+  --popover: oklch(0.285 0.035 245 / 96%);
+  --popover-foreground: oklch(0.94 0.018 230);
   --destructive: oklch(0.704 0.191 22.216);
-  --input: oklch(0.56 0.055 116 / 45%);
-  --chart-1: oklch(0.75 0.13 116);
-  --chart-2: oklch(0.8 0.12 91);
-  --chart-3: oklch(0.7 0.11 145);
-  --chart-4: oklch(0.72 0.13 50);
+  --input: oklch(0.56 0.045 235 / 45%);
+  --chart-1: oklch(0.75 0.11 220);
+  --chart-2: oklch(0.8 0.09 205);
+  --chart-3: oklch(0.7 0.09 195);
+  --chart-4: oklch(0.72 0.1 275);
   --chart-5: oklch(0.65 0.1 250);
-  --sidebar: oklch(0.28 0.04 116);
-  --sidebar-foreground: oklch(0.94 0.025 105);
-  --sidebar-primary: oklch(0.75 0.13 116);
-  --sidebar-primary-foreground: oklch(0.22 0.045 112);
-  --sidebar-accent: oklch(0.37 0.07 91);
-  --sidebar-accent-foreground: oklch(0.93 0.045 94);
-  --sidebar-border: oklch(0.56 0.055 116 / 45%);
-  --sidebar-ring: oklch(0.75 0.13 116);
+  --sidebar: oklch(0.28 0.035 245);
+  --sidebar-foreground: oklch(0.94 0.018 230);
+  --sidebar-primary: oklch(0.75 0.11 220);
+  --sidebar-primary-foreground: oklch(0.22 0.04 245);
+  --sidebar-accent: oklch(0.37 0.06 205);
+  --sidebar-accent-foreground: oklch(0.93 0.035 210);
+  --sidebar-border: oklch(0.56 0.045 235 / 45%);
+  --sidebar-ring: oklch(0.75 0.11 220);
 }
 
 @theme inline {
@@ -231,6 +231,106 @@ a:focus-visible {
 .account-total,.category-summary { align-items: center; background: linear-gradient(110deg,#edf6df,#fffbe8); border: 1px solid #dce8bd; border-radius: 24px; display: flex; justify-content: space-between; margin-bottom: 20px; padding: 24px; }.account-total span { color: var(--muted-foreground); display: block; font-size: 12px; }.account-total strong { display: block; font-size: 31px; letter-spacing: -.05em; margin: 4px 0; }.account-total p { color: var(--muted-foreground); font-size: 11px; margin: 0; }.account-grid { display: grid; gap: 17px; grid-template-columns: repeat(auto-fit,minmax(210px,1fr)); margin-bottom: 20px; }.account-card { min-height: 176px; padding: 19px; }.account-card-top { display: flex; justify-content: space-between; }.account-symbol { align-items: center; border-radius: 12px; color: white; display: flex; font-size: 18px; height: 40px; justify-content: center; width: 40px; }.account-card > p { color: var(--muted-foreground); font-size: 10px; margin: 18px 0 2px; }.account-card h3 { font-size: 14px; margin: 0; }.account-card-note { color: var(--muted-foreground); font-size: 10px; }.negative { color: #d26955; }.transfer-row { align-items: center; border-top: 1px solid var(--border); display: grid; gap: 10px; grid-template-columns: 34px 1fr auto; margin-top: 17px; padding-top: 16px; }.transfer-row > span { align-items: center; background: #edf5e4; border-radius: 10px; color: var(--primary); display: flex; height: 34px; justify-content: center; }.transfer-row strong,.transfer-row p { display: block; font-size: 12px; margin: 0; }.transfer-row p { color: var(--muted-foreground); font-size: 10px; }.transfer-row b { font-size: 12px; }.category-summary p { font-size: 13px; margin: 0; }.category-summary p strong { color: var(--primary); font-size: 22px; }.category-group { margin-top: 27px; }.category-group > .section-row > span { color: var(--muted-foreground); font-size: 11px; }.category-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); margin-top: 12px; }.category-item { align-items: center; background: color-mix(in oklch,var(--card) 75%,transparent); border: 1px solid var(--border); border-radius: 16px; display: grid; gap: 10px; grid-template-columns: 34px 1fr auto; padding: 11px; }.category-item > span { align-items: center; border-radius: 10px; color: white; display: flex; height: 34px; justify-content: center; width: 34px; }.category-item strong { font-size: 12px; }.category-item button { background: transparent; border: 0; color: var(--muted-foreground); cursor: pointer; }
 @media (max-width: 860px) { .app-layout { display: block; }.sidebar { display: none; }.app-main { padding: 26px 20px 96px; }.bottom-nav { align-items: center; backdrop-filter: blur(14px); background: color-mix(in oklch,var(--card) 90%,transparent); border-top: 1px solid var(--border); bottom: 0; display: flex; height: 69px; justify-content: space-around; left: 0; position: fixed; right: 0; z-index: 20; }.bottom-nav a { align-items: center; color: var(--muted-foreground); display: flex; flex-direction: column; font-size: 9px; gap: 2px; text-decoration: none; }.bottom-nav a.active { color: var(--primary); }.bottom-nav a i { font-size: 17px; font-style: normal; }.bottom-nav button { background: var(--primary); border: 4px solid var(--background); border-radius: 50%; color: white; font-size: 26px; font-weight: 300; height: 52px; margin-top: -27px; width: 52px; }.stat-grid { grid-template-columns: repeat(2,1fr); }.dashboard-grid,.lower-grid,.reports-grid { grid-template-columns: 1fr; }.balance-card img { height: 172px; margin: 13px -23px -25px 0; width: 172px; }.balance-card { min-height: 160px; padding: 21px; }.dashboard-heading,.page-header { align-items: flex-start; flex-direction: column; }.dashboard-heading > .button-primary,.page-header > .button-primary { display: none; }.goal-feature { align-items: flex-start; }.goal-feature img { height: 100px; width: 100px; }.topbar { height: 63px; padding: 0 20px; }.sidebar + .app-main { min-height: calc(100vh - 63px); }.transaction-drawer { padding: 26px 21px; }.spending-card { min-height: 310px; } }
 @media (max-width: 460px) { .topbar .icon-button { display: none; }.brand { font-size: 18px; }.balance-card img { height: 130px; margin: 23px -23px -15px -20px; width: 130px; }.balance-card h2 { font-size: 27px; }.metric-card { padding: 14px; }.metric-card strong { font-size: 17px; }.app-main { padding-left: 15px; padding-right: 15px; }.chart-card,.spending-card,.soft-surface.rounded-3xl { padding: 18px; }.goal-feature { gap: 4px; padding: 18px; }.goal-feature h2 { font-size: 18px; }.goal-feature img { height: 78px; width: 78px; }.transaction { grid-template-columns: 35px 1fr auto; gap: 8px; }.transaction-icon { height: 34px; width: 34px; }.transaction-amount { font-size: 11px; }.transaction-amount small { display: none; } }
+
+.profile-button span {
+  background: #3b82b6;
+}
+
+.sidebar-tip {
+  background: linear-gradient(145deg, #e7f4fb, #f3f9fe);
+  border-color: #c9e1f0;
+}
+
+.sidebar-tip span {
+  color: #4d7891;
+}
+
+.dashboard-heading h1 span {
+  color: #2f7eaf;
+}
+
+.balance-card,
+.investment-hero {
+  background: linear-gradient(125deg, #2f719b, #5ba6cb);
+  box-shadow: 0 20px 40px -24px #245d80;
+}
+
+.pill,
+.mini-transaction > span,
+.transaction-icon,
+.asset-icon,
+.transfer-row > span {
+  background: #e6f3fa;
+  color: var(--primary);
+}
+
+.pill {
+  color: #286389;
+}
+
+.metric-green::before,
+.green-dot {
+  background: #3b82b6;
+}
+
+.metric-yellow::before {
+  background: #5fa8cc;
+}
+
+.metric-purple::before {
+  background: #7188c5;
+}
+
+.spending-ring,
+.chart-ring {
+  background: conic-gradient(#5fa8cc 0 46%, #3b82b6 46% 73%, #7188c5 73% 100%);
+}
+
+.goal-icon {
+  background: #e1f1f8;
+  color: #2f7eaf;
+}
+
+.debt-alert {
+  background: linear-gradient(140deg, #eaf5fb, #dbeefa);
+  border-color: #bfddea;
+}
+
+.debt-alert p {
+  color: #4a728a;
+}
+
+.debt-alert a {
+  color: #28698f;
+}
+
+.budget-orb {
+  background: conic-gradient(#5fa8cc 0 73%, #e6f1f7 73%);
+}
+
+.investment-hero .positive {
+  color: #e1f6ff !important;
+}
+
+.donut {
+  background: conic-gradient(#77bddb 0 57%, #4d95bb 57%);
+}
+
+.donut::before {
+  background: #3b7fa8;
+}
+
+.goal-feature,
+.account-total,
+.category-summary {
+  background: linear-gradient(110deg, #e7f4fb, #f4f9fd);
+  border-color: #c7e1ef;
+}
+
+.account-total,
+.category-summary {
+  border-color: #c7e1ef;
+}
 
 @layer base {
   * {

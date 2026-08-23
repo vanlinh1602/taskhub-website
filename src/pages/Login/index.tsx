@@ -1,5 +1,5 @@
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
@@ -7,7 +7,6 @@ import { useShallow } from 'zustand/shallow';
 
 import { LoadingScreen } from '@/components/loading-screen';
 import { useUserStore } from '@/features/user/hooks';
-import { getExtensionAuthorization } from '@/features/user/utils/extensionAuthorization';
 import { translations } from '@/locales/translations';
 import { auth } from '@/services/firebase';
 
@@ -66,17 +65,12 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [isSigningIn, setIsSigningIn] = useState(false);
-  const authorization = useMemo(
-    () => getExtensionAuthorization(searchParams),
-    [searchParams],
-  );
-
   useEffect(() => {
-    if (user && !authorization) {
+    if (user) {
       const next = searchParams.get('next');
       navigate(next?.startsWith('/') ? next : '/', { replace: true });
     }
-  }, [authorization, navigate, searchParams, user]);
+  }, [navigate, searchParams, user]);
 
   if (isLoading) {
     return <LoadingScreen />;
@@ -118,7 +112,7 @@ export default function LoginPage() {
             <div className="flex items-center gap-3">
               <img
                 className="size-12 rounded-2xl shadow-control"
-                src="/assets/brand/banana-bud-logo.png"
+                src="/assets/brand/taskory-hub-logo.png"
                 alt=""
               />
               <span className="text-lg font-extrabold tracking-tight">
@@ -147,7 +141,7 @@ export default function LoginPage() {
                   <div className={styles.mascotHalo} />
                   <img
                     className="relative size-36 rounded-[2.5rem] shadow-soft xl:size-44"
-                    src="/assets/brand/banana-bud-logo.png"
+                    src="/assets/brand/taskory-hub-logo.png"
                     alt=""
                   />
                 </div>
@@ -186,7 +180,7 @@ export default function LoginPage() {
             <div className="lg:hidden">
               <img
                 className="size-14 rounded-2xl shadow-control"
-                src="/assets/brand/banana-bud-logo.png"
+                src="/assets/brand/taskory-hub-logo.png"
                 alt=""
               />
             </div>

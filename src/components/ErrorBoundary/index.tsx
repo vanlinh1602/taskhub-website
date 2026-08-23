@@ -29,13 +29,23 @@ function ErrorFallback() {
     >
       <div aria-hidden="true" className={styles.glow} />
 
-      <a className="relative z-10 inline-flex w-fit items-center gap-3 rounded-2xl pr-3 font-extrabold" href="/">
-        <img className="size-11 rounded-2xl shadow-control" src="/assets/brand/banana-bud-logo.png" alt="" />
-        <span className="text-lg tracking-tight">Banana Bud</span>
+      <a
+        className="relative z-10 inline-flex w-fit items-center gap-3 rounded-2xl pr-3 font-extrabold"
+        href="/"
+      >
+        <img
+          className="size-11 rounded-2xl shadow-control"
+          src="/assets/brand/taskory-hub-logo.png"
+          alt=""
+        />
+        <span className="text-lg tracking-tight">Taskory Hub</span>
       </a>
 
       <section className="relative z-10 mx-auto grid w-full max-w-6xl flex-1 items-center gap-8 py-8 lg:grid-cols-[0.86fr_1.14fr] lg:gap-14 lg:py-4">
-        <div className="mx-auto max-w-xl text-center lg:mx-0 lg:text-left" role="alert">
+        <div
+          className="mx-auto max-w-xl text-center lg:mx-0 lg:text-left"
+          role="alert"
+        >
           <p className="mb-4 inline-flex rounded-full border border-border bg-card/80 px-4 py-2 text-sm font-extrabold tracking-[0.18em] text-primary shadow-control backdrop-blur-sm">
             {t(translations.errors.application.label)}
           </p>
@@ -68,7 +78,7 @@ function ErrorFallback() {
         <div className={styles.artStage}>
           <img
             className={styles.mascot}
-            src="/assets/illustrations/error-mascot-v3.png"
+            src="/assets/brand/taskory-hub-logo.png"
             alt={t(translations.errors.application.alt)}
           />
         </div>
@@ -77,7 +87,10 @@ function ErrorFallback() {
   );
 }
 
-export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+export default class ErrorBoundary extends Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
   public readonly state: ErrorBoundaryState = { hasError: false };
 
   public static getDerivedStateFromError(): ErrorBoundaryState {

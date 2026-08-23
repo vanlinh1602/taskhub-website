@@ -20,10 +20,10 @@ export default function NotFoundPage() {
       >
         <img
           className="size-11 rounded-2xl shadow-control"
-          src="/assets/brand/banana-bud-logo.png"
+          src="/assets/brand/taskory-hub-logo.png"
           alt=""
         />
-        <span className="text-lg tracking-tight">Banana Bud</span>
+        <span className="text-lg tracking-tight">Taskory Hub</span>
       </Link>
 
       <section className="relative z-10 mx-auto grid w-full max-w-6xl flex-1 items-center gap-8 py-8 lg:grid-cols-[0.86fr_1.14fr] lg:gap-14 lg:py-4">
@@ -69,7 +69,7 @@ export default function NotFoundPage() {
           </span>
           <img
             className={styles.mascot}
-            src="/assets/illustrations/not-found-mascot.png"
+            src="/assets/brand/taskory-hub-logo.png"
             alt={t(translations.errors.notFound.alt)}
           />
         </div>
