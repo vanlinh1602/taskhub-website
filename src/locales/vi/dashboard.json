@@ -1,5 +1,13 @@
 {
+  "blocked": "Đang bị chặn",
+  "completedByDay": "Hoàn thành theo ngày",
   "description": "Lập kế hoạch, phân công và theo dõi các deadline chương truyện cùng đội ngũ của bạn trong Taskory Hub.",
-  "eyebrow": "Không gian làm việc đã sẵn sàng",
-  "title": "Mọi quy trình của bạn sẽ bắt đầu tại đây"
+  "extensions": "Gia hạn chờ duyệt",
+  "eyebrow": "Tổng quan vận hành",
+  "overdue": "Đã quá hạn",
+  "payments": "Chờ thanh toán",
+  "publishing": "Chờ xuất bản",
+  "stageProgress": "Tiến độ theo công đoạn",
+  "title": "Điều phối workspace",
+  "workspace": "Workspace"
 }

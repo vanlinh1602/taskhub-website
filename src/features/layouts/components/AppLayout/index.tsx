@@ -1,6 +1,7 @@
+import { useQuery } from '@tanstack/react-query';
 import { LogOut, Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Outlet, useLocation } from 'react-router';
 import { useShallow } from 'zustand/shallow';
@@ -20,18 +21,24 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { getWorkspaces } from '@/features/admin/apis';
 import { useUserStore } from '@/features/user/hooks';
+import { useWorkspaceStore } from '@/features/workspace/hooks';
 import { translations } from '@/locales/translations';
 
 import { findNavigationItem } from '../../constants/navigation';
 import { getNextTheme } from '../../utils/theme';
-import { getWorkspaceName } from '../../utils/workspace';
 import AppSidebar from '../AppSidebar';
 
 export default function AppLayout() {
   const { t } = useTranslation();
   const { resolvedTheme, setTheme } = useTheme();
   const { pathname } = useLocation();
+  const { activeWorkspaceId, setActiveWorkspace } = useWorkspaceStore();
+  const workspacesQuery = useQuery({
+    queryKey: ['workspace', 'list'],
+    queryFn: getWorkspaces,
+  });
   const { logout, user } = useUserStore(
     useShallow((state) => ({
       logout: state.logout,
@@ -46,10 +53,15 @@ export default function AppLayout() {
       ? t(navigationItem.label)
       : t(translations.common.appName);
   }, [pathname, t]);
-  const workspaceName = useMemo(
-    () => getWorkspaceName(user, t(translations.layouts.workspaceFallback)),
-    [t, user],
-  );
+  const activeWorkspace =
+    workspacesQuery.data?.find(
+      (workspace) => workspace.id === activeWorkspaceId,
+    ) ?? workspacesQuery.data?.[0];
+
+  useEffect(() => {
+    if (!activeWorkspaceId && activeWorkspace)
+      setActiveWorkspace(activeWorkspace);
+  }, [activeWorkspace, activeWorkspaceId, setActiveWorkspace]);
 
   function handleThemeToggle(): void {
     setTheme(getNextTheme(resolvedTheme));
@@ -72,17 +84,32 @@ export default function AppLayout() {
               />
               <div className="min-w-0">
                 <p className="hidden text-xs font-medium text-muted-foreground sm:block">
-                  {workspaceName}
+                  {activeWorkspace?.name ??
+                    t(translations.layouts.workspaceFallback)}
                 </p>
                 <h1 className="truncate text-base font-extrabold tracking-tight sm:text-lg">
                   {pageTitle}
                 </h1>
               </div>
               <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
-                <div className="hidden items-center gap-2 rounded-xl border border-border/70 bg-card/75 px-3 py-1.5 text-xs font-semibold shadow-sm md:flex">
-                  <span className="size-2 rounded-full bg-primary shadow-[0_0_0_4px_color-mix(in_oklch,var(--primary),transparent_85%)]" />
-                  <span className="max-w-44 truncate">{workspaceName}</span>
-                </div>
+                <select
+                  aria-label={t(translations.layouts.workspaceFallback)}
+                  className="hidden h-9 max-w-52 rounded-xl border border-border/70 bg-card px-3 text-xs font-semibold shadow-sm md:block"
+                  value={activeWorkspace?.id ?? ''}
+                  onChange={(event) =>
+                    setActiveWorkspace(
+                      workspacesQuery.data?.find(
+                        (workspace) => workspace.id === event.target.value,
+                      ),
+                    )
+                  }
+                >
+                  {workspacesQuery.data?.map((workspace) => (
+                    <option key={workspace.id} value={workspace.id}>
+                      {workspace.name}
+                    </option>
+                  ))}
+                </select>
                 <Button
                   aria-label={t(
                     isDarkTheme

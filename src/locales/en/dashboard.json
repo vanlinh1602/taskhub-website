@@ -1,5 +1,13 @@
 {
+  "blocked": "Blocked",
+  "completedByDay": "Completed by day",
   "description": "Plan, assign, and track chapter deadlines with your team in Taskory Hub.",
-  "eyebrow": "Your workspace is ready",
-  "title": "Your workflows will start here"
+  "extensions": "Pending extensions",
+  "eyebrow": "Operations overview",
+  "overdue": "Overdue",
+  "payments": "Pending payments",
+  "publishing": "Ready to publish",
+  "stageProgress": "Progress by stage",
+  "title": "Coordinate workspace",
+  "workspace": "Workspace"
 }
