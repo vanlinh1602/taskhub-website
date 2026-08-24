@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/sidebar';
 import { translations } from '@/locales/translations';
 
-import { navigationItems } from '../../constants/navigation';
+import { navigationSections } from '../../constants/navigation';
 
 export default function AppSidebar() {
   const { t } = useTranslation();
@@ -37,30 +37,35 @@ export default function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="px-2 group-data-[collapsible=icon]:px-1.5">
-        <SidebarGroup className="p-1 group-data-[collapsible=icon]:p-0">
-          <SidebarGroupLabel className="px-3 text-[0.65rem] font-bold tracking-[0.12em] text-sidebar-foreground/50 uppercase">
-            {t(translations.layouts.navigation)}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="gap-1">
-              {navigationItems.map((item) => (
-                <SidebarMenuItem key={item.id}>
-                  <SidebarMenuButton
-                    asChild
-                    className="h-10 rounded-xl px-3 font-semibold group-data-[collapsible=icon]:size-9! group-data-[collapsible=icon]:p-2.5! data-active:shadow-sm"
-                    isActive={pathname === item.href}
-                    tooltip={t(item.label)}
-                  >
-                    <NavLink to={item.href} end>
-                      <item.icon aria-hidden="true" />
-                      <span>{t(item.label)}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {navigationSections.map((section) => (
+          <SidebarGroup
+            key={section.id}
+            className="p-1 group-data-[collapsible=icon]:p-0"
+          >
+            <SidebarGroupLabel className="px-3 text-[0.65rem] font-bold tracking-[0.12em] text-sidebar-foreground/50 uppercase">
+              {t(section.label)}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-1">
+                {section.items.map((item) => (
+                  <SidebarMenuItem key={item.id}>
+                    <SidebarMenuButton
+                      asChild
+                      className="h-10 rounded-xl px-3 font-semibold group-data-[collapsible=icon]:size-9! group-data-[collapsible=icon]:p-2.5! data-active:shadow-sm"
+                      isActive={pathname === item.href}
+                      tooltip={t(item.label)}
+                    >
+                      <NavLink to={item.href} end>
+                        <item.icon aria-hidden="true" />
+                        <span>{t(item.label)}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
 
       <SidebarFooter className="p-3 group-data-[collapsible=icon]:hidden">

@@ -1,1 +1,16 @@
-{ "dashboard": "Tổng quan", "title": "Điều hướng" }
+{
+  "chapters": "Chapter",
+  "configuration": "Cấu hình",
+  "dashboard": "Tổng quan",
+  "deadlineExtensions": "Yêu cầu gia hạn",
+  "members": "Thành viên",
+  "operations": "Vận hành",
+  "overview": "Tổng quan",
+  "payroll": "Thanh toán",
+  "stages": "Công đoạn",
+  "stories": "Truyện",
+  "tasks": "Task",
+  "title": "Điều hướng",
+  "workflows": "Workflow",
+  "workspaceSettings": "Thiết lập workspace"
+}

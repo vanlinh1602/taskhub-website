@@ -1,0 +1,34 @@
+{
+  "chapters": {
+    "description": "Review and coordinate chapters as they move through the workspace workflow."
+  },
+  "deadlineExtensions": {
+    "description": "Review task deadline extension requests submitted by the team."
+  },
+  "eyebrow": "Workspace management",
+  "members": {
+    "description": "Manage workspace members, their roles, and their available work stages."
+  },
+  "payroll": {
+    "description": "Review completed work and track payments owed to workspace members."
+  },
+  "placeholder": {
+    "description": "This management area will be available in a later phase.",
+    "title": "Coming soon"
+  },
+  "stages": {
+    "description": "Define the production stages used to organize your workflow."
+  },
+  "stories": {
+    "description": "Manage stories and the workflows assigned to them."
+  },
+  "tasks": {
+    "description": "Monitor work items, assignments, deadlines, and completion status."
+  },
+  "workflows": {
+    "description": "Create and maintain reusable workflow templates for your stories."
+  },
+  "workspaceSettings": {
+    "description": "Configure workspace details, Discord roles and channels, and shared Google Drive folders."
+  }
+}

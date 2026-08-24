@@ -8,6 +8,9 @@ import FirebaseAuthObserver from '@/features/user/components/FirebaseAuthObserve
 import AuthRouter from './AuthRouter';
 
 const DashboardPage = lazy(() => import('@/pages/Dashboard'));
+const ManagementPlaceholderPage = lazy(
+  () => import('@/pages/ManagementPlaceholder'),
+);
 const NotFoundPage = lazy(() => import('@/pages/NotFound'));
 const LoginPage = lazy(() => import('@/pages/Login'));
 
@@ -26,6 +29,21 @@ function App() {
                 element={<Navigate to={DEFAULT_PROTECTED_PATH} replace />}
               />
               <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="chapters" element={<ManagementPlaceholderPage />} />
+              <Route
+                path="deadline-extensions"
+                element={<ManagementPlaceholderPage />}
+              />
+              <Route path="members" element={<ManagementPlaceholderPage />} />
+              <Route path="payroll" element={<ManagementPlaceholderPage />} />
+              <Route path="stages" element={<ManagementPlaceholderPage />} />
+              <Route path="stories" element={<ManagementPlaceholderPage />} />
+              <Route path="tasks" element={<ManagementPlaceholderPage />} />
+              <Route path="workflows" element={<ManagementPlaceholderPage />} />
+              <Route
+                path="workspace-settings"
+                element={<ManagementPlaceholderPage />}
+              />
             </Route>
           </Route>
           <Route path="*" element={<NotFoundPage />} />

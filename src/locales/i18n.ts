@@ -7,12 +7,14 @@ import enCommon from './en/common.json';
 import enDashboard from './en/dashboard.json';
 import enErrors from './en/errors.json';
 import enLayouts from './en/layouts.json';
+import enManagement from './en/management.json';
 import enNavigation from './en/navigation.json';
 import viAuth from './vi/auth.json';
 import viCommon from './vi/common.json';
 import viDashboard from './vi/dashboard.json';
 import viErrors from './vi/errors.json';
 import viLayouts from './vi/layouts.json';
+import viManagement from './vi/management.json';
 import viNavigation from './vi/navigation.json';
 
 export const translationsJson = {
@@ -23,6 +25,7 @@ export const translationsJson = {
       dashboard: enDashboard,
       errors: enErrors,
       layouts: enLayouts,
+      management: enManagement,
       navigation: enNavigation,
     },
   },
@@ -33,6 +36,7 @@ export const translationsJson = {
       dashboard: viDashboard,
       errors: viErrors,
       layouts: viLayouts,
+      management: viManagement,
       navigation: viNavigation,
     },
   },

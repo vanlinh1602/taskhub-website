@@ -1,0 +1,34 @@
+{
+  "chapters": {
+    "description": "Theo dõi và điều phối chapter trong quy trình làm việc của workspace."
+  },
+  "deadlineExtensions": {
+    "description": "Xét duyệt các yêu cầu gia hạn deadline task từ thành viên."
+  },
+  "eyebrow": "Quản lý workspace",
+  "members": {
+    "description": "Quản lý thành viên workspace, vai trò và các công đoạn có thể nhận."
+  },
+  "payroll": {
+    "description": "Theo dõi công việc đã hoàn thành và các khoản cần thanh toán cho thành viên."
+  },
+  "placeholder": {
+    "description": "Khu vực quản lý này sẽ được triển khai ở giai đoạn tiếp theo.",
+    "title": "Sắp có"
+  },
+  "stages": {
+    "description": "Thiết lập các công đoạn sản xuất để tổ chức quy trình làm việc."
+  },
+  "stories": {
+    "description": "Quản lý truyện và workflow được gán cho từng truyện."
+  },
+  "tasks": {
+    "description": "Theo dõi task, phân công, deadline và trạng thái hoàn thành."
+  },
+  "workflows": {
+    "description": "Tạo và quản lý các workflow mẫu tái sử dụng cho truyện."
+  },
+  "workspaceSettings": {
+    "description": "Thiết lập thông tin workspace, role và kênh Discord, cùng các thư mục Google Drive dùng chung."
+  }
+}

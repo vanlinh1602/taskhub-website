@@ -1,1 +1,16 @@
-{ "dashboard": "Dashboard", "title": "Navigation" }
+{
+  "chapters": "Chapters",
+  "configuration": "Configuration",
+  "dashboard": "Dashboard",
+  "deadlineExtensions": "Deadline extensions",
+  "members": "Members",
+  "operations": "Operations",
+  "overview": "Overview",
+  "payroll": "Payroll",
+  "stages": "Stages",
+  "stories": "Stories",
+  "tasks": "Tasks",
+  "title": "Navigation",
+  "workflows": "Workflows",
+  "workspaceSettings": "Workspace settings"
+}
