@@ -1,0 +1,52 @@
+---
+description: Product UI and visual design standards
+globs:
+  - "src/**/*.tsx"
+  - "src/**/*.css"
+alwaysApply: true
+---
+
+# UI Design Standards
+
+Build interfaces that feel modern, youthful, approachable, and efficient. Prioritize a calm, clear hierarchy over visual novelty, so people can understand what to do at a glance.
+
+## Component-first delivery
+
+- Reuse an existing application component before creating a new one.
+- For common interactive UI, use the shadcn/ui primitives already available in `src/components/ui/`.
+- When a required primitive is missing, add it with `npx shadcn@latest add <name>` rather than recreating its behavior or accessibility features by hand.
+- Compose shadcn/ui components with Tailwind and app-specific wrappers. Do not fork or substantially rewrite generated primitives unless there is a demonstrated product need.
+- Use `lucide-react` for interface icons. Choose familiar icons, give icon-only controls an accessible label, and pair an icon with text when the action could be unclear.
+
+## Layout and hierarchy
+
+- Give every screen one obvious primary task and one visually dominant primary action.
+- Use a consistent page structure: page title and concise context, primary actions, core content, then secondary details.
+- Group related controls and information in clear sections. Avoid dense, unstructured control clusters.
+- Use responsive layouts deliberately: start with a usable single-column mobile layout, then add columns only when they improve scanning or comparison.
+- Keep content widths readable, align repeated elements to a shared grid, and use consistent spacing tokens instead of arbitrary spacing or dimensions.
+- Use cards, borders, background surfaces, and shadows sparingly to clarify grouping. Avoid excessive nested cards, heavy shadows, and decorative containers.
+
+## Visual language
+
+- Prefer generous whitespace, balanced proportions, readable type, rounded corners, and subtle motion to create a fresh and friendly product feel.
+- Use the semantic theme tokens from `src/index.css`; do not introduce one-off colors, fonts, or a parallel visual theme.
+- Establish hierarchy through size, weight, spacing, and contrast before adding color.
+- Keep accent color purposeful: reserve it for primary actions, selected states, and important status—not every interactive element.
+- Use color, icons, and text together for status and feedback. Never use color as the only signal.
+- Keep animations brief and functional. Respect `prefers-reduced-motion`; avoid distracting, continuous, or layout-shifting animation.
+
+## Usability and accessibility
+
+- Make interactive targets easy to tap, with visible hover, focus, active, disabled, loading, empty, and error states where applicable.
+- Preserve keyboard navigation and visible focus indicators. Use the semantic behavior supplied by shadcn/ui instead of non-semantic clickable `div` elements.
+- Use clear, action-oriented labels. Avoid ambiguous icon-only actions and technical wording in user-facing UI.
+- Ensure text and interactive controls have sufficient contrast in both light and dark modes.
+- Design empty, loading, error, and success states as part of each workflow, including a helpful next action whenever possible.
+
+## Interaction patterns
+
+- Use dialogs only for focused, short tasks or destructive-action confirmation. Use sheets for secondary detail or contextual workflows; use a dedicated page for complex, multi-step work.
+- Prefer inline validation close to the field, then summarize errors when a form has multiple issues.
+- Request confirmation only for consequential or destructive actions. Make destructive actions visually distinct and explain their impact.
+- Use toasts for transient outcome feedback, not for information that must remain visible or requires a decision.

@@ -1,5 +1,4 @@
 export const ROUTES = {
-  CHAPTERS: '/chapters',
   DASHBOARD: '/dashboard',
   DEADLINE_EXTENSIONS: '/deadline-extensions',
   LOGIN: '/login',

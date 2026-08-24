@@ -15,7 +15,10 @@ import {
 } from '@/components/ui/sidebar';
 import { translations } from '@/locales/translations';
 
-import { navigationSections } from '../../constants/navigation';
+import {
+  isNavigationItemActive,
+  navigationSections,
+} from '../../constants/navigation';
 
 export default function AppSidebar() {
   const { t } = useTranslation();
@@ -52,7 +55,7 @@ export default function AppSidebar() {
                     <SidebarMenuButton
                       asChild
                       className="h-10 rounded-xl px-3 font-semibold group-data-[collapsible=icon]:size-9! group-data-[collapsible=icon]:p-2.5! data-active:shadow-sm"
-                      isActive={pathname === item.href}
+                      isActive={isNavigationItemActive(item, pathname)}
                       tooltip={t(item.label)}
                     >
                       <NavLink to={item.href} end>

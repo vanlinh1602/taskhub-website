@@ -4,6 +4,7 @@ Before any code change, read these (all are `alwaysApply: true` for Cursor):
 
 - `.cursor/rules/typescript.mdc` — TypeScript conventions and code quality
 - `.cursor/rules/react.mdc` — React app architecture, antd/Tailwind, React Query, Zustand
+- `.cursor/rules/ui-design.mdc` — UI design, usability, accessibility, and shadcn/ui usage
 
 `.cursor/rules/` is the single source of truth for coding rules in this repo. Cursor auto-attaches them via `.mdc` frontmatter; Claude and Codex load them via this file.
 

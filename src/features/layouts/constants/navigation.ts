@@ -2,7 +2,6 @@ import {
   BookOpen,
   CalendarClock,
   CircleDollarSign,
-  Layers3,
   LayoutDashboard,
   ListTodo,
   Settings2,
@@ -39,13 +38,6 @@ export const navigationSections = [
         icon: BookOpen,
         label: translations.navigation.stories,
         description: translations.management.stories.description,
-      },
-      {
-        id: 'chapters',
-        href: ROUTES.CHAPTERS,
-        icon: Layers3,
-        label: translations.navigation.chapters,
-        description: translations.management.chapters.description,
       },
       {
         id: 'tasks',
@@ -114,5 +106,12 @@ export const navigationItems: readonly NavigationItem[] =
 export function findNavigationItem(
   pathname: string,
 ): NavigationItem | undefined {
-  return navigationItems.find((item) => item.href === pathname);
+  return navigationItems.find((item) => isNavigationItemActive(item, pathname));
+}
+
+export function isNavigationItemActive(
+  item: NavigationItem,
+  pathname: string,
+): boolean {
+  return pathname === item.href || pathname.startsWith(`${item.href}/`);
 }
