@@ -29,3 +29,5 @@ firebase.json
 
 *.cache
 .env
+.env.qa
+.env.production
