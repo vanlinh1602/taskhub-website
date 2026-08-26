@@ -1,0 +1,42 @@
+---
+description: Taskory Hub visual design system (Calm Mint Workspace)
+globs: src/**/*.{tsx,css,module.css}
+alwaysApply: false
+---
+
+# Design — Calm Mint Workspace
+
+Taskory Hub UI for teams managing deadlines and assignments. Modern, friendly, mature — not childish. Prefer real workflows over showcase layouts.
+
+## Direction
+
+- Primary: mint/teal. Light canvas + soft pastels. Optional honey accent for **one** highlight per screen.
+- Airy layout, clear hierarchy. Rounded cards, soft shadow, subtle gradient — sparingly.
+- Decoration (sparkle, soft shapes): **empty states / hero only**, almost never on work chrome.
+- Vary section scale/presentation; one clear visual anchor per screen.
+- Responsive desktop → tablet → mobile (sidebar → bottom nav). Readable contrast always.
+
+## Tokens (source of truth: `src/index.css`)
+
+- Do not invent parallel color/font systems. Use CSS variables / Tailwind theme colors (`primary`, `secondary`, `muted`, `accent`, `destructive`, shadows).
+- Typography: system UI stack (Unicode/UTF-8 via OS fonts). No custom webfonts unless product explicitly adds them.
+- Icons: `lucide-react` only, consistent size/stroke.
+
+## Components
+
+- Prefer shadcn primitives; compose with `cn()`.
+- Cards: use for interactive/grouped content; avoid identical card grids everywhere.
+- Summary band / gradient hero: at most one per screen.
+- Empty, loading, and toasts should feel on-brand (short personality) without cute overload. Errors stay clear (`toast` + `formatError`).
+
+## Motion & states
+
+- Hover/focus/active: light bg/border/opacity; focus ring = primary; 150–250ms ease.
+- No strong glow, bounce on every card, or looping decorative animation on work screens.
+- Loading: skeleton/spinner that preserves layout when possible.
+
+## Anti-patterns
+
+- Pink as dominant color; heavy gradient/shadow stacks; meaningless whitespace.
+- Flat “template” dashboards with repeated identical cards.
+- Hardcoded blue/purple theme hex when tokens already express mint/teal.
