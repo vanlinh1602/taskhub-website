@@ -17,6 +17,7 @@ const StoryDetailPage = lazy(() => import('@/pages/Stories/Detail'));
 const ChapterDetailPage = lazy(() => import('@/pages/Stories/ChapterDetail'));
 const LoginPage = lazy(() => import('@/pages/Login'));
 const MembersPage = lazy(() => import('@/pages/Members'));
+const TasksPage = lazy(() => import('@/pages/Tasks'));
 
 function App() {
   return (
@@ -46,7 +47,7 @@ function App() {
                 path="stories/:storyId/chapter/:chapterId"
                 element={<ChapterDetailPage />}
               />
-              <Route path="tasks" element={<ManagementPlaceholderPage />} />
+              <Route path="tasks" element={<TasksPage />} />
               <Route path="workflows" element={<ManagementPlaceholderPage />} />
               <Route
                 path="workspace-settings"
