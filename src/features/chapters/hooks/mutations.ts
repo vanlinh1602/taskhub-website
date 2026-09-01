@@ -8,12 +8,15 @@ import {
 import { adminQueryKeys } from '@/features/admin/hooks';
 import {
   createChapter,
+  deductChapterTask,
+  notifyChapterProgress,
   updateChapterConfiguration,
   updateChapterPublication,
   updateChapterTask,
 } from '@/features/chapters/apis';
 import type {
   CreateChapterInput,
+  DeductChapterTaskInput,
   UpdateChapterConfigurationInput,
   UpdateChapterTaskInput,
 } from '@/features/chapters/types';
@@ -33,6 +36,11 @@ interface UpdateChapterPublicationMutationInput {
 interface UpdateChapterTaskMutationInput {
   readonly taskId: string;
   readonly input: UpdateChapterTaskInput;
+}
+
+interface DeductChapterTaskMutationInput {
+  readonly taskId: string;
+  readonly input: DeductChapterTaskInput;
 }
 
 export async function invalidateChapterListQueries(
@@ -142,8 +150,16 @@ export function useUpdateChapterPublicationMutation(
         chapterId,
         publicationStatus,
       ),
-    onSuccess: async () => {
-      await invalidateChapterListQueries(queryClient, workspaceId, storyId);
+    onSuccess: async (_result, { chapterId }) => {
+      await Promise.all([
+        invalidateChapterListQueries(queryClient, workspaceId, storyId),
+        queryClient.invalidateQueries({
+          queryKey: chaptersQueryKeys.detail(workspaceId, storyId, chapterId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: adminQueryKeys.dashboardRoot(),
+        }),
+      ]);
     },
   });
 }
@@ -169,7 +185,39 @@ export function useUpdateChapterTaskMutation(
   });
 }
 
+export function useDeductChapterTaskMutation(
+  workspaceId: string,
+  storyId: string,
+  chapterId: string,
+): UseMutationResult<void, Error, DeductChapterTaskMutationInput, unknown> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ taskId, input }: DeductChapterTaskMutationInput) =>
+      deductChapterTask(workspaceId, storyId, chapterId, taskId, input),
+    onSuccess: async () => {
+      await invalidateChapterTaskQueries(
+        queryClient,
+        workspaceId,
+        storyId,
+        chapterId,
+      );
+    },
+  });
+}
+
+export function useNotifyChapterProgressMutation(
+  workspaceId: string,
+  storyId: string,
+  chapterId: string,
+): UseMutationResult<void, Error, void, unknown> {
+  return useMutation({
+    mutationFn: () => notifyChapterProgress(workspaceId, storyId, chapterId),
+  });
+}
+
 export type {
+  DeductChapterTaskMutationInput,
   UpdateChapterConfigurationMutationInput,
   UpdateChapterPublicationMutationInput,
   UpdateChapterTaskMutationInput,

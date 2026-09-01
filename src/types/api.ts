@@ -40,7 +40,10 @@ export type GeneralApiProblem =
    */
   | { kind: 'cancelled' };
 
-export type ApiProblems = GeneralApiProblem & { error?: Error };
+export type ApiProblems = GeneralApiProblem & {
+  data?: unknown;
+  error?: Error;
+};
 
 export type ApiEnvelope<T> = {
   statusCode: number;

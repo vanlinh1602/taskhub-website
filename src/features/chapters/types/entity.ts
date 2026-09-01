@@ -99,3 +99,9 @@ export interface UpdateChapterTaskInput {
   readonly agreedPrice?: string;
   readonly assigneeDiscordUserId?: string | null;
 }
+
+export interface DeductChapterTaskInput {
+  readonly amount: string;
+  readonly reason: string;
+  readonly evidenceUrl?: string;
+}

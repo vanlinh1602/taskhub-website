@@ -44,6 +44,9 @@ function getApiProblem(response: ApiResponse<any>): ApiProblems {
   if (response.originalError) {
     problem.error = response.originalError;
   }
+  if (response.data !== undefined) {
+    problem.data = response.data;
+  }
 
   return problem;
 }

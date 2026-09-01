@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  deductChapterTask,
   getChapter,
+  notifyChapterProgress,
   updateChapterConfiguration,
+  updateChapterPublication,
   updateChapterTask,
 } from '@/features/chapters/apis';
 import { backendService } from '@/services';
@@ -43,6 +46,24 @@ describe('chapter APIs', () => {
     );
   });
 
+  it('patches chapter publication status with the encoded chapter scope', async () => {
+    const patch = vi
+      .spyOn(backendService, 'patch')
+      .mockResolvedValue({ kind: 'ok', data: null } as never);
+
+    await updateChapterPublication(
+      'workspace id',
+      'story/id',
+      'chapter id',
+      'PUBLISHED',
+    );
+
+    expect(patch).toHaveBeenCalledWith(
+      '/api/story-workflow/workspace%20id/stories/story%2Fid/chapters/chapter%20id/publication',
+      { publicationStatus: 'PUBLISHED' },
+    );
+  });
+
   it('patches a task with the manager update payload and encoded scope', async () => {
     const patch = vi
       .spyOn(backendService, 'patch')
@@ -59,6 +80,42 @@ describe('chapter APIs', () => {
     expect(patch).toHaveBeenCalledWith(
       '/api/story-workflow/workspace%20id/stories/story%2Fid/chapters/chapter%20id/tasks/task%2Fid',
       { agreedPrice: '150000.00', assigneeDiscordUserId: null },
+    );
+  });
+
+  it('posts a deduction with the encoded task scope', async () => {
+    const post = vi
+      .spyOn(backendService, 'post')
+      .mockResolvedValue({ kind: 'ok', data: null } as never);
+    const input = {
+      amount: '12.50',
+      reason: 'Needs revision',
+      evidenceUrl: 'https://discord.com/channels/example',
+    };
+
+    await deductChapterTask(
+      'workspace id',
+      'story/id',
+      'chapter id',
+      'task/id',
+      input,
+    );
+
+    expect(post).toHaveBeenCalledWith(
+      '/api/story-workflow/workspace%20id/stories/story%2Fid/chapters/chapter%20id/tasks/task%2Fid/deduction',
+      input,
+    );
+  });
+
+  it('posts a progress notification with the encoded chapter scope', async () => {
+    const post = vi
+      .spyOn(backendService, 'post')
+      .mockResolvedValue({ kind: 'ok', data: null } as never);
+
+    await notifyChapterProgress('workspace id', 'story/id', 'chapter id');
+
+    expect(post).toHaveBeenCalledWith(
+      '/api/story-workflow/workspace%20id/stories/story%2Fid/chapters/chapter%20id/progress-notification',
     );
   });
 });

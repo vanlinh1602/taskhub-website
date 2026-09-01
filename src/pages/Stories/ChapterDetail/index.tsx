@@ -3,12 +3,15 @@ import {
   CalendarClock,
   CheckCircle2,
   CircleDollarSign,
+  CircleMinus,
   Clock3,
   ExternalLink,
   FileText,
   ListChecks,
   RefreshCw,
+  Send,
   Settings2,
+  Upload,
   UserRound,
 } from 'lucide-react';
 import { type FormEvent, type ReactNode, useMemo, useState } from 'react';
@@ -55,9 +58,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
 import {
   useChapterQuery,
+  useDeductChapterTaskMutation,
+  useNotifyChapterProgressMutation,
   useUpdateChapterConfigurationMutation,
+  useUpdateChapterPublicationMutation,
   useUpdateChapterTaskMutation,
 } from '@/features/chapters/hooks';
 import type {
@@ -69,6 +76,7 @@ import type {
   ChapterTask,
   ChapterTaskStatus,
   ChapterWorkflowStatus,
+  DeductChapterTaskInput,
   UpdateChapterTaskInput,
 } from '@/features/chapters/types';
 import { filterTaskAssignees } from '@/features/chapters/utils';
@@ -110,6 +118,10 @@ export default function ChapterDetailPage(): ReactNode {
   const [taskStatusDirty, setTaskStatusDirty] = useState(false);
   const [taskPrice, setTaskPrice] = useState('');
   const [taskAssignee, setTaskAssignee] = useState(unassignedValue);
+  const [deductionTask, setDeductionTask] = useState<ChapterTask | null>(null);
+  const [deductionAmount, setDeductionAmount] = useState('');
+  const [deductionReason, setDeductionReason] = useState('');
+  const [deductionEvidenceUrl, setDeductionEvidenceUrl] = useState('');
   const chapterQuery = useChapterQuery(workspaceId, storyId, chapterId);
   const membersQuery = useMembersQuery(workspaceId, {
     enabled: Boolean(editingTask),
@@ -126,6 +138,20 @@ export default function ChapterDetailPage(): ReactNode {
     workspaceId,
     storyId,
     chapterId,
+  );
+  const deductionMutation = useDeductChapterTaskMutation(
+    workspaceId,
+    storyId,
+    chapterId,
+  );
+  const progressMutation = useNotifyChapterProgressMutation(
+    workspaceId,
+    storyId,
+    chapterId,
+  );
+  const publicationMutation = useUpdateChapterPublicationMutation(
+    workspaceId,
+    storyId,
   );
   const dateFormatter = useMemo(
     () =>
@@ -166,6 +192,14 @@ export default function ChapterDetailPage(): ReactNode {
     setTaskStatusDirty(false);
     setTaskPrice(task.agreedPrice ?? '');
     setTaskAssignee(task.assignee?.discordUserId ?? unassignedValue);
+  }
+
+  function openTaskDeduction(task: ChapterTask): void {
+    if (task.paymentStatus === 'PAID') return;
+    setDeductionTask(task);
+    setDeductionAmount('');
+    setDeductionReason('');
+    setDeductionEvidenceUrl('');
   }
 
   function submitChapter(event: FormEvent<HTMLFormElement>): void {
@@ -211,6 +245,66 @@ export default function ChapterDetailPage(): ReactNode {
           setEditingTask(null);
           toast.success(t(translations.management.stories.taskSaved));
         },
+        onError: (error: Error) => toast.error(formatError(error)),
+      },
+    );
+  }
+
+  function submitDeduction(event: FormEvent<HTMLFormElement>): void {
+    event.preventDefault();
+    if (!deductionTask) return;
+    if (!/^\d+(?:\.\d{1,2})?$/.test(deductionAmount) || Number(deductionAmount) <= 0) {
+      toast.error(t(translations.management.stories.deductionAmountInvalid));
+      return;
+    }
+    if (!deductionReason.trim()) {
+      toast.error(t(translations.management.stories.deductReasonRequired));
+      return;
+    }
+    const input: DeductChapterTaskInput = {
+      amount: deductionAmount,
+      reason: deductionReason,
+      ...(deductionEvidenceUrl.trim()
+        ? { evidenceUrl: deductionEvidenceUrl.trim() }
+        : {}),
+    };
+    deductionMutation.mutate(
+      { taskId: deductionTask.id, input },
+      {
+        onSuccess: () => {
+          setDeductionTask(null);
+          toast.success(t(translations.management.stories.deductionSaved));
+        },
+        onError: (error: Error) => toast.error(formatError(error)),
+      },
+    );
+  }
+
+  function notifyProgress(): void {
+    progressMutation.mutate(undefined, {
+      onSuccess: () =>
+        toast.success(t(translations.management.stories.notifyProgressSuccess)),
+      onError: (error: Error) => toast.error(formatError(error)),
+    });
+  }
+
+  function togglePublication(): void {
+    if (!detail) return;
+    const isPublished = detail.chapter.publicationStatus === 'PUBLISHED';
+    publicationMutation.mutate(
+      {
+        chapterId,
+        publicationStatus: isPublished ? 'UNPUBLISHED' : 'PUBLISHED',
+      },
+      {
+        onSuccess: () =>
+          toast.success(
+            t(
+              isPublished
+                ? translations.management.stories.unpublished
+                : translations.management.stories.published,
+            ),
+          ),
         onError: (error: Error) => toast.error(formatError(error)),
       },
     );
@@ -309,6 +403,38 @@ export default function ChapterDetailPage(): ReactNode {
             <Button onClick={openChapterEditor} size="sm" variant="outline">
               <Settings2 aria-hidden="true" />
               {t(translations.management.stories.editChapter)}
+            </Button>
+            <Button
+              disabled={publicationMutation.isPending}
+              onClick={togglePublication}
+              size="sm"
+              variant={
+                chapter.publicationStatus === 'PUBLISHED'
+                  ? 'outline'
+                  : 'default'
+              }
+            >
+              {publicationMutation.isPending ? (
+                <RefreshCw aria-hidden="true" className="animate-spin" />
+              ) : (
+                <Upload aria-hidden="true" />
+              )}
+              {chapter.publicationStatus === 'PUBLISHED'
+                ? t(translations.management.stories.unpublish)
+                : t(translations.management.stories.publish)}
+            </Button>
+            <Button
+              disabled={progressMutation.isPending}
+              onClick={notifyProgress}
+              size="sm"
+              variant="outline"
+            >
+              {progressMutation.isPending ? (
+                <RefreshCw aria-hidden="true" className="animate-spin" />
+              ) : (
+                <Send aria-hidden="true" />
+              )}
+              {t(translations.management.stories.notifyProgress)}
             </Button>
             {chapter.googleDriveUrl ? (
               <Button asChild size="sm" variant="outline">
@@ -472,6 +598,7 @@ export default function ChapterDetailPage(): ReactNode {
               compactDateFormatter={compactDateFormatter}
               dateFormatter={dateFormatter}
               language={i18n.language}
+              onDeduct={openTaskDeduction}
               onEdit={openTaskEditor}
               tasks={tasks}
             />
@@ -481,6 +608,7 @@ export default function ChapterDetailPage(): ReactNode {
                   dateFormatter={dateFormatter}
                   key={task.id}
                   language={i18n.language}
+                  onDeduct={() => openTaskDeduction(task)}
                   onEdit={() => openTaskEditor(task)}
                   task={task}
                 />
@@ -588,6 +716,20 @@ export default function ChapterDetailPage(): ReactNode {
         price={taskPrice}
         status={taskStatus}
         assignee={taskAssignee}
+      />
+
+      <TaskDeductionDialog
+        amount={deductionAmount}
+        evidenceUrl={deductionEvidenceUrl}
+        isPending={deductionMutation.isPending}
+        language={i18n.language}
+        onAmountChange={setDeductionAmount}
+        onEvidenceUrlChange={setDeductionEvidenceUrl}
+        onOpenChange={(open) => !open && setDeductionTask(null)}
+        onReasonChange={setDeductionReason}
+        onSubmit={submitDeduction}
+        reason={deductionReason}
+        task={deductionTask}
       />
     </section>
   );
@@ -757,16 +899,132 @@ function TaskEditDialog({
   );
 }
 
+function TaskDeductionDialog({
+  amount,
+  evidenceUrl,
+  isPending,
+  language,
+  onAmountChange,
+  onEvidenceUrlChange,
+  onOpenChange,
+  onReasonChange,
+  onSubmit,
+  reason,
+  task,
+}: {
+  amount: string;
+  evidenceUrl: string;
+  isPending: boolean;
+  language: string;
+  onAmountChange: (value: string) => void;
+  onEvidenceUrlChange: (value: string) => void;
+  onOpenChange: (open: boolean) => void;
+  onReasonChange: (value: string) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  reason: string;
+  task: ChapterTask | null;
+}): ReactNode {
+  const { t } = useTranslation();
+
+  return (
+    <Dialog open={task !== null} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {t(translations.management.stories.deductMoneyTitle)}
+          </DialogTitle>
+        </DialogHeader>
+        {task ? (
+          <form className="space-y-4" onSubmit={onSubmit}>
+            <div className="rounded-xl bg-muted/50 px-3 py-2.5">
+              <p className="font-semibold">{task.stageName}</p>
+              <p className="text-xs text-muted-foreground">
+                {t(translations.management.stories.taskId, { id: task.id })}
+                {' · '}
+                {t(translations.management.stories.agreedPrice)}:{' '}
+                {formatMoney(task.agreedPrice, task.currency, language)}
+              </p>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {t(translations.management.stories.deductMoneyDescription)}
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="task-deduction-amount">
+                {t(translations.management.stories.deductAmount)}
+              </Label>
+              <Input
+                id="task-deduction-amount"
+                inputMode="decimal"
+                min="0.01"
+                onChange={(event) => onAmountChange(event.target.value)}
+                step="0.01"
+                type="number"
+                value={amount}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                {t(translations.management.stories.deductAmountHint)}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="task-deduction-reason">
+                {t(translations.management.stories.deductReason)}
+              </Label>
+              <Textarea
+                id="task-deduction-reason"
+                maxLength={1000}
+                onChange={(event) => onReasonChange(event.target.value)}
+                value={reason}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="task-deduction-evidence">
+                {t(translations.management.stories.deductEvidenceUrl)}
+              </Label>
+              <Input
+                id="task-deduction-evidence"
+                onChange={(event) => onEvidenceUrlChange(event.target.value)}
+                placeholder="https://discord.com/channels/..."
+                type="url"
+                value={evidenceUrl}
+              />
+              <p className="text-xs text-muted-foreground">
+                {t(translations.management.stories.deductEvidenceHint)}
+              </p>
+            </div>
+            <Button
+              className="w-full"
+              disabled={isPending}
+              type="submit"
+              variant="destructive"
+            >
+              {isPending ? (
+                <RefreshCw aria-hidden="true" className="animate-spin" />
+              ) : (
+                <CircleMinus aria-hidden="true" />
+              )}
+              {t(translations.management.stories.deductSubmit)}
+            </Button>
+          </form>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function TaskTable({
   compactDateFormatter,
   dateFormatter,
   language,
+  onDeduct,
   onEdit,
   tasks,
 }: {
   compactDateFormatter: Intl.DateTimeFormat;
   dateFormatter: Intl.DateTimeFormat;
   language: string;
+  onDeduct: (task: ChapterTask) => void;
   onEdit: (task: ChapterTask) => void;
   tasks: readonly ChapterTask[];
 }): ReactNode {
@@ -831,14 +1089,27 @@ function TaskTable({
                 <PaymentStatusBadge status={task.paymentStatus} />
               </TableCell>
               <TableCell className="text-right">
-                <Button
-                  aria-label={t(translations.management.stories.editTask)}
-                  onClick={() => onEdit(task)}
-                  size="icon-sm"
-                  variant="ghost"
-                >
-                  <Settings2 aria-hidden="true" />
-                </Button>
+                <div className="inline-flex items-center gap-1">
+                  <Button
+                    aria-label={t(translations.management.stories.deductMoney)}
+                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    disabled={task.paymentStatus === 'PAID'}
+                    onClick={() => onDeduct(task)}
+                    size="icon-sm"
+                    variant="ghost"
+                  >
+                    <CircleMinus aria-hidden="true" />
+                  </Button>
+                  <Button
+                    aria-label={t(translations.management.stories.editTask)}
+                    className="text-primary hover:bg-primary/10 hover:text-primary"
+                    onClick={() => onEdit(task)}
+                    size="icon-sm"
+                    variant="ghost"
+                  >
+                    <Settings2 aria-hidden="true" />
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           ))}
@@ -913,11 +1184,13 @@ function CompactTime({
 function TaskCard({
   dateFormatter,
   language,
+  onDeduct,
   onEdit,
   task,
 }: {
   dateFormatter: Intl.DateTimeFormat;
   language: string;
+  onDeduct: () => void;
   onEdit: () => void;
   task: ChapterTask;
 }): ReactNode {
@@ -935,7 +1208,18 @@ function TaskCard({
           <TaskStatusBadge status={task.status} />
           <PaymentStatusBadge status={task.paymentStatus} />
           <Button
+            aria-label={t(translations.management.stories.deductMoney)}
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            disabled={task.paymentStatus === 'PAID'}
+            onClick={onDeduct}
+            size="icon-sm"
+            variant="ghost"
+          >
+            <CircleMinus aria-hidden="true" />
+          </Button>
+          <Button
             aria-label={t(translations.management.stories.editTask)}
+            className="text-primary hover:bg-primary/10 hover:text-primary"
             onClick={onEdit}
             size="icon-sm"
             variant="ghost"

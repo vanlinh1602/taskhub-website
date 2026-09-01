@@ -13,6 +13,7 @@ export type {
   ChapterWorkflowStatus,
   ChapterWorkflowSummary,
   CreateChapterInput,
+  DeductChapterTaskInput,
   UpdateChapterConfigurationInput,
   UpdateChapterTaskInput,
 } from './entity';

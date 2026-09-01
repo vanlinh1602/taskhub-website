@@ -6,6 +6,7 @@ import type {
   ChapterPage,
   ChapterWorkflowFilter,
   CreateChapterInput,
+  DeductChapterTaskInput,
   UpdateChapterConfigurationInput,
   UpdateChapterTaskInput,
 } from '../types';
@@ -89,6 +90,31 @@ export async function updateChapterTask(
   const response = await backendService.patch(
     `/api/story-workflow/${encodeURIComponent(workspaceId)}/stories/${encodeURIComponent(storyId)}/chapters/${encodeURIComponent(chapterId)}/tasks/${encodeURIComponent(taskId)}`,
     input,
+  );
+  if (response.kind !== 'ok') throw new Error(formatError(response));
+}
+
+export async function deductChapterTask(
+  workspaceId: string,
+  storyId: string,
+  chapterId: string,
+  taskId: string,
+  input: DeductChapterTaskInput,
+): Promise<void> {
+  const response = await backendService.post(
+    `/api/story-workflow/${encodeURIComponent(workspaceId)}/stories/${encodeURIComponent(storyId)}/chapters/${encodeURIComponent(chapterId)}/tasks/${encodeURIComponent(taskId)}/deduction`,
+    input,
+  );
+  if (response.kind !== 'ok') throw new Error(formatError(response));
+}
+
+export async function notifyChapterProgress(
+  workspaceId: string,
+  storyId: string,
+  chapterId: string,
+): Promise<void> {
+  const response = await backendService.post(
+    `/api/story-workflow/${encodeURIComponent(workspaceId)}/stories/${encodeURIComponent(storyId)}/chapters/${encodeURIComponent(chapterId)}/progress-notification`,
   );
   if (response.kind !== 'ok') throw new Error(formatError(response));
 }
