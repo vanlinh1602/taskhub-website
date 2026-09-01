@@ -21,6 +21,8 @@ const MembersPage = lazy(() => import('@/pages/Members'));
 const TasksPage = lazy(() => import('@/pages/Tasks'));
 const StagesPage = lazy(() => import('@/pages/Stages'));
 const WorkspaceSettingsPage = lazy(() => import('@/pages/WorkspaceSettings'));
+const WorkflowsPage = lazy(() => import('@/pages/Workflows'));
+const WorkflowEditorPage = lazy(() => import('@/pages/Workflows/Editor'));
 
 function App() {
   return (
@@ -51,7 +53,11 @@ function App() {
                 element={<ChapterDetailPage />}
               />
               <Route path="tasks" element={<TasksPage />} />
-              <Route path="workflows" element={<ManagementPlaceholderPage />} />
+              <Route path="workflows" element={<WorkflowsPage />} />
+              <Route
+                path="workflows/:workflowId"
+                element={<WorkflowEditorPage />}
+              />
               <Route
                 path="workspace-settings"
                 element={<WorkspaceSettingsPage />}

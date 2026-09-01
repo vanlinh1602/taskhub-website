@@ -11,6 +11,7 @@ import enManagement from './en/management.json';
 import enMembers from './en/members.json';
 import enNavigation from './en/navigation.json';
 import enStages from './en/stages.json';
+import enWorkflows from './en/workflows.json';
 import enWorkspaceSettings from './en/workspace-settings.json';
 import viAuth from './vi/auth.json';
 import viCommon from './vi/common.json';
@@ -21,6 +22,7 @@ import viManagement from './vi/management.json';
 import viMembers from './vi/members.json';
 import viNavigation from './vi/navigation.json';
 import viStages from './vi/stages.json';
+import viWorkflows from './vi/workflows.json';
 import viWorkspaceSettings from './vi/workspace-settings.json';
 
 export const translationsJson = {
@@ -36,6 +38,7 @@ export const translationsJson = {
       navigation: enNavigation,
       stages: enStages,
       workspaceSettings: enWorkspaceSettings,
+      workflows: enWorkflows,
     },
   },
   vi: {
@@ -50,6 +53,7 @@ export const translationsJson = {
       navigation: viNavigation,
       stages: viStages,
       workspaceSettings: viWorkspaceSettings,
+      workflows: viWorkflows,
     },
   },
 };
