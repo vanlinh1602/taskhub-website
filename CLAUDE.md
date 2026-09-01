@@ -4,6 +4,7 @@ Before any code change, read these (Cursor attaches via `.mdc` frontmatter; Clau
 
 - `.cursor/rules/typescript.mdc` — TypeScript conventions and code quality
 - `.cursor/rules/react.mdc` — React app architecture, Tailwind, React Query, Zustand
+- `.cursor/rules/state-management.mdc` — feature hooks, React Query, and Zustand state boundaries
 - `.cursor/rules/ui-design.mdc` — UI design, usability, accessibility, and shadcn/ui usage
 - `.cursor/rules/design.mdc` — Calm Mint Workspace visual system (UI/CSS work)
 

@@ -1,9 +1,18 @@
 export type {
   Chapter,
+  ChapterAssignee,
+  ChapterDetail,
+  ChapterDifficulty,
+  ChapterManagerTaskStatus,
   ChapterPage,
+  ChapterPaymentStatus,
   ChapterPriority,
+  ChapterTask,
+  ChapterTaskStatus,
   ChapterWorkflowFilter,
   ChapterWorkflowStatus,
+  ChapterWorkflowSummary,
   CreateChapterInput,
   UpdateChapterConfigurationInput,
+  UpdateChapterTaskInput,
 } from './entity';

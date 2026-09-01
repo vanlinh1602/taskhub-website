@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query';
 import { Fingerprint, LogOut, Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useEffect, useMemo } from 'react';
@@ -30,7 +29,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { getWorkspaces } from '@/features/admin/apis';
+import { useWorkspacesQuery } from '@/features/admin/hooks';
 import { useUserStore } from '@/features/user/hooks';
 import { useWorkspaceStore } from '@/features/workspace/hooks';
 import { translations } from '@/locales/translations';
@@ -44,10 +43,7 @@ export default function AppLayout() {
   const { resolvedTheme, setTheme } = useTheme();
   const { pathname } = useLocation();
   const { activeWorkspaceId, setActiveWorkspace } = useWorkspaceStore();
-  const workspacesQuery = useQuery({
-    queryKey: ['workspace', 'list'],
-    queryFn: getWorkspaces,
-  });
+  const workspacesQuery = useWorkspacesQuery();
   const { logout, user } = useUserStore(
     useShallow((state) => ({
       logout: state.logout,

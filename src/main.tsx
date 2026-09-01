@@ -2,6 +2,7 @@ import './index.css';
 import './locales/i18n';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ThemeProvider } from 'next-themes';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -28,6 +29,7 @@ createRoot(document.getElementById('root')!).render(
           <App />
         </ErrorBoundary>
         <Toaster richColors position="top-right" />
+        <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>
     </ThemeProvider>
   </StrictMode>,

@@ -14,7 +14,9 @@ const ManagementPlaceholderPage = lazy(
 const NotFoundPage = lazy(() => import('@/pages/NotFound'));
 const StoriesPage = lazy(() => import('@/pages/Stories'));
 const StoryDetailPage = lazy(() => import('@/pages/Stories/Detail'));
+const ChapterDetailPage = lazy(() => import('@/pages/Stories/ChapterDetail'));
 const LoginPage = lazy(() => import('@/pages/Login'));
+const MembersPage = lazy(() => import('@/pages/Members'));
 
 function App() {
   return (
@@ -32,18 +34,18 @@ function App() {
               />
               <Route path="dashboard" element={<DashboardPage />} />
               <Route
-                path="chapters"
-                element={<Navigate to="/stories" replace />}
-              />
-              <Route
                 path="deadline-extensions"
                 element={<ManagementPlaceholderPage />}
               />
-              <Route path="members" element={<ManagementPlaceholderPage />} />
+              <Route path="members" element={<MembersPage />} />
               <Route path="payroll" element={<ManagementPlaceholderPage />} />
               <Route path="stages" element={<ManagementPlaceholderPage />} />
               <Route path="stories" element={<StoriesPage />} />
               <Route path="stories/:storyId" element={<StoryDetailPage />} />
+              <Route
+                path="stories/:storyId/chapter/:chapterId"
+                element={<ChapterDetailPage />}
+              />
               <Route path="tasks" element={<ManagementPlaceholderPage />} />
               <Route path="workflows" element={<ManagementPlaceholderPage />} />
               <Route

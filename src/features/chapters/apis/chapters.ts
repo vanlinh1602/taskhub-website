@@ -2,11 +2,25 @@ import { backendService } from '@/services';
 import formatError from '@/utils/formatError';
 
 import type {
+  ChapterDetail,
   ChapterPage,
   ChapterWorkflowFilter,
   CreateChapterInput,
   UpdateChapterConfigurationInput,
+  UpdateChapterTaskInput,
 } from '../types';
+
+export async function getChapter(
+  workspaceId: string,
+  storyId: string,
+  chapterId: string,
+): Promise<ChapterDetail> {
+  const response = await backendService.get<ChapterDetail>(
+    `/api/story-workflow/${encodeURIComponent(workspaceId)}/stories/${encodeURIComponent(storyId)}/chapters/${encodeURIComponent(chapterId)}`,
+  );
+  if (response.kind === 'ok') return response.data;
+  throw new Error(formatError(response));
+}
 
 export async function getChapters(
   workspaceId: string,
@@ -60,6 +74,20 @@ export async function updateChapterConfiguration(
 ): Promise<void> {
   const response = await backendService.patch(
     `/api/story-workflow/${encodeURIComponent(workspaceId)}/stories/${encodeURIComponent(storyId)}/chapters/${encodeURIComponent(chapterId)}`,
+    input,
+  );
+  if (response.kind !== 'ok') throw new Error(formatError(response));
+}
+
+export async function updateChapterTask(
+  workspaceId: string,
+  storyId: string,
+  chapterId: string,
+  taskId: string,
+  input: UpdateChapterTaskInput,
+): Promise<void> {
+  const response = await backendService.patch(
+    `/api/story-workflow/${encodeURIComponent(workspaceId)}/stories/${encodeURIComponent(storyId)}/chapters/${encodeURIComponent(chapterId)}/tasks/${encodeURIComponent(taskId)}`,
     input,
   );
   if (response.kind !== 'ok') throw new Error(formatError(response));

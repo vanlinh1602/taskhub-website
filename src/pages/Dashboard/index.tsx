@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query';
 import {
   AlertCircle,
   Banknote,
@@ -10,18 +9,14 @@ import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getDashboard } from '@/features/admin/apis';
+import { useDashboardQuery } from '@/features/admin/hooks';
 import { useWorkspaceStore } from '@/features/workspace/hooks';
 import { translations } from '@/locales/translations';
 
 export default function DashboardPage() {
   const { t } = useTranslation();
   const { activeWorkspaceId: workspaceId } = useWorkspaceStore();
-  const dashboardQuery = useQuery({
-    queryKey: ['admin', 'dashboard', workspaceId],
-    queryFn: () => getDashboard(workspaceId),
-    enabled: workspaceId.length > 0,
-  });
+  const dashboardQuery = useDashboardQuery(workspaceId);
 
   const cards = dashboardQuery.data
     ? [

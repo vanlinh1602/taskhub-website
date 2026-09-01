@@ -1,5 +1,6 @@
 import js from '@eslint/js';
 import stylistic from '@stylistic/eslint-plugin';
+import tanstackQuery from '@tanstack/eslint-plugin-query';
 import betterTailwindcss from 'eslint-plugin-better-tailwindcss';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
@@ -10,6 +11,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   { ignores: ['dist', 'scripts/**', 'src/components/ui/**/*.{ts,tsx}'] },
+  ...tanstackQuery.configs['flat/recommended'],
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],
@@ -55,6 +57,32 @@ export default tseslint.config(
       'react-hooks/rules-of-hooks': 'warn',
       'object-shorthand': ['error', 'always'],
       'no-console': 'warn',
+    },
+  },
+  {
+    files: [
+      'src/pages/**/*.{ts,tsx}',
+      'src/features/**/components/**/*.{ts,tsx}',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@tanstack/react-query',
+              message:
+                'Use the feature query or mutation hook instead of importing React Query directly.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/features/**/hooks/index.ts'],
+    rules: {
+      '@stylistic/padding-line-between-statements': 'off',
     },
   },
 );

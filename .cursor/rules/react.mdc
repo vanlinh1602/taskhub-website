@@ -113,6 +113,8 @@ CSS modules are allowed for pseudo-elements, keyframes/animations, complex selec
 
 - Server data belongs in React Query. Global UI/session/preferences belong in Zustand. Local UI state belongs in `useState` / `useReducer`.
 - Never use Zustand for data that belongs in React Query.
+- Feature queries and mutations belong in `src/features/[name]/hooks/`; pages and feature components must consume those named hooks instead of calling React Query directly.
+- Keep query options, query-key factories, and cache invalidation in the feature hook layer. `src/main.tsx` and application-wide infrastructure are the only direct React Query exceptions.
 - Query keys should be stable and hierarchical: `['entity']`, `['entity', id]`, `['entity', 'list', filter]`, `['entity', 'metadata', key]`.
 - Use the same key shape in `useQuery` and `queryClient.invalidateQueries`.
 - Default cache durations: lists/indexes `staleTime` 24h; metadata 30d; snapshots/history 7d; `gcTime` `Infinity` for persisted data unless the data should expire.

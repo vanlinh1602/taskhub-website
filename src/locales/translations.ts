@@ -5,6 +5,7 @@ import viDashboard from './vi/dashboard.json';
 import viErrors from './vi/errors.json';
 import viLayouts from './vi/layouts.json';
 import viManagement from './vi/management.json';
+import viMembers from './vi/members.json';
 import viNavigation from './vi/navigation.json';
 
 const vi = {
@@ -13,6 +14,7 @@ const vi = {
   dashboard: viDashboard,
   errors: viErrors,
   layouts: viLayouts,
+  members: viMembers,
   management: viManagement,
   navigation: viNavigation,
 } satisfies TranslationJsonType;

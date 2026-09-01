@@ -1,5 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  ArrowRight,
   ChevronLeft,
   ChevronRight,
   ExternalLink,
@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { type FormEvent, type ReactNode, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams } from 'react-router';
+import { Link, useParams } from 'react-router';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -54,23 +54,29 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  createChapter,
-  getChapters,
-  updateChapterConfiguration,
-  updateChapterPublication,
-} from '@/features/chapters/apis';
+  useChaptersQuery,
+  useCreateChapterMutation,
+  useUpdateChapterConfigurationMutation,
+  useUpdateChapterPublicationMutation,
+} from '@/features/chapters/hooks';
 import type {
   Chapter,
+  ChapterDifficulty,
   ChapterPriority,
   ChapterWorkflowFilter,
   ChapterWorkflowStatus,
 } from '@/features/chapters/types';
-import { getStory } from '@/features/stories/apis';
+import { useStoryQuery } from '@/features/stories/hooks';
 import { useWorkspaceStore } from '@/features/workspace/hooks';
 import { translations } from '@/locales/translations';
 import formatError from '@/utils/formatError';
 
 const priorities: readonly ChapterPriority[] = ['LOW', 'NORMAL', 'HIGH'];
+const difficulties: readonly ChapterDifficulty[] = [
+  'NORMAL',
+  'HARD',
+  'VERY_HARD',
+];
 const workflows: readonly ChapterWorkflowFilter[] = [
   'ALL',
   'DRAFT',
@@ -85,26 +91,19 @@ export default function StoryDetailPage(): ReactNode {
   const { t } = useTranslation();
   const { storyId = '' } = useParams();
   const { activeWorkspaceId: workspaceId } = useWorkspaceStore();
-  const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
   const [workflow, setWorkflow] = useState<ChapterWorkflowFilter>('ALL');
   const [publication, setPublication] = useState<PublicationFilter>('ALL');
   const [priority, setPriority] = useState<ChapterPriority | 'ALL'>('ALL');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingChapter, setEditingChapter] = useState<Chapter | null>(null);
-  const storyQuery = useQuery({
-    queryKey: ['stories', 'detail', workspaceId, storyId],
-    queryFn: () => getStory(workspaceId, storyId),
-    enabled: Boolean(workspaceId && storyId),
-    staleTime: 86400000,
-  });
-  const chaptersQuery = useQuery({
-    queryKey: ['chapters', 'list', workspaceId, storyId, workflow, page],
-    queryFn: () =>
-      getChapters(workspaceId, storyId, { page, status: workflow }),
-    enabled: Boolean(workspaceId && storyId),
-    staleTime: 86400000,
-  });
+  const storyQuery = useStoryQuery(workspaceId, storyId);
+  const chaptersQuery = useChaptersQuery(
+    workspaceId,
+    storyId,
+    workflow,
+    page,
+  );
   const chapters = useMemo(
     () =>
       (chaptersQuery.data?.items ?? []).filter(
@@ -115,53 +114,15 @@ export default function StoryDetailPage(): ReactNode {
       ),
     [chaptersQuery.data, priority, publication],
   );
-  const createMutation = useMutation({
-    mutationFn: (input: { folderId: string; priority: ChapterPriority }) =>
-      createChapter(workspaceId, storyId, input),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ['chapters', 'list', workspaceId, storyId],
-      });
-      setIsCreateOpen(false);
-      toast.success(t(translations.management.stories.createChapter));
-    },
-    onError: (error: Error) => toast.error(formatError(error)),
-  });
-  const configurationMutation = useMutation({
-    mutationFn: ({
-      id,
-      input,
-    }: {
-      id: string;
-      input: {
-        difficulty: string;
-        hasAdultContent: boolean;
-        priority: ChapterPriority;
-      };
-    }) => updateChapterConfiguration(workspaceId, storyId, id, input),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ['chapters', 'list', workspaceId, storyId],
-      });
-      setEditingChapter(null);
-      toast.success(t(translations.management.stories.save));
-    },
-    onError: (error: Error) => toast.error(formatError(error)),
-  });
-  const publicationMutation = useMutation({
-    mutationFn: (chapter: Chapter) =>
-      updateChapterPublication(
-        workspaceId,
-        storyId,
-        chapter.id,
-        chapter.publicationStatus === 'PUBLISHED' ? 'UNPUBLISHED' : 'PUBLISHED',
-      ),
-    onSuccess: async () =>
-      queryClient.invalidateQueries({
-        queryKey: ['chapters', 'list', workspaceId, storyId],
-      }),
-    onError: (error: Error) => toast.error(formatError(error)),
-  });
+  const createMutation = useCreateChapterMutation(workspaceId, storyId);
+  const configurationMutation = useUpdateChapterConfigurationMutation(
+    workspaceId,
+    storyId,
+  );
+  const publicationMutation = useUpdateChapterPublicationMutation(
+    workspaceId,
+    storyId,
+  );
 
   function changeWorkflow(value: ChapterWorkflowFilter): void {
     setWorkflow(value);
@@ -178,27 +139,60 @@ export default function StoryDetailPage(): ReactNode {
     setPage(0);
   }
 
+  function togglePublication(chapter: Chapter): void {
+    publicationMutation.mutate(
+      {
+        chapterId: chapter.id,
+        publicationStatus:
+          chapter.publicationStatus === 'PUBLISHED'
+            ? 'UNPUBLISHED'
+            : 'PUBLISHED',
+      },
+      {
+        onError: (error: Error) => toast.error(formatError(error)),
+      },
+    );
+  }
+
   function submitCreate(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    createMutation.mutate({
-      folderId: String(form.get('folderId') ?? ''),
-      priority: String(form.get('priority') ?? 'NORMAL') as ChapterPriority,
-    });
+    createMutation.mutate(
+      {
+        folderId: String(form.get('folderId') ?? ''),
+        priority: String(form.get('priority') ?? 'NORMAL') as ChapterPriority,
+      },
+      {
+        onSuccess: () => {
+          setIsCreateOpen(false);
+          toast.success(t(translations.management.stories.createChapter));
+        },
+        onError: (error: Error) => toast.error(formatError(error)),
+      },
+    );
   }
 
   function submitConfiguration(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     if (!editingChapter) return;
     const form = new FormData(event.currentTarget);
-    configurationMutation.mutate({
-      id: editingChapter.id,
-      input: {
-        difficulty: String(form.get('difficulty') ?? 'NORMAL'),
-        hasAdultContent: form.get('hasAdultContent') === 'on',
-        priority: String(form.get('priority') ?? 'NORMAL') as ChapterPriority,
+    configurationMutation.mutate(
+      {
+        chapterId: editingChapter.id,
+        input: {
+          difficulty: String(form.get('difficulty') ?? 'NORMAL') as ChapterDifficulty,
+          hasAdultContent: form.get('hasAdultContent') === 'on',
+          priority: String(form.get('priority') ?? 'NORMAL') as ChapterPriority,
+        },
       },
-    });
+      {
+        onSuccess: () => {
+          setEditingChapter(null);
+          toast.success(t(translations.management.stories.save));
+        },
+        onError: (error: Error) => toast.error(formatError(error)),
+      },
+    );
   }
 
   return (
@@ -359,10 +353,9 @@ export default function StoryDetailPage(): ReactNode {
           <ChapterTable
             chapters={chapters}
             onEdit={setEditingChapter}
-            onTogglePublication={(chapter) =>
-              publicationMutation.mutate(chapter)
-            }
+            onTogglePublication={togglePublication}
             isUpdating={publicationMutation.isPending}
+            storyId={storyId}
           />
           <div className="grid gap-3 lg:hidden">
             {chapters.map((chapter) => (
@@ -370,8 +363,9 @@ export default function StoryDetailPage(): ReactNode {
                 key={chapter.id}
                 chapter={chapter}
                 onEdit={() => setEditingChapter(chapter)}
-                onTogglePublication={() => publicationMutation.mutate(chapter)}
+                onTogglePublication={() => togglePublication(chapter)}
                 isUpdating={publicationMutation.isPending}
+                storyId={storyId}
               />
             ))}
           </div>
@@ -429,12 +423,21 @@ export default function StoryDetailPage(): ReactNode {
                 <Label htmlFor="chapter-difficulty">
                   {t(translations.management.stories.difficulty)}
                 </Label>
-                <Input
-                  id="chapter-difficulty"
-                  name="difficulty"
+                <Select
                   defaultValue={editingChapter.difficulty}
-                  required
-                />
+                  name="difficulty"
+                >
+                  <SelectTrigger id="chapter-difficulty" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {difficulties.map((item) => (
+                      <SelectItem key={item} value={item}>
+                        {getDifficultyLabel(t, item)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <PrioritySelect
                 defaultValue={editingChapter.priority}
@@ -529,11 +532,13 @@ function ChapterTable({
   onEdit,
   onTogglePublication,
   isUpdating,
+  storyId,
 }: {
   chapters: readonly Chapter[];
   onEdit: (chapter: Chapter) => void;
   onTogglePublication: (chapter: Chapter) => void;
   isUpdating: boolean;
+  storyId: string;
 }): ReactNode {
   const { t } = useTranslation();
   return (
@@ -565,6 +570,7 @@ function ChapterTable({
               onEdit={() => onEdit(chapter)}
               onTogglePublication={() => onTogglePublication(chapter)}
               isUpdating={isUpdating}
+              storyId={storyId}
             />
           ))}
         </TableBody>
@@ -578,11 +584,13 @@ function ChapterRow({
   onEdit,
   onTogglePublication,
   isUpdating,
+  storyId,
 }: {
   chapter: Chapter;
   onEdit: () => void;
   onTogglePublication: () => void;
   isUpdating: boolean;
+  storyId: string;
 }): ReactNode {
   const { t } = useTranslation();
   const progress = progressOf(chapter);
@@ -590,7 +598,12 @@ function ChapterRow({
   return (
     <TableRow>
       <TableCell>
-        <p className="font-semibold">{chapter.chapterName}</p>
+        <Link
+          className="font-semibold text-primary underline-offset-4 hover:underline"
+          to={getChapterDetailPath(storyId, chapter.id)}
+        >
+          {chapter.chapterName}
+        </Link>
         {chapter.hasAdultContent ? (
           <p className="text-xs font-medium text-destructive">
             {t(translations.management.stories.adultContent)}
@@ -638,6 +651,12 @@ function ChapterRow({
       </TableCell>
       <TableCell>
         <div className="flex justify-end gap-1">
+          <Button asChild size="sm" variant="ghost">
+            <Link to={getChapterDetailPath(storyId, chapter.id)}>
+              <ArrowRight />
+              {t(translations.management.stories.viewChapter)}
+            </Link>
+          </Button>
           <Button
             aria-label={t(translations.management.stories.editChapter)}
             onClick={onEdit}
@@ -679,11 +698,13 @@ function ChapterCard({
   onEdit,
   onTogglePublication,
   isUpdating,
+  storyId,
 }: {
   chapter: Chapter;
   onEdit: () => void;
   onTogglePublication: () => void;
   isUpdating: boolean;
+  storyId: string;
 }): ReactNode {
   const { t } = useTranslation();
   const published = chapter.publicationStatus === 'PUBLISHED';
@@ -691,7 +712,14 @@ function ChapterCard({
     <Card>
       <CardHeader className="flex flex-row items-start gap-3">
         <div className="min-w-0 flex-1">
-          <CardTitle className="truncate">{chapter.chapterName}</CardTitle>
+          <CardTitle className="truncate">
+            <Link
+              className="text-primary underline-offset-4 hover:underline"
+              to={getChapterDetailPath(storyId, chapter.id)}
+            >
+              {chapter.chapterName}
+            </Link>
+          </CardTitle>
           <CardDescription className="mt-1 flex flex-wrap gap-2">
             <Badge className={workflowClass(chapter.workflowStatus)}>
               {getWorkflowLabel(t)(chapter.workflowStatus ?? 'ALL')}
@@ -718,21 +746,29 @@ function ChapterCard({
           })}
         </p>
         <div className="mt-4 flex justify-between border-t pt-4">
-          <span className="text-xs font-semibold">
-            {published
-              ? t(translations.management.stories.published)
-              : t(translations.management.stories.unpublished)}
-          </span>
-          <Button
-            disabled={isUpdating}
-            onClick={onTogglePublication}
-            size="sm"
-            variant="outline"
-          >
-            {published
-              ? t(translations.management.stories.unpublish)
-              : t(translations.management.stories.publish)}
+          <Button asChild size="sm" variant="ghost">
+            <Link to={getChapterDetailPath(storyId, chapter.id)}>
+              <ArrowRight />
+              {t(translations.management.stories.viewChapter)}
+            </Link>
           </Button>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold">
+              {published
+                ? t(translations.management.stories.published)
+                : t(translations.management.stories.unpublished)}
+            </span>
+            <Button
+              disabled={isUpdating}
+              onClick={onTogglePublication}
+              size="sm"
+              variant="outline"
+            >
+              {published
+                ? t(translations.management.stories.unpublish)
+                : t(translations.management.stories.publish)}
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -783,6 +819,17 @@ function getPriorityLabel(
       : t(translations.management.stories.priorityNormal);
 }
 
+function getDifficultyLabel(
+  t: ReturnType<typeof useTranslation>['t'],
+  difficulty: ChapterDifficulty,
+): string {
+  return difficulty === 'VERY_HARD'
+    ? t(translations.management.stories.difficultyVeryHard)
+    : difficulty === 'HARD'
+      ? t(translations.management.stories.difficultyHard)
+      : t(translations.management.stories.difficultyNormal);
+}
+
 function workflowClass(status: ChapterWorkflowStatus | null): string {
   return status === 'COMPLETED'
     ? 'rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary'
@@ -799,4 +846,8 @@ function priorityClass(priority: ChapterPriority): string {
     : priority === 'LOW'
       ? 'rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground'
       : 'rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary';
+}
+
+function getChapterDetailPath(storyId: string, chapterId: string): string {
+  return `/stories/${encodeURIComponent(storyId)}/chapter/${encodeURIComponent(chapterId)}`;
 }

@@ -1,4 +1,3 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   BookOpenText,
   CalendarDays,
@@ -37,7 +36,10 @@ import {
 } from '@/components/ui/empty';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { createStory, getStories } from '@/features/stories/apis';
+import {
+  useCreateStoryMutation,
+  useStoriesQuery,
+} from '@/features/stories/hooks';
 import { useWorkspaceStore } from '@/features/workspace/hooks';
 import { translations } from '@/locales/translations';
 import formatError from '@/utils/formatError';
@@ -45,42 +47,34 @@ import formatError from '@/utils/formatError';
 export default function StoriesPage() {
   const { i18n, t } = useTranslation();
   const { activeWorkspaceId: workspaceId } = useWorkspaceStore();
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const storiesQuery = useQuery({
-    queryKey: ['stories', 'list', workspaceId, query],
-    queryFn: () => getStories(workspaceId, query),
-    enabled: workspaceId.length > 0,
-    staleTime: 1000 * 60 * 60 * 24,
-  });
+  const storiesQuery = useStoriesQuery(workspaceId, query);
   const dateFormatter = useMemo(
     () => new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium' }),
     [i18n.language],
   );
-  const createMutation = useMutation({
-    mutationFn: (input: {
-      title: string;
-      alternativeTitle?: string;
-      folderId?: string;
-    }) => createStory(workspaceId, input),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['stories', 'list'] });
-      setIsCreateOpen(false);
-      toast.success(t(translations.management.stories.createStory));
-    },
-    onError: (error: Error) => toast.error(formatError(error)),
-  });
+  const createMutation = useCreateStoryMutation(workspaceId);
 
   function submitCreate(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    createMutation.mutate({
-      title: String(data.get('title') ?? ''),
-      alternativeTitle: String(data.get('alternativeTitle') ?? '') || undefined,
-      folderId: String(data.get('folderId') ?? '') || undefined,
-    });
+    createMutation.mutate(
+      {
+        title: String(data.get('title') ?? ''),
+        alternativeTitle:
+          String(data.get('alternativeTitle') ?? '') || undefined,
+        folderId: String(data.get('folderId') ?? '') || undefined,
+      },
+      {
+        onSuccess: () => {
+          setIsCreateOpen(false);
+          toast.success(t(translations.management.stories.createStory));
+        },
+        onError: (error: Error) => toast.error(formatError(error)),
+      },
+    );
   }
 
   return (

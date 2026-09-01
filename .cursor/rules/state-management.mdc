@@ -1,9 +1,21 @@
+---
+description: Server-state and client-state management conventions
+globs:
+alwaysApply: true
+---
+
 # State Management Guidelines
 
 ## Overview
 The project uses a combination of React Query for server state and Zustand for client state management.
 
 ## React Query (Server State)
+
+### Feature Hook Boundary
+- Put every feature query and mutation in `src/features/[feature]/hooks/`.
+- Pages and feature components must consume named feature hooks instead of importing from `@tanstack/react-query` or configuring queries inline.
+- Keep API transport functions in `src/features/[feature]/apis/`; hooks own query options and cache invalidation.
+- `src/main.tsx` may create the `QueryClient` and provider. Infrastructure components may use `useQueryClient` only for application-wide cache operations.
 
 ### Query Hooks Pattern
 ```typescript
@@ -25,24 +37,17 @@ export const useUpdateComic = () => {
   return useMutation({
     mutationFn: ({ id, comic }: { id: number; comic: Partial<ComicUpdate> }) =>
       updateComic(id, comic),
-    onSuccess: (_any, { id }) => {
-      // Invalidate related queries
-      queryClient.invalidateQueries({ queryKey: ['comic', id] });
-      queryClient.invalidateQueries({ queryKey: ['comics'] });
-
-      // Show success toast
-      toast.success(title: t(translations.updateStatus.success),{
-        description: t(translations.updateStatus.success),
-      });
-    },
-    onError: (error: any) => {
-      toas.error(title: t(translations.updateStatus.error),{
-        description: formatError(error),
-      });
+    onSuccess: async (_result, { id }) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['comic', id] }),
+        queryClient.invalidateQueries({ queryKey: ['comics'] }),
+      ]);
     },
   });
 };
 ```
+
+Keep UI-specific success and error feedback in the calling page or component.
 
 ### Query Key Patterns
 - Use descriptive, nested keys
@@ -183,7 +188,7 @@ export const useComicsPageStore = create<
 - Use `useShallow` to prevent unnecessary re-renders
 - Implement proper memoization
 - Use `enabled` option to control query execution
-- Set appropriate `staleTime` and `cacheTime`
+- Set appropriate `staleTime` and `gcTime`
 
 ## Examples from Codebase
 ```typescript
@@ -223,7 +228,3 @@ export const useUserStore = create<UserStore & UserStoreActions>()(
   }))
 );
 ```
-description:
-globs:
-alwaysApply: false
----
