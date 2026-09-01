@@ -6,6 +6,8 @@ import type viLayouts from './vi/layouts.json';
 import type viManagement from './vi/management.json';
 import type viMembers from './vi/members.json';
 import type viNavigation from './vi/navigation.json';
+import type viStages from './vi/stages.json';
+import type viWorkspaceSettings from './vi/workspace-settings.json';
 
 export type ConvertedToObjectType<T> = {
   [Property in keyof T]: T[Property] extends string
@@ -22,4 +24,6 @@ export interface TranslationJsonType {
   readonly members: typeof viMembers;
   readonly management: typeof viManagement;
   readonly navigation: typeof viNavigation;
+  readonly stages: typeof viStages;
+  readonly workspaceSettings: typeof viWorkspaceSettings;
 }

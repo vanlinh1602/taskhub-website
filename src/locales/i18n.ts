@@ -10,6 +10,8 @@ import enLayouts from './en/layouts.json';
 import enManagement from './en/management.json';
 import enMembers from './en/members.json';
 import enNavigation from './en/navigation.json';
+import enStages from './en/stages.json';
+import enWorkspaceSettings from './en/workspace-settings.json';
 import viAuth from './vi/auth.json';
 import viCommon from './vi/common.json';
 import viDashboard from './vi/dashboard.json';
@@ -18,6 +20,8 @@ import viLayouts from './vi/layouts.json';
 import viManagement from './vi/management.json';
 import viMembers from './vi/members.json';
 import viNavigation from './vi/navigation.json';
+import viStages from './vi/stages.json';
+import viWorkspaceSettings from './vi/workspace-settings.json';
 
 export const translationsJson = {
   en: {
@@ -30,6 +34,8 @@ export const translationsJson = {
       members: enMembers,
       management: enManagement,
       navigation: enNavigation,
+      stages: enStages,
+      workspaceSettings: enWorkspaceSettings,
     },
   },
   vi: {
@@ -42,6 +48,8 @@ export const translationsJson = {
       members: viMembers,
       management: viManagement,
       navigation: viNavigation,
+      stages: viStages,
+      workspaceSettings: viWorkspaceSettings,
     },
   },
 };

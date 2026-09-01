@@ -8,6 +8,7 @@ import FirebaseAuthObserver from '@/features/user/components/FirebaseAuthObserve
 import AuthRouter from './AuthRouter';
 
 const DashboardPage = lazy(() => import('@/pages/Dashboard'));
+const DeadlineExtensionsPage = lazy(() => import('@/pages/DeadlineExtensions'));
 const ManagementPlaceholderPage = lazy(
   () => import('@/pages/ManagementPlaceholder'),
 );
@@ -18,6 +19,8 @@ const ChapterDetailPage = lazy(() => import('@/pages/Stories/ChapterDetail'));
 const LoginPage = lazy(() => import('@/pages/Login'));
 const MembersPage = lazy(() => import('@/pages/Members'));
 const TasksPage = lazy(() => import('@/pages/Tasks'));
+const StagesPage = lazy(() => import('@/pages/Stages'));
+const WorkspaceSettingsPage = lazy(() => import('@/pages/WorkspaceSettings'));
 
 function App() {
   return (
@@ -36,11 +39,11 @@ function App() {
               <Route path="dashboard" element={<DashboardPage />} />
               <Route
                 path="deadline-extensions"
-                element={<ManagementPlaceholderPage />}
+                element={<DeadlineExtensionsPage />}
               />
               <Route path="members" element={<MembersPage />} />
               <Route path="payroll" element={<ManagementPlaceholderPage />} />
-              <Route path="stages" element={<ManagementPlaceholderPage />} />
+              <Route path="stages" element={<StagesPage />} />
               <Route path="stories" element={<StoriesPage />} />
               <Route path="stories/:storyId" element={<StoryDetailPage />} />
               <Route
@@ -51,7 +54,7 @@ function App() {
               <Route path="workflows" element={<ManagementPlaceholderPage />} />
               <Route
                 path="workspace-settings"
-                element={<ManagementPlaceholderPage />}
+                element={<WorkspaceSettingsPage />}
               />
             </Route>
           </Route>

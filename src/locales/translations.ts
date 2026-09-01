@@ -7,6 +7,8 @@ import viLayouts from './vi/layouts.json';
 import viManagement from './vi/management.json';
 import viMembers from './vi/members.json';
 import viNavigation from './vi/navigation.json';
+import viStages from './vi/stages.json';
+import viWorkspaceSettings from './vi/workspace-settings.json';
 
 const vi = {
   auth: viAuth,
@@ -17,6 +19,8 @@ const vi = {
   members: viMembers,
   management: viManagement,
   navigation: viNavigation,
+  stages: viStages,
+  workspaceSettings: viWorkspaceSettings,
 } satisfies TranslationJsonType;
 
 function convertValue(value: unknown, currentKey: string): unknown {
