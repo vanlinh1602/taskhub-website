@@ -7,5 +7,6 @@ export const statisticsQueryKeys = {
     ['statistics', 'list', workspaceId, filters] as const,
   summary: (workspaceId: string, filters: StatisticsSummaryFilters) =>
     ['statistics', 'summary', workspaceId, filters] as const,
+  summaryRoot: () => ['statistics', 'summary'] as const,
   listRoot: () => ['statistics', 'list'] as const,
 };

@@ -1,3 +1,12 @@
+import type {
+  DeductTaskInput,
+  PaymentStatus,
+  TaskAssignee,
+  TaskManagerTaskStatus,
+  TaskStatus,
+  UpdateTaskInput,
+} from '@/features/tasks/types';
+
 export type ChapterPriority = 'LOW' | 'NORMAL' | 'HIGH';
 
 export type ChapterDifficulty = 'NORMAL' | 'HARD' | 'VERY_HARD';
@@ -21,19 +30,11 @@ export interface ChapterDeleteState {
   readonly blockedReasons: readonly ChapterDeleteBlockReason[];
 }
 
-export type ChapterTaskStatus =
-  | 'BLOCKED'
-  | 'READY'
-  | 'IN_PROGRESS'
-  | 'COMPLETED'
-  | 'CANCELLED';
+export type ChapterTaskStatus = TaskStatus;
 
-export type ChapterManagerTaskStatus = Extract<
-  ChapterTaskStatus,
-  'BLOCKED' | 'READY' | 'CANCELLED'
->;
+export type ChapterManagerTaskStatus = TaskManagerTaskStatus;
 
-export type ChapterPaymentStatus = 'NOT_READY' | 'PENDING' | 'PAID';
+export type ChapterPaymentStatus = PaymentStatus;
 
 export interface Chapter {
   readonly id: string;
@@ -57,10 +58,7 @@ export interface ChapterPage {
   readonly total: number;
 }
 
-export interface ChapterAssignee {
-  readonly discordUserId: string;
-  readonly displayName: string | null;
-}
+export type ChapterAssignee = TaskAssignee;
 
 export interface ChapterWorkflowSummary {
   readonly id: string;
@@ -106,14 +104,6 @@ export interface UpdateChapterConfigurationInput {
   readonly priority?: ChapterPriority;
 }
 
-export interface UpdateChapterTaskInput {
-  readonly status?: ChapterManagerTaskStatus;
-  readonly agreedPrice?: string;
-  readonly assigneeDiscordUserId?: string | null;
-}
+export type UpdateChapterTaskInput = UpdateTaskInput;
 
-export interface DeductChapterTaskInput {
-  readonly amount: string;
-  readonly reason: string;
-  readonly evidenceUrl?: string;
-}
+export type DeductChapterTaskInput = DeductTaskInput;

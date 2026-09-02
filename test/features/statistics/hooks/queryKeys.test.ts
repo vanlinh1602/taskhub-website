@@ -40,5 +40,9 @@ describe('statistics query keys', () => {
       'workspace-1',
       expect.objectContaining({ workflowTemplateId: '900' }),
     ]);
+    expect(statisticsQueryKeys.summaryRoot()).toEqual([
+      'statistics',
+      'summary',
+    ]);
   });
 });

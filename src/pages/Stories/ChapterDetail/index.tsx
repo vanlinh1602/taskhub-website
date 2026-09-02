@@ -40,7 +40,6 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -58,32 +57,25 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Textarea } from '@/components/ui/textarea';
 import { ChapterActionsMenu } from '@/features/chapters/components/chapter-actions-menu';
 import { ChapterDeleteDialog } from '@/features/chapters/components/chapter-delete-dialog';
 import {
   useChapterQuery,
-  useDeductChapterTaskMutation,
   useDeleteChapterMutation,
   useNotifyChapterProgressMutation,
   useUpdateChapterConfigurationMutation,
   useUpdateChapterPublicationMutation,
-  useUpdateChapterTaskMutation,
 } from '@/features/chapters/hooks';
 import type {
   Chapter,
-  ChapterAssignee,
   ChapterDifficulty,
-  ChapterManagerTaskStatus,
   ChapterPaymentStatus,
   ChapterTask,
   ChapterTaskStatus,
   ChapterWorkflowStatus,
-  DeductChapterTaskInput,
-  UpdateChapterTaskInput,
 } from '@/features/chapters/types';
-import { filterTaskAssignees } from '@/features/chapters/utils';
-import { useMembersQuery } from '@/features/members/hooks';
+import TaskActionDialogs from '@/features/tasks/components/task-action-dialogs';
+import type { TaskActionTarget } from '@/features/tasks/types';
 import { useWorkspaceStore } from '@/features/workspace/hooks';
 import { translations } from '@/locales/translations';
 import formatError from '@/utils/formatError';
@@ -98,13 +90,6 @@ const chapterDifficulties: readonly ChapterDifficulty[] = [
   'HARD',
   'VERY_HARD',
 ];
-const managerTaskStatuses: readonly ChapterManagerTaskStatus[] = [
-  'BLOCKED',
-  'READY',
-  'CANCELLED',
-];
-const unassignedValue = '__UNASSIGNED__';
-
 export default function ChapterDetailPage(): ReactNode {
   const { i18n, t } = useTranslation();
   const { storyId = '', chapterId = '' } = useParams();
@@ -112,44 +97,21 @@ export default function ChapterDetailPage(): ReactNode {
   const { activeWorkspaceId: workspaceId } = useWorkspaceStore();
   const [isChapterEditorOpen, setIsChapterEditorOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<ChapterTask | null>(null);
+  const [taskAction, setTaskAction] = useState<{
+    readonly mode: 'edit' | 'deduct';
+    readonly target: TaskActionTarget;
+  } | null>(null);
   const [chapterDifficulty, setChapterDifficulty] =
     useState<ChapterDifficulty>('NORMAL');
   const [chapterPriority, setChapterPriority] =
     useState<Chapter['priority']>('NORMAL');
   const [chapterAdultContent, setChapterAdultContent] = useState(false);
-  const [taskStatus, setTaskStatus] =
-    useState<ChapterManagerTaskStatus>('READY');
-  const [taskStatusDirty, setTaskStatusDirty] = useState(false);
-  const [taskPrice, setTaskPrice] = useState('');
-  const [taskAssignee, setTaskAssignee] = useState(unassignedValue);
-  const [deductionTask, setDeductionTask] = useState<ChapterTask | null>(null);
-  const [deductionAmount, setDeductionAmount] = useState('');
-  const [deductionReason, setDeductionReason] = useState('');
-  const [deductionEvidenceUrl, setDeductionEvidenceUrl] = useState('');
   const chapterQuery = useChapterQuery(workspaceId, storyId, chapterId);
-  const membersQuery = useMembersQuery(workspaceId, {
-    enabled: Boolean(editingTask),
-  });
-  const taskAssignees = useMemo(
-    () => filterTaskAssignees(membersQuery.data ?? [], editingTask),
-    [editingTask, membersQuery.data],
-  );
   const chapterMutation = useUpdateChapterConfigurationMutation(
     workspaceId,
     storyId,
   );
   const deleteMutation = useDeleteChapterMutation(workspaceId, storyId);
-  const taskMutation = useUpdateChapterTaskMutation(
-    workspaceId,
-    storyId,
-    chapterId,
-  );
-  const deductionMutation = useDeductChapterTaskMutation(
-    workspaceId,
-    storyId,
-    chapterId,
-  );
   const progressMutation = useNotifyChapterProgressMutation(
     workspaceId,
     storyId,
@@ -204,23 +166,18 @@ export default function ChapterDetailPage(): ReactNode {
   }
 
   function openTaskEditor(task: ChapterTask): void {
-    setEditingTask(task);
-    setTaskStatus(
-      managerTaskStatuses.includes(task.status as ChapterManagerTaskStatus)
-        ? (task.status as ChapterManagerTaskStatus)
-        : 'READY',
-    );
-    setTaskStatusDirty(false);
-    setTaskPrice(task.agreedPrice ?? '');
-    setTaskAssignee(task.assignee?.discordUserId ?? unassignedValue);
+    setTaskAction({
+      mode: 'edit',
+      target: toTaskActionTarget(storyId, chapterId, task),
+    });
   }
 
   function openTaskDeduction(task: ChapterTask): void {
     if (task.paymentStatus === 'PAID') return;
-    setDeductionTask(task);
-    setDeductionAmount('');
-    setDeductionReason('');
-    setDeductionEvidenceUrl('');
+    setTaskAction({
+      mode: 'deduct',
+      target: toTaskActionTarget(storyId, chapterId, task),
+    });
   }
 
   function submitChapter(event: FormEvent<HTMLFormElement>): void {
@@ -238,63 +195,6 @@ export default function ChapterDetailPage(): ReactNode {
         onSuccess: () => {
           setIsChapterEditorOpen(false);
           toast.success(t(translations.management.stories.save));
-        },
-        onError: (error: Error) => toast.error(formatError(error)),
-      },
-    );
-  }
-
-  function submitTask(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault();
-    if (!editingTask) return;
-    if (!/^\d+(?:\.\d{1,2})?$/.test(taskPrice)) {
-      toast.error(t(translations.management.stories.taskPriceInvalid));
-      return;
-    }
-    const previousAssignee = editingTask.assignee?.discordUserId ?? null;
-    const nextAssignee = taskAssignee === unassignedValue ? null : taskAssignee;
-    const input: UpdateChapterTaskInput =
-      nextAssignee !== previousAssignee
-        ? { agreedPrice: taskPrice, assigneeDiscordUserId: nextAssignee }
-        : taskStatusDirty
-          ? { agreedPrice: taskPrice, status: taskStatus }
-          : { agreedPrice: taskPrice };
-    taskMutation.mutate(
-      { taskId: editingTask.id, input },
-      {
-        onSuccess: () => {
-          setEditingTask(null);
-          toast.success(t(translations.management.stories.taskSaved));
-        },
-        onError: (error: Error) => toast.error(formatError(error)),
-      },
-    );
-  }
-
-  function submitDeduction(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault();
-    if (!deductionTask) return;
-    if (!/^\d+(?:\.\d{1,2})?$/.test(deductionAmount) || Number(deductionAmount) <= 0) {
-      toast.error(t(translations.management.stories.deductionAmountInvalid));
-      return;
-    }
-    if (!deductionReason.trim()) {
-      toast.error(t(translations.management.stories.deductReasonRequired));
-      return;
-    }
-    const input: DeductChapterTaskInput = {
-      amount: deductionAmount,
-      reason: deductionReason,
-      ...(deductionEvidenceUrl.trim()
-        ? { evidenceUrl: deductionEvidenceUrl.trim() }
-        : {}),
-    };
-    deductionMutation.mutate(
-      { taskId: deductionTask.id, input },
-      {
-        onSuccess: () => {
-          setDeductionTask(null);
-          toast.success(t(translations.management.stories.deductionSaved));
         },
         onError: (error: Error) => toast.error(formatError(error)),
       },
@@ -717,41 +617,13 @@ export default function ChapterDetailPage(): ReactNode {
         </DialogContent>
       </Dialog>
 
-      <TaskEditDialog
-        assignees={taskAssignees}
-        assigneesError={membersQuery.isError ? membersQuery.error : null}
-        assigneesLoading={membersQuery.isLoading}
-        editingTask={editingTask}
-        isPending={taskMutation.isPending}
-        onAssigneeChange={(value) => {
-          setTaskAssignee(value);
-          if (value === unassignedValue) setTaskStatus('READY');
+      <TaskActionDialogs
+        mode={taskAction?.mode ?? null}
+        onOpenChange={(open) => {
+          if (!open) setTaskAction(null);
         }}
-        onOpenChange={(open) => !open && setEditingTask(null)}
-        onRetry={() => void membersQuery.refetch()}
-        onStatusChange={(value) => {
-          setTaskStatus(value);
-          setTaskStatusDirty(true);
-        }}
-        onPriceChange={setTaskPrice}
-        onSubmit={submitTask}
-        price={taskPrice}
-        status={taskStatus}
-        assignee={taskAssignee}
-      />
-
-      <TaskDeductionDialog
-        amount={deductionAmount}
-        evidenceUrl={deductionEvidenceUrl}
-        isPending={deductionMutation.isPending}
-        language={i18n.language}
-        onAmountChange={setDeductionAmount}
-        onEvidenceUrlChange={setDeductionEvidenceUrl}
-        onOpenChange={(open) => !open && setDeductionTask(null)}
-        onReasonChange={setDeductionReason}
-        onSubmit={submitDeduction}
-        reason={deductionReason}
-        task={deductionTask}
+        target={taskAction?.target ?? null}
+        workspaceId={workspaceId}
       />
       <ChapterDeleteDialog
         chapter={isDeleteDialogOpen ? chapter : null}
@@ -763,282 +635,24 @@ export default function ChapterDetailPage(): ReactNode {
   );
 }
 
-function TaskEditDialog({
-  assignee,
-  assignees,
-  assigneesError,
-  assigneesLoading,
-  editingTask,
-  isPending,
-  onAssigneeChange,
-  onOpenChange,
-  onRetry,
-  onStatusChange,
-  onPriceChange,
-  onSubmit,
-  price,
-  status,
-}: {
-  assignee: string;
-  assignees: readonly ChapterAssignee[];
-  assigneesError: Error | null;
-  assigneesLoading: boolean;
-  editingTask: ChapterTask | null;
-  isPending: boolean;
-  onAssigneeChange: (value: string) => void;
-  onOpenChange: (open: boolean) => void;
-  onRetry: () => void;
-  onStatusChange: (value: ChapterManagerTaskStatus) => void;
-  onPriceChange: (value: string) => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  price: string;
-  status: ChapterManagerTaskStatus;
-}): ReactNode {
-  const { t } = useTranslation();
-  const assigneeOptions = useMemo(() => {
-    if (!editingTask?.assignee) return assignees;
-    if (
-      assignees.some(
-        (option) =>
-          option.discordUserId === editingTask.assignee?.discordUserId,
-      )
-    )
-      return assignees;
-    return [editingTask.assignee, ...assignees];
-  }, [assignees, editingTask]);
-
-  return (
-    <Dialog open={editingTask !== null} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            {t(translations.management.stories.editTask)}
-          </DialogTitle>
-        </DialogHeader>
-        {editingTask ? (
-          <form className="space-y-4" onSubmit={onSubmit}>
-            <div className="rounded-xl bg-muted/50 px-3 py-2.5">
-              <p className="font-semibold">{editingTask.stageName}</p>
-              <p className="text-xs text-muted-foreground">
-                {t(translations.management.stories.taskId, {
-                  id: editingTask.id,
-                })}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="task-edit-status">
-                {t(translations.management.stories.status)}
-              </Label>
-              <Select
-                value={status}
-                onValueChange={(value) =>
-                  onStatusChange(value as ChapterManagerTaskStatus)
-                }
-              >
-                <SelectTrigger id="task-edit-status" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {managerTaskStatuses.map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {getTaskStatusLabel(t, item)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="task-edit-price">
-                {t(translations.management.stories.agreedPrice)}
-              </Label>
-              <Input
-                id="task-edit-price"
-                inputMode="decimal"
-                min="0"
-                onChange={(event) => onPriceChange(event.target.value)}
-                step="0.01"
-                type="number"
-                value={price}
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                {t(translations.management.stories.taskPriceHint)}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="task-edit-assignee">
-                {t(translations.management.stories.assignee)}
-              </Label>
-              <Select value={assignee} onValueChange={onAssigneeChange}>
-                <SelectTrigger id="task-edit-assignee" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={unassignedValue}>
-                    {t(translations.management.stories.unassigned)}
-                  </SelectItem>
-                  {assigneeOptions.map((option) => (
-                    <SelectItem
-                      key={option.discordUserId}
-                      value={option.discordUserId}
-                    >
-                      {option.displayName ?? option.discordUserId}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {assigneesLoading ? (
-                <p className="text-xs text-muted-foreground">
-                  {t(translations.management.stories.loadingAssignees)}
-                </p>
-              ) : null}
-              {assigneesError ? (
-                <div className="flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-                  <span>{formatError(assigneesError)}</span>
-                  <Button
-                    onClick={onRetry}
-                    size="sm"
-                    type="button"
-                    variant="outline"
-                  >
-                    {t(translations.management.stories.retry)}
-                  </Button>
-                </div>
-              ) : null}
-              {assignee !== unassignedValue &&
-              assignee !== editingTask.assignee?.discordUserId ? (
-                <p className="text-xs text-primary">
-                  {t(translations.management.stories.assigneeWillStart)}
-                </p>
-              ) : null}
-              {assignee === unassignedValue && editingTask.assignee ? (
-                <p className="text-xs text-muted-foreground">
-                  {t(translations.management.stories.unassignWillReady)}
-                </p>
-              ) : null}
-            </div>
-            <Button className="w-full" disabled={isPending} type="submit">
-              {t(translations.management.stories.save)}
-            </Button>
-          </form>
-        ) : null}
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function TaskDeductionDialog({
-  amount,
-  evidenceUrl,
-  isPending,
-  language,
-  onAmountChange,
-  onEvidenceUrlChange,
-  onOpenChange,
-  onReasonChange,
-  onSubmit,
-  reason,
-  task,
-}: {
-  amount: string;
-  evidenceUrl: string;
-  isPending: boolean;
-  language: string;
-  onAmountChange: (value: string) => void;
-  onEvidenceUrlChange: (value: string) => void;
-  onOpenChange: (open: boolean) => void;
-  onReasonChange: (value: string) => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  reason: string;
-  task: ChapterTask | null;
-}): ReactNode {
-  const { t } = useTranslation();
-
-  return (
-    <Dialog open={task !== null} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            {t(translations.management.stories.deductMoneyTitle)}
-          </DialogTitle>
-        </DialogHeader>
-        {task ? (
-          <form className="space-y-4" onSubmit={onSubmit}>
-            <div className="rounded-xl bg-muted/50 px-3 py-2.5">
-              <p className="font-semibold">{task.stageName}</p>
-              <p className="text-xs text-muted-foreground">
-                {t(translations.management.stories.taskId, { id: task.id })}
-                {' · '}
-                {t(translations.management.stories.agreedPrice)}:{' '}
-                {formatMoney(task.agreedPrice, task.currency, language)}
-              </p>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {t(translations.management.stories.deductMoneyDescription)}
-            </p>
-            <div className="space-y-2">
-              <Label htmlFor="task-deduction-amount">
-                {t(translations.management.stories.deductAmount)}
-              </Label>
-              <Input
-                id="task-deduction-amount"
-                inputMode="decimal"
-                min="0.01"
-                onChange={(event) => onAmountChange(event.target.value)}
-                step="0.01"
-                type="number"
-                value={amount}
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                {t(translations.management.stories.deductAmountHint)}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="task-deduction-reason">
-                {t(translations.management.stories.deductReason)}
-              </Label>
-              <Textarea
-                id="task-deduction-reason"
-                maxLength={1000}
-                onChange={(event) => onReasonChange(event.target.value)}
-                value={reason}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="task-deduction-evidence">
-                {t(translations.management.stories.deductEvidenceUrl)}
-              </Label>
-              <Input
-                id="task-deduction-evidence"
-                onChange={(event) => onEvidenceUrlChange(event.target.value)}
-                placeholder="https://discord.com/channels/..."
-                type="url"
-                value={evidenceUrl}
-              />
-              <p className="text-xs text-muted-foreground">
-                {t(translations.management.stories.deductEvidenceHint)}
-              </p>
-            </div>
-            <Button
-              className="w-full"
-              disabled={isPending}
-              type="submit"
-              variant="destructive"
-            >
-              {isPending ? (
-                <RefreshCw aria-hidden="true" className="animate-spin" />
-              ) : (
-                <CircleMinus aria-hidden="true" />
-              )}
-              {t(translations.management.stories.deductSubmit)}
-            </Button>
-          </form>
-        ) : null}
-      </DialogContent>
-    </Dialog>
-  );
+function toTaskActionTarget(
+  storyId: string,
+  chapterId: string,
+  task: ChapterTask,
+): TaskActionTarget {
+  return {
+    agreedPrice: task.agreedPrice,
+    assigneeDiscordUserId: task.assignee?.discordUserId ?? null,
+    assigneeDisplayName: task.assignee?.displayName ?? null,
+    chapterId,
+    currency: task.currency,
+    id: task.id,
+    paymentStatus: task.paymentStatus,
+    stageCode: task.stageCode,
+    stageName: task.stageName,
+    status: task.status,
+    storyId,
+  };
 }
 
 function TaskTable({

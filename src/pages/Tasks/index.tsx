@@ -36,11 +36,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import TaskActionButtons from '@/features/tasks/components/task-action-buttons';
+import {
+  default as TaskActionDialogs,
+  type TaskActionMode,
+} from '@/features/tasks/components/task-action-dialogs';
 import {
   useTaskFilterOptionsQuery,
   useTasksQuery,
 } from '@/features/tasks/hooks';
 import type {
+  TaskActionTarget,
   TaskDueAtOrder,
   TaskFilterStage,
   TaskFilterStory,
@@ -51,6 +57,7 @@ import {
   getTaskStatusLabelKey,
   isTaskOverdue,
 } from '@/features/tasks/utils';
+import { toTaskActionTarget } from '@/features/tasks/utils/task-action-target';
 import { useWorkspaceStore } from '@/features/workspace/hooks';
 import { translations } from '@/locales/translations';
 import formatError from '@/utils/formatError';
@@ -174,16 +181,20 @@ function TaskAssignee({
 
 function TaskTable({
   dateFormatter,
+  onDeduct,
+  onEdit,
   tasks,
   t,
 }: {
   readonly dateFormatter: Intl.DateTimeFormat;
+  readonly onDeduct: (task: TaskListItem) => void;
+  readonly onEdit: (task: TaskListItem) => void;
   readonly tasks: readonly TaskListItem[];
   readonly t: ReturnType<typeof useTranslation>['t'];
 }) {
   return (
     <div className="hidden overflow-x-auto lg:block">
-      <Table className="min-w-[960px]">
+      <Table className="min-w-[1180px]">
         <TableHeader>
           <TableRow className="border-border/60 hover:bg-transparent">
             <TableHead>{t(translations.management.tasks.task)}</TableHead>
@@ -193,6 +204,9 @@ function TaskTable({
             <TableHead>{t(translations.management.tasks.assignee)}</TableHead>
             <TableHead>{t(translations.management.tasks.status)}</TableHead>
             <TableHead>{t(translations.management.tasks.deadline)}</TableHead>
+            <TableHead className="text-right">
+              {t(translations.management.stories.actions)}
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -223,6 +237,13 @@ function TaskTable({
               <TableCell>
                 <TaskDeadline dateFormatter={dateFormatter} task={task} t={t} />
               </TableCell>
+              <TableCell className="text-right whitespace-nowrap">
+                <TaskActionButtons
+                  isDeductDisabled={task.paymentStatus === 'PAID'}
+                  onDeduct={() => onDeduct(task)}
+                  onEdit={() => onEdit(task)}
+                />
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -233,10 +254,14 @@ function TaskTable({
 
 function TaskCardList({
   dateFormatter,
+  onDeduct,
+  onEdit,
   tasks,
   t,
 }: {
   readonly dateFormatter: Intl.DateTimeFormat;
+  readonly onDeduct: (task: TaskListItem) => void;
+  readonly onEdit: (task: TaskListItem) => void;
   readonly tasks: readonly TaskListItem[];
   readonly t: ReturnType<typeof useTranslation>['t'];
 }) {
@@ -293,6 +318,13 @@ function TaskCardList({
               </dd>
             </div>
           </dl>
+          <div className="mt-4 border-t border-border/60 pt-3">
+            <TaskActionButtons
+              isDeductDisabled={task.paymentStatus === 'PAID'}
+              onDeduct={() => onDeduct(task)}
+              onEdit={() => onEdit(task)}
+            />
+          </div>
         </article>
       ))}
     </div>
@@ -317,6 +349,10 @@ export default function TasksPage() {
   const [stageDefinitionId, setStageDefinitionId] = useState('');
   const [dueAtOrder, setDueAtOrder] = useState<TaskDueAtOrder>('ASC');
   const [page, setPage] = useState(0);
+  const [taskAction, setTaskAction] = useState<{
+    readonly mode: TaskActionMode;
+    readonly target: TaskActionTarget;
+  } | null>(null);
   const filterOptionsQuery = useTaskFilterOptionsQuery(workspaceId);
   const taskQuery = useTasksQuery(workspaceId, {
     dueAtOrder,
@@ -406,6 +442,10 @@ export default function TasksPage() {
 
   function retryQueries(): void {
     void Promise.all([taskQuery.refetch(), filterOptionsQuery.refetch()]);
+  }
+
+  function openTaskAction(mode: TaskActionMode, task: TaskListItem): void {
+    setTaskAction({ mode, target: toTaskActionTarget(task) });
   }
 
   return (
@@ -608,8 +648,20 @@ export default function TasksPage() {
             </Empty>
           ) : (
             <>
-              <TaskTable dateFormatter={dateFormatter} tasks={tasks} t={t} />
-              <TaskCardList dateFormatter={dateFormatter} tasks={tasks} t={t} />
+              <TaskTable
+                dateFormatter={dateFormatter}
+                onDeduct={(task) => openTaskAction('deduct', task)}
+                onEdit={(task) => openTaskAction('edit', task)}
+                tasks={tasks}
+                t={t}
+              />
+              <TaskCardList
+                dateFormatter={dateFormatter}
+                onDeduct={(task) => openTaskAction('deduct', task)}
+                onEdit={(task) => openTaskAction('edit', task)}
+                tasks={tasks}
+                t={t}
+              />
               <div className="flex flex-col gap-3 border-t border-border/60 px-4 py-4 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-5">
                 <span className="text-muted-foreground">
                   {t(translations.management.tasks.pageSummary, {
@@ -647,6 +699,14 @@ export default function TasksPage() {
           )}
         </CardContent>
       </Card>
+      <TaskActionDialogs
+        mode={taskAction?.mode ?? null}
+        onOpenChange={(open) => {
+          if (!open) setTaskAction(null);
+        }}
+        target={taskAction?.target ?? null}
+        workspaceId={workspaceId}
+      />
     </section>
   );
 }

@@ -1,5 +1,8 @@
 export type {
+  DeductTaskInput,
   PaymentStatus,
+  TaskActionTarget,
+  TaskAssignee,
   TaskDueAtOrder,
   TaskFilterOptions,
   TaskFilterStage,
@@ -7,5 +10,7 @@ export type {
   TaskListItem,
   TaskListPage,
   TaskListQuery,
+  TaskManagerTaskStatus,
   TaskStatus,
+  UpdateTaskInput,
 } from './entity';

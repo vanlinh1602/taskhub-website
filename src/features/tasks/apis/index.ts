@@ -1,1 +1,6 @@
-export { getTaskFilterOptions, getTasks } from './tasks';
+export {
+  deductTask,
+  getTaskFilterOptions,
+  getTasks,
+  updateTask,
+} from './tasks';

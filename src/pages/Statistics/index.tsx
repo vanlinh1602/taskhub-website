@@ -79,6 +79,13 @@ import type {
   StatisticsTaskCell,
   StatisticsTaskStatus,
 } from '@/features/statistics/types';
+import { toTaskActionTarget } from '@/features/statistics/utils/task-action-target';
+import TaskActionButtons from '@/features/tasks/components/task-action-buttons';
+import {
+  default as TaskActionDialogs,
+  type TaskActionMode,
+} from '@/features/tasks/components/task-action-dialogs';
+import type { TaskActionTarget } from '@/features/tasks/types';
 import { useWorkspaceStore } from '@/features/workspace/hooks';
 import { translations } from '@/locales/translations';
 import formatError from '@/utils/formatError';
@@ -97,6 +104,13 @@ const PAYMENT_STATUSES: readonly StatisticsPaymentStatus[] = [
   'PENDING',
   'PAID',
 ];
+
+interface SelectedTaskReference {
+  readonly taskId: string;
+  readonly storyId: string;
+  readonly chapterId: string;
+  readonly stageDefinitionId: string;
+}
 
 interface SelectedTask {
   readonly cell: StatisticsTaskCell;
@@ -231,7 +245,7 @@ function StatisticsTable({
   t,
 }: {
   readonly language: string;
-  readonly onSelect: (selected: SelectedTask) => void;
+  readonly onSelect: (selected: SelectedTaskReference) => void;
   readonly result: NonNullable<ReturnType<typeof useStatisticsQuery>['data']>;
   readonly t: ReturnType<typeof useTranslation>['t'];
 }) {
@@ -294,16 +308,15 @@ function StatisticsTable({
                 </TableCell>
                 {result.columns.flatMap((column) => {
                   const cell = row.stages[column.id];
-                  const shared = { cell, column, row };
-                  return [
-                    <TableCell className={`border-r border-border/60 p-1 text-center ${rowBoundaryClass}`} key={`${row.chapterId}-${column.id}-amount`}>
-                      {cell ? <button aria-label={`${column.name} ${t(translations.statistics.amount)}`} className="min-h-12 w-full rounded-lg px-2 py-2 text-sm font-semibold tabular-nums transition-colors hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none" onClick={() => onSelect({ cell, chapterName: row.chapterName, stage: shared.column, storyTitle: row.storyTitle })}>{formatMoney(cell.agreedPrice, cell.currency, language)}</button> : <span className="text-muted-foreground">—</span>}
-                    </TableCell>,
-                    <TableCell className={`border-r border-border/60 p-1 text-center ${rowBoundaryClass}`} key={`${row.chapterId}-${column.id}-completed`}>
-                      {cell ? <button aria-label={`${column.name} ${t(translations.statistics.completed)}`} className="min-h-12 w-full rounded-lg px-2 py-2 transition-colors hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none" onClick={() => onSelect({ cell, chapterName: row.chapterName, stage: shared.column, storyTitle: row.storyTitle })}><StatusMark done={cell.taskStatus === 'COMPLETED'} label={cell.taskStatus === 'COMPLETED' ? t(translations.statistics.yes) : t(translations.statistics.no)} /></button> : <span className="text-muted-foreground">—</span>}
-                    </TableCell>,
-                    <TableCell className={`border-r border-border/60 p-1 text-center ${rowBoundaryClass}`} key={`${row.chapterId}-${column.id}-paid`}>
-                      {cell ? <button aria-label={`${column.name} ${t(translations.statistics.paid)}`} className="min-h-12 w-full rounded-lg px-2 py-2 transition-colors hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none" onClick={() => onSelect({ cell, chapterName: row.chapterName, stage: shared.column, storyTitle: row.storyTitle })}><StatusMark done={cell.paymentStatus === 'PAID'} label={cell.paymentStatus === 'PAID' ? t(translations.statistics.yes) : t(translations.statistics.no)} /></button> : <span className="text-muted-foreground">—</span>}
+                   return [
+                     <TableCell className={`border-r border-border/60 p-1 text-center ${rowBoundaryClass}`} key={`${row.chapterId}-${column.id}-amount`}>
+                       {cell ? <button aria-label={`${column.name} ${t(translations.statistics.amount)}`} className="min-h-12 w-full rounded-lg px-2 py-2 text-sm font-semibold tabular-nums transition-colors hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none" onClick={() => onSelect({ chapterId: row.chapterId, stageDefinitionId: column.id, storyId: row.storyId, taskId: cell.taskId })}>{formatMoney(cell.agreedPrice, cell.currency, language)}</button> : <span className="text-muted-foreground">—</span>}
+                     </TableCell>,
+                     <TableCell className={`border-r border-border/60 p-1 text-center ${rowBoundaryClass}`} key={`${row.chapterId}-${column.id}-completed`}>
+                       {cell ? <button aria-label={`${column.name} ${t(translations.statistics.completed)}`} className="min-h-12 w-full rounded-lg px-2 py-2 transition-colors hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none" onClick={() => onSelect({ chapterId: row.chapterId, stageDefinitionId: column.id, storyId: row.storyId, taskId: cell.taskId })}><StatusMark done={cell.taskStatus === 'COMPLETED'} label={cell.taskStatus === 'COMPLETED' ? t(translations.statistics.yes) : t(translations.statistics.no)} /></button> : <span className="text-muted-foreground">—</span>}
+                     </TableCell>,
+                     <TableCell className={`border-r border-border/60 p-1 text-center ${rowBoundaryClass}`} key={`${row.chapterId}-${column.id}-paid`}>
+                       {cell ? <button aria-label={`${column.name} ${t(translations.statistics.paid)}`} className="min-h-12 w-full rounded-lg px-2 py-2 transition-colors hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none" onClick={() => onSelect({ chapterId: row.chapterId, stageDefinitionId: column.id, storyId: row.storyId, taskId: cell.taskId })}><StatusMark done={cell.paymentStatus === 'PAID'} label={cell.paymentStatus === 'PAID' ? t(translations.statistics.yes) : t(translations.statistics.no)} /></button> : <span className="text-muted-foreground">—</span>}
                     </TableCell>,
                   ];
                 })}
@@ -332,12 +345,43 @@ export default function StatisticsPage() {
   const navigate = useNavigate();
   const defaults = useMemo(() => makeDefaultFilters(activeWorkspace?.timezone), [activeWorkspace?.timezone]);
   const [filters, setFilters] = useState<StatisticsFilters>(() => defaults);
-  const [selectedTask, setSelectedTask] = useState<SelectedTask | null>(null);
+  const [selectedTaskReference, setSelectedTaskReference] =
+    useState<SelectedTaskReference | null>(null);
+  const [taskAction, setTaskAction] = useState<{
+    readonly mode: TaskActionMode;
+    readonly target: TaskActionTarget;
+  } | null>(null);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const filtersQuery = useStatisticsFiltersQuery(activeWorkspaceId);
   const statisticsQuery = useStatisticsQuery(activeWorkspaceId, filters);
   const summaryQuery = useStatisticsSummaryQuery(activeWorkspaceId, filters, isSummaryOpen);
   const exportMutation = useExportStatisticsMutation(activeWorkspaceId);
+  const selectedTask = useMemo<SelectedTask | null>(() => {
+    if (!selectedTaskReference || !statisticsQuery.data) return null;
+    const row = statisticsQuery.data.items.find(
+      (item) =>
+        item.storyId === selectedTaskReference.storyId &&
+        item.chapterId === selectedTaskReference.chapterId,
+    );
+    const stage = statisticsQuery.data.columns.find(
+      (column) => column.id === selectedTaskReference.stageDefinitionId,
+    );
+    const cell = row?.stages[selectedTaskReference.stageDefinitionId] ?? null;
+    if (
+      !row ||
+      !stage ||
+      !cell ||
+      cell.taskId !== selectedTaskReference.taskId
+    ) {
+      return null;
+    }
+    return {
+      cell,
+      chapterName: row.chapterName,
+      stage,
+      storyTitle: row.storyTitle,
+    };
+  }, [selectedTaskReference, statisticsQuery.data]);
 
   useEffect(() => {
     if (activeWorkspaceId) setFilters((current) => readFilters(new URLSearchParams(window.location.search), { ...defaults, ...current }));
@@ -357,6 +401,13 @@ export default function StatisticsPage() {
     if (filters.page > 0) params.set('page', String(filters.page));
     window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
   }, [filters]);
+
+  useEffect(() => {
+    if (!selectedTask && selectedTaskReference) {
+      setSelectedTaskReference(null);
+      setTaskAction(null);
+    }
+  }, [selectedTask, selectedTaskReference]);
 
   const language = i18n.language;
   const error = statisticsQuery.error;
@@ -393,6 +444,14 @@ export default function StatisticsPage() {
         toast.success(t(translations.statistics.exportSuccess));
       },
       onError: (exportError) => toast.error(t(translations.statistics.exportError), { description: formatError(exportError) }),
+    });
+  }
+
+  function openSelectedTaskAction(mode: TaskActionMode): void {
+    if (!selectedTask) return;
+    setTaskAction({
+      mode,
+      target: toTaskActionTarget(selectedTask.cell, selectedTask.stage),
     });
   }
 
@@ -511,15 +570,38 @@ export default function StatisticsPage() {
           </Empty>
         ) : statisticsQuery.isLoading ? <StatisticsTableSkeleton label={t(translations.statistics.loading)} /> : statisticsQuery.data?.items.length === 0 ? (
           <Empty className="min-h-72 border-0 bg-muted/20"><EmptyHeader><EmptyMedia variant="icon"><Circle /></EmptyMedia><EmptyTitle>{t(translations.statistics.empty)}</EmptyTitle><EmptyDescription>{t(translations.statistics.emptyDescription)}</EmptyDescription></EmptyHeader></Empty>
-        ) : canShowTable && statisticsQuery.data ? <StatisticsTable language={language} onSelect={setSelectedTask} result={statisticsQuery.data} t={t} /> : null}
+         ) : canShowTable && statisticsQuery.data ? <StatisticsTable language={language} onSelect={setSelectedTaskReference} result={statisticsQuery.data} t={t} /> : null}
         {statisticsQuery.data && statisticsQuery.data.total > 0 ? <div className="flex flex-col gap-3 border-t border-border/60 px-4 py-4 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-6"><span className="text-muted-foreground">{t(translations.statistics.pageSummary, { count: statisticsQuery.data.total, current: statisticsQuery.data.page + 1, total: statisticsQuery.data.pageCount })}</span><div className="flex gap-2"><Button disabled={statisticsQuery.isFetching || filters.page <= 0} onClick={() => updateFilter('page', Math.max(0, filters.page - 1))} size="sm" variant="outline"><ChevronLeft aria-hidden="true" />{t(translations.statistics.previousPage)}</Button><Button disabled={statisticsQuery.isFetching || filters.page + 1 >= statisticsQuery.data.pageCount} onClick={() => updateFilter('page', filters.page + 1)} size="sm">{t(translations.statistics.nextPage)}<ChevronRight aria-hidden="true" /></Button></div></div> : null}
       </Card>
 
-      <Sheet onOpenChange={(open) => { if (!open) setSelectedTask(null); }} open={selectedTask !== null}>
+      <Sheet
+        onOpenChange={(open) => {
+          if (!open) setSelectedTaskReference(null);
+        }}
+        open={selectedTask !== null}
+      >
         <SheetContent className="w-full gap-0 overflow-hidden bg-card p-0 data-[side=right]:!w-full data-[side=right]:sm:!max-w-lg">
-          {selectedTask ? <TaskDetail selected={selectedTask} language={language} navigate={navigate} t={t} /> : null}
+          {selectedTask ? (
+            <TaskDetail
+              language={language}
+              navigate={navigate}
+              onDeduct={() => openSelectedTaskAction('deduct')}
+              onEdit={() => openSelectedTaskAction('edit')}
+              selected={selectedTask}
+              t={t}
+            />
+          ) : null}
         </SheetContent>
       </Sheet>
+
+      <TaskActionDialogs
+        mode={taskAction?.mode ?? null}
+        onOpenChange={(open) => {
+          if (!open) setTaskAction(null);
+        }}
+        target={taskAction?.target ?? null}
+        workspaceId={activeWorkspaceId}
+      />
 
       <StatisticsSummaryDialog
         language={language}
@@ -539,11 +621,15 @@ function PageIntro({ t }: { readonly t: ReturnType<typeof useTranslation>['t'] }
 function TaskDetail({
   language,
   navigate,
+  onDeduct,
+  onEdit,
   selected,
   t,
 }: {
   readonly language: string;
   readonly navigate: ReturnType<typeof useNavigate>;
+  readonly onDeduct: () => void;
+  readonly onEdit: () => void;
   readonly selected: SelectedTask;
   readonly t: ReturnType<typeof useTranslation>['t'];
 }) {
@@ -577,7 +663,7 @@ function TaskDetail({
       </SheetHeader>
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
         <div className="grid gap-x-5 gap-y-1 text-sm sm:grid-cols-2">
-          <DetailItem icon={<UserRound aria-hidden="true" />} label={t(translations.statistics.assigneeValue)} value={cell.assigneeDisplayName ?? t(translations.statistics.unassigned)} />
+           <DetailItem icon={<UserRound aria-hidden="true" />} label={t(translations.statistics.assigneeValue)} value={cell.assigneeDisplayName ?? cell.assigneeDiscordUserId ?? t(translations.statistics.unassigned)} />
           <DetailItem emphasis icon={<CircleDollarSign aria-hidden="true" />} label={t(translations.statistics.price)} value={formatMoney(cell.agreedPrice, cell.currency, language)} />
           <DetailItem icon={<CalendarDays aria-hidden="true" />} label={t(translations.statistics.createdAt)} value={formatDate(cell.createdAt, language, t(translations.statistics.noDate))} />
           <DetailItem icon={<CalendarDays aria-hidden="true" />} label={t(translations.statistics.completedAt)} value={formatDate(cell.completedAt, language, t(translations.statistics.noDate))} />
@@ -586,12 +672,17 @@ function TaskDetail({
         </div>
         <p className="mt-5 border-t border-border/60 pt-4 text-sm text-muted-foreground">{t(translations.statistics.detailsDescription)}</p>
       </div>
-      <div className="border-t border-border/60 bg-card px-6 py-4">
-        <Button className="w-full sm:w-auto" onClick={() => navigate(`/stories/${encodeURIComponent(cell.storyId)}/chapter/${encodeURIComponent(cell.chapterId)}`)} variant="outline">
-          <ExternalLink aria-hidden="true" />
-          {t(translations.statistics.viewChapter)}
-        </Button>
-      </div>
+       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 bg-card px-6 py-4">
+         <TaskActionButtons
+           isDeductDisabled={cell.paymentStatus === 'PAID'}
+           onDeduct={onDeduct}
+           onEdit={onEdit}
+         />
+         <Button className="w-full sm:w-auto" onClick={() => navigate(`/stories/${encodeURIComponent(cell.storyId)}/chapter/${encodeURIComponent(cell.chapterId)}`)} variant="outline">
+           <ExternalLink aria-hidden="true" />
+           {t(translations.statistics.viewChapter)}
+         </Button>
+       </div>
     </div>
   );
 }

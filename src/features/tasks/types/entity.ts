@@ -5,9 +5,45 @@ export type TaskStatus =
   | 'COMPLETED'
   | 'CANCELLED';
 
+export type TaskManagerTaskStatus = Extract<
+  TaskStatus,
+  'BLOCKED' | 'READY' | 'CANCELLED'
+>;
+
 export type PaymentStatus = 'NOT_READY' | 'PENDING' | 'PAID';
 
 export type TaskDueAtOrder = 'ASC' | 'DESC';
+
+export interface TaskAssignee {
+  readonly discordUserId: string;
+  readonly displayName: string | null;
+}
+
+export interface TaskActionTarget {
+  readonly id: string;
+  readonly storyId: string;
+  readonly chapterId: string;
+  readonly stageCode: string;
+  readonly stageName: string;
+  readonly status: TaskStatus;
+  readonly paymentStatus: PaymentStatus;
+  readonly agreedPrice: string | null;
+  readonly currency: string;
+  readonly assigneeDiscordUserId: string | null;
+  readonly assigneeDisplayName: string | null;
+}
+
+export interface UpdateTaskInput {
+  readonly status?: TaskManagerTaskStatus;
+  readonly agreedPrice?: string;
+  readonly assigneeDiscordUserId?: string | null;
+}
+
+export interface DeductTaskInput {
+  readonly amount: string;
+  readonly reason: string;
+  readonly evidenceUrl?: string;
+}
 
 export interface TaskListItem {
   readonly id: string;

@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getTaskFilterOptions, getTasks } from '@/features/tasks/apis';
+import {
+  deductTask,
+  getTaskFilterOptions,
+  getTasks,
+  updateTask,
+} from '@/features/tasks/apis';
 import { backendService } from '@/services';
 
 describe('task APIs', () => {
@@ -55,6 +60,60 @@ describe('task APIs', () => {
 
     expect(get).toHaveBeenCalledWith(
       '/api/story-workflow/workspace%2Fid/tasks/filters',
+    );
+  });
+
+  it('updates a task with every nested identifier encoded', async () => {
+    const patch = vi
+      .spyOn(backendService, 'patch')
+      .mockResolvedValue({ kind: 'ok' } as never);
+
+    await updateTask(
+      'workspace/id',
+      'story id',
+      'chapter/id',
+      'task/id',
+      {
+        agreedPrice: '12.50',
+        assigneeDiscordUserId: 'member/id',
+        status: 'BLOCKED',
+      },
+    );
+
+    expect(patch).toHaveBeenCalledWith(
+      '/api/story-workflow/workspace%2Fid/stories/story%20id/chapters/chapter%2Fid/tasks/task%2Fid',
+      {
+        agreedPrice: '12.50',
+        assigneeDiscordUserId: 'member/id',
+        status: 'BLOCKED',
+      },
+    );
+  });
+
+  it('posts a deduction with every nested identifier encoded', async () => {
+    const post = vi
+      .spyOn(backendService, 'post')
+      .mockResolvedValue({ kind: 'ok' } as never);
+
+    await deductTask(
+      'workspace/id',
+      'story id',
+      'chapter/id',
+      'task/id',
+      {
+        amount: '3.25',
+        evidenceUrl: 'https://discord.com/channels/1/2/3',
+        reason: 'Late delivery',
+      },
+    );
+
+    expect(post).toHaveBeenCalledWith(
+      '/api/story-workflow/workspace%2Fid/stories/story%20id/chapters/chapter%2Fid/tasks/task%2Fid/deduction',
+      {
+        amount: '3.25',
+        evidenceUrl: 'https://discord.com/channels/1/2/3',
+        reason: 'Late delivery',
+      },
     );
   });
 });

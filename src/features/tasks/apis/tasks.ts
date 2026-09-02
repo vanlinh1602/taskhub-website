@@ -2,9 +2,11 @@ import { backendService } from '@/services';
 import formatError from '@/utils/formatError';
 
 import type {
+  DeductTaskInput,
   TaskFilterOptions,
   TaskListPage,
   TaskListQuery,
+  UpdateTaskInput,
 } from '../types';
 
 function createTaskListQuery(query: TaskListQuery): string {
@@ -41,4 +43,32 @@ export async function getTaskFilterOptions(
   );
   if (response.kind === 'ok') return response.data;
   throw new Error(formatError(response));
+}
+
+export async function updateTask(
+  workspaceId: string,
+  storyId: string,
+  chapterId: string,
+  taskId: string,
+  input: UpdateTaskInput,
+): Promise<void> {
+  const response = await backendService.patch(
+    `/api/story-workflow/${encodeURIComponent(workspaceId)}/stories/${encodeURIComponent(storyId)}/chapters/${encodeURIComponent(chapterId)}/tasks/${encodeURIComponent(taskId)}`,
+    input,
+  );
+  if (response.kind !== 'ok') throw new Error(formatError(response));
+}
+
+export async function deductTask(
+  workspaceId: string,
+  storyId: string,
+  chapterId: string,
+  taskId: string,
+  input: DeductTaskInput,
+): Promise<void> {
+  const response = await backendService.post(
+    `/api/story-workflow/${encodeURIComponent(workspaceId)}/stories/${encodeURIComponent(storyId)}/chapters/${encodeURIComponent(chapterId)}/tasks/${encodeURIComponent(taskId)}/deduction`,
+    input,
+  );
+  if (response.kind !== 'ok') throw new Error(formatError(response));
 }

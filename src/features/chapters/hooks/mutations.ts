@@ -8,19 +8,16 @@ import {
 import { adminQueryKeys } from '@/features/admin/hooks';
 import {
   createChapter,
-  deductChapterTask,
   deleteChapter,
   notifyChapterProgress,
   updateChapterConfiguration,
   updateChapterPublication,
-  updateChapterTask,
 } from '@/features/chapters/apis';
 import type {
   CreateChapterInput,
-  DeductChapterTaskInput,
   UpdateChapterConfigurationInput,
-  UpdateChapterTaskInput,
 } from '@/features/chapters/types';
+import { invalidateTaskMutationQueries } from '@/features/tasks/hooks/mutations';
 
 import { chaptersQueryKeys } from './queryKeys';
 
@@ -32,16 +29,6 @@ interface UpdateChapterConfigurationMutationInput {
 interface UpdateChapterPublicationMutationInput {
   readonly chapterId: string;
   readonly publicationStatus: 'PUBLISHED' | 'UNPUBLISHED';
-}
-
-interface UpdateChapterTaskMutationInput {
-  readonly taskId: string;
-  readonly input: UpdateChapterTaskInput;
-}
-
-interface DeductChapterTaskMutationInput {
-  readonly taskId: string;
-  readonly input: DeductChapterTaskInput;
 }
 
 export async function invalidateChapterListQueries(
@@ -76,15 +63,11 @@ export async function invalidateChapterTaskQueries(
   storyId: string,
   chapterId: string,
 ): Promise<void> {
-  await Promise.all([
-    queryClient.invalidateQueries({
-      queryKey: chaptersQueryKeys.detail(workspaceId, storyId, chapterId),
-    }),
-    invalidateChapterListQueries(queryClient, workspaceId, storyId),
-    queryClient.invalidateQueries({
-      queryKey: adminQueryKeys.dashboardRoot(),
-    }),
-  ]);
+  await invalidateTaskMutationQueries(queryClient, {
+    chapterId,
+    storyId,
+    workspaceId,
+  });
 }
 
 export async function invalidateChapterDeleteQueries(
@@ -205,48 +188,6 @@ export function useUpdateChapterPublicationMutation(
   });
 }
 
-export function useUpdateChapterTaskMutation(
-  workspaceId: string,
-  storyId: string,
-  chapterId: string,
-): UseMutationResult<void, Error, UpdateChapterTaskMutationInput, unknown> {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ taskId, input }: UpdateChapterTaskMutationInput) =>
-      updateChapterTask(workspaceId, storyId, chapterId, taskId, input),
-    onSuccess: async () => {
-      await invalidateChapterTaskQueries(
-        queryClient,
-        workspaceId,
-        storyId,
-        chapterId,
-      );
-    },
-  });
-}
-
-export function useDeductChapterTaskMutation(
-  workspaceId: string,
-  storyId: string,
-  chapterId: string,
-): UseMutationResult<void, Error, DeductChapterTaskMutationInput, unknown> {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ taskId, input }: DeductChapterTaskMutationInput) =>
-      deductChapterTask(workspaceId, storyId, chapterId, taskId, input),
-    onSuccess: async () => {
-      await invalidateChapterTaskQueries(
-        queryClient,
-        workspaceId,
-        storyId,
-        chapterId,
-      );
-    },
-  });
-}
-
 export function useNotifyChapterProgressMutation(
   workspaceId: string,
   storyId: string,
@@ -258,8 +199,13 @@ export function useNotifyChapterProgressMutation(
 }
 
 export type {
-  DeductChapterTaskMutationInput,
   UpdateChapterConfigurationMutationInput,
   UpdateChapterPublicationMutationInput,
-  UpdateChapterTaskMutationInput,
 };
+
+export {
+  type DeductTaskMutationInput as DeductChapterTaskMutationInput,
+  type UpdateTaskMutationInput as UpdateChapterTaskMutationInput,
+  useDeductTaskMutation as useDeductChapterTaskMutation,
+  useUpdateTaskMutation as useUpdateChapterTaskMutation,
+} from '@/features/tasks/hooks/mutations';
