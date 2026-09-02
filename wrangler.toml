@@ -1,2 +1,2 @@
-name = "taskory-hub-website"
+name = "taskory-hub"
 pages_build_output_dir = "./dist"

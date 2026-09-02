@@ -71,6 +71,16 @@ export default class Api {
     return getApiProblem(response);
   };
 
+  getBlob = async (path: string, params?: any): Promise<{ kind: 'ok'; data: Blob } | ApiProblems> => {
+    const response: ApiResponse<Blob> = await this.requestWithAuth(() =>
+      this.api.get(path, params, { responseType: 'blob' }),
+    );
+    if (response.ok && response.data) {
+      return { kind: 'ok', data: response.data };
+    }
+    return getApiProblem(response);
+  };
+
   post = async <T>(
     path: string,
     params?: any,

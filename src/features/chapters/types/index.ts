@@ -1,6 +1,8 @@
 export type {
   Chapter,
   ChapterAssignee,
+  ChapterDeleteBlockReason,
+  ChapterDeleteState,
   ChapterDetail,
   ChapterDifficulty,
   ChapterManagerTaskStatus,

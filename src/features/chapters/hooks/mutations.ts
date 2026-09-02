@@ -9,6 +9,7 @@ import { adminQueryKeys } from '@/features/admin/hooks';
 import {
   createChapter,
   deductChapterTask,
+  deleteChapter,
   notifyChapterProgress,
   updateChapterConfiguration,
   updateChapterPublication,
@@ -86,6 +87,26 @@ export async function invalidateChapterTaskQueries(
   ]);
 }
 
+export async function invalidateChapterDeleteQueries(
+  queryClient: QueryClient,
+  workspaceId: string,
+  storyId: string,
+  chapterId: string,
+): Promise<void> {
+  await Promise.all([
+    invalidateChapterListQueries(queryClient, workspaceId, storyId),
+    queryClient.invalidateQueries({
+      queryKey: chaptersQueryKeys.detail(workspaceId, storyId, chapterId),
+    }),
+    queryClient.invalidateQueries({
+      queryKey: chaptersQueryKeys.detailRoot(),
+    }),
+    queryClient.invalidateQueries({
+      queryKey: adminQueryKeys.dashboardRoot(),
+    }),
+  ]);
+}
+
 export function useCreateChapterMutation(
   workspaceId: string,
   storyId: string,
@@ -97,6 +118,26 @@ export function useCreateChapterMutation(
       createChapter(workspaceId, storyId, input),
     onSuccess: async () => {
       await invalidateChapterListQueries(queryClient, workspaceId, storyId);
+    },
+  });
+}
+
+export function useDeleteChapterMutation(
+  workspaceId: string,
+  storyId: string,
+): UseMutationResult<void, Error, string, unknown> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (chapterId: string) =>
+      deleteChapter(workspaceId, storyId, chapterId),
+    onSuccess: async (_result, chapterId) => {
+      await invalidateChapterDeleteQueries(
+        queryClient,
+        workspaceId,
+        storyId,
+        chapterId,
+      );
     },
   });
 }

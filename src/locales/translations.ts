@@ -8,6 +8,7 @@ import viManagement from './vi/management.json';
 import viMembers from './vi/members.json';
 import viNavigation from './vi/navigation.json';
 import viStages from './vi/stages.json';
+import viStatistics from './vi/statistics.json';
 import viWorkflows from './vi/workflows.json';
 import viWorkspaceSettings from './vi/workspace-settings.json';
 
@@ -21,6 +22,7 @@ const vi = {
   management: viManagement,
   navigation: viNavigation,
   stages: viStages,
+  statistics: viStatistics,
   workspaceSettings: viWorkspaceSettings,
   workflows: viWorkflows,
 } satisfies TranslationJsonType;

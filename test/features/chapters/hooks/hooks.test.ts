@@ -5,6 +5,7 @@ import {
   createChapterQueryOptions,
   createChaptersQueryOptions,
   invalidateChapterConfigurationQueries,
+  invalidateChapterDeleteQueries,
   invalidateChapterTaskQueries,
 } from '@/features/chapters/hooks';
 
@@ -81,6 +82,39 @@ describe('chapters hooks', () => {
     });
     expect(invalidateQueries).toHaveBeenCalledWith({
       queryKey: ['chapters', 'list', 'workspace-1', 'story-1'],
+    });
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['admin', 'dashboard'],
+    });
+  });
+
+  it('invalidates chapter list, detail, and dashboard after deletion', async () => {
+    const queryClient = new QueryClient();
+    const invalidateQueries = vi
+      .spyOn(queryClient, 'invalidateQueries')
+      .mockResolvedValue(true);
+
+    await invalidateChapterDeleteQueries(
+      queryClient,
+      'workspace-1',
+      'story-1',
+      'chapter-1',
+    );
+
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['chapters', 'list', 'workspace-1', 'story-1'],
+    });
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: [
+        'chapters',
+        'detail',
+        'workspace-1',
+        'story-1',
+        'chapter-1',
+      ],
+    });
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['chapters', 'detail'],
     });
     expect(invalidateQueries).toHaveBeenCalledWith({
       queryKey: ['admin', 'dashboard'],

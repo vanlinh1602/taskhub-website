@@ -28,7 +28,4 @@ export type UserStore = {
 export type UserStoreActions = {
   authUser: () => Promise<void>;
   logout: () => Promise<void>;
-  updateUser: (userId: number, user: Partial<User>) => Promise<boolean>;
-  setActiveTeam: (teamId: number) => void;
-  setActiveTeamAsync: (teamId: number) => Promise<void>;
 };

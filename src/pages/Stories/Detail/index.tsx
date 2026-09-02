@@ -53,9 +53,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { ChapterActionsMenu } from '@/features/chapters/components/chapter-actions-menu';
+import { ChapterDeleteDialog } from '@/features/chapters/components/chapter-delete-dialog';
 import {
   useChaptersQuery,
   useCreateChapterMutation,
+  useDeleteChapterMutation,
   useUpdateChapterConfigurationMutation,
   useUpdateChapterPublicationMutation,
 } from '@/features/chapters/hooks';
@@ -86,6 +89,7 @@ const workflows: readonly ChapterWorkflowFilter[] = [
 ];
 const publications = ['ALL', 'PUBLISHED', 'UNPUBLISHED'] as const;
 type PublicationFilter = (typeof publications)[number];
+const chapterPageSize = 25;
 
 export default function StoryDetailPage(): ReactNode {
   const { t } = useTranslation();
@@ -97,6 +101,7 @@ export default function StoryDetailPage(): ReactNode {
   const [priority, setPriority] = useState<ChapterPriority | 'ALL'>('ALL');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingChapter, setEditingChapter] = useState<Chapter | null>(null);
+  const [deletingChapter, setDeletingChapter] = useState<Chapter | null>(null);
   const storyQuery = useStoryQuery(workspaceId, storyId);
   const chaptersQuery = useChaptersQuery(
     workspaceId,
@@ -115,6 +120,7 @@ export default function StoryDetailPage(): ReactNode {
     [chaptersQuery.data, priority, publication],
   );
   const createMutation = useCreateChapterMutation(workspaceId, storyId);
+  const deleteMutation = useDeleteChapterMutation(workspaceId, storyId);
   const configurationMutation = useUpdateChapterConfigurationMutation(
     workspaceId,
     storyId,
@@ -152,6 +158,27 @@ export default function StoryDetailPage(): ReactNode {
         onError: (error: Error) => toast.error(formatError(error)),
       },
     );
+  }
+
+  function submitDelete(): void {
+    if (!deletingChapter) return;
+    deleteMutation.mutate(deletingChapter.id, {
+      onSuccess: () => {
+        const currentPage = chaptersQuery.data?.page ?? page;
+        const remainingTotal = Math.max(
+          0,
+          (chaptersQuery.data?.total ?? 0) - 1,
+        );
+        const remainingPageCount = Math.max(
+          1,
+          Math.ceil(remainingTotal / chapterPageSize),
+        );
+        setDeletingChapter(null);
+        setPage(Math.min(currentPage, remainingPageCount - 1));
+        toast.success(t(translations.management.stories.chapterDeleteSuccess));
+      },
+      onError: (error: Error) => toast.error(formatError(error)),
+    });
   }
 
   function submitCreate(event: FormEvent<HTMLFormElement>): void {
@@ -352,6 +379,7 @@ export default function StoryDetailPage(): ReactNode {
         <>
           <ChapterTable
             chapters={chapters}
+            onDelete={setDeletingChapter}
             onEdit={setEditingChapter}
             onTogglePublication={togglePublication}
             isUpdating={publicationMutation.isPending}
@@ -362,6 +390,7 @@ export default function StoryDetailPage(): ReactNode {
               <ChapterCard
                 key={chapter.id}
                 chapter={chapter}
+                onDelete={() => setDeletingChapter(chapter)}
                 onEdit={() => setEditingChapter(chapter)}
                 onTogglePublication={() => togglePublication(chapter)}
                 isUpdating={publicationMutation.isPending}
@@ -462,6 +491,12 @@ export default function StoryDetailPage(): ReactNode {
           ) : null}
         </DialogContent>
       </Dialog>
+      <ChapterDeleteDialog
+        chapter={deletingChapter}
+        isPending={deleteMutation.isPending}
+        onConfirm={submitDelete}
+        onOpenChange={(open) => !open && setDeletingChapter(null)}
+      />
     </section>
   );
 }
@@ -529,12 +564,14 @@ function PrioritySelect({
 
 function ChapterTable({
   chapters,
+  onDelete,
   onEdit,
   onTogglePublication,
   isUpdating,
   storyId,
 }: {
   chapters: readonly Chapter[];
+  onDelete: (chapter: Chapter) => void;
   onEdit: (chapter: Chapter) => void;
   onTogglePublication: (chapter: Chapter) => void;
   isUpdating: boolean;
@@ -567,6 +604,7 @@ function ChapterTable({
             <ChapterRow
               key={chapter.id}
               chapter={chapter}
+              onDelete={() => onDelete(chapter)}
               onEdit={() => onEdit(chapter)}
               onTogglePublication={() => onTogglePublication(chapter)}
               isUpdating={isUpdating}
@@ -581,12 +619,14 @@ function ChapterTable({
 
 function ChapterRow({
   chapter,
+  onDelete,
   onEdit,
   onTogglePublication,
   isUpdating,
   storyId,
 }: {
   chapter: Chapter;
+  onDelete: () => void;
   onEdit: () => void;
   onTogglePublication: () => void;
   isUpdating: boolean;
@@ -687,6 +727,7 @@ function ChapterRow({
               ? t(translations.management.stories.unpublish)
               : t(translations.management.stories.publish)}
           </Button>
+          <ChapterActionsMenu onDelete={onDelete} />
         </div>
       </TableCell>
     </TableRow>
@@ -695,12 +736,14 @@ function ChapterRow({
 
 function ChapterCard({
   chapter,
+  onDelete,
   onEdit,
   onTogglePublication,
   isUpdating,
   storyId,
 }: {
   chapter: Chapter;
+  onDelete: () => void;
   onEdit: () => void;
   onTogglePublication: () => void;
   isUpdating: boolean;
@@ -737,6 +780,7 @@ function ChapterCard({
         >
           <Settings2 />
         </Button>
+        <ChapterActionsMenu onDelete={onDelete} />
       </CardHeader>
       <CardContent>
         <p className="text-sm">

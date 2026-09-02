@@ -54,6 +54,17 @@ export async function createChapter(
   if (response.kind !== 'ok') throw new Error(formatError(response));
 }
 
+export async function deleteChapter(
+  workspaceId: string,
+  storyId: string,
+  chapterId: string,
+): Promise<void> {
+  const response = await backendService.delete(
+    `/api/story-workflow/${encodeURIComponent(workspaceId)}/stories/${encodeURIComponent(storyId)}/chapters/${encodeURIComponent(chapterId)}`,
+  );
+  if (response.kind !== 'ok') throw new Error(formatError(response));
+}
+
 export async function updateChapterPublication(
   workspaceId: string,
   storyId: string,

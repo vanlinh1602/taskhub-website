@@ -1,6 +1,7 @@
 export {
   type DeductChapterTaskMutationInput,
   invalidateChapterConfigurationQueries,
+  invalidateChapterDeleteQueries,
   invalidateChapterListQueries,
   invalidateChapterTaskQueries,
   type UpdateChapterConfigurationMutationInput,
@@ -8,6 +9,7 @@ export {
   type UpdateChapterTaskMutationInput,
   useCreateChapterMutation,
   useDeductChapterTaskMutation,
+  useDeleteChapterMutation,
   useNotifyChapterProgressMutation,
   useUpdateChapterConfigurationMutation,
   useUpdateChapterPublicationMutation,

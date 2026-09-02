@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { type FormEvent, type ReactNode, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -59,9 +59,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
+import { ChapterActionsMenu } from '@/features/chapters/components/chapter-actions-menu';
+import { ChapterDeleteDialog } from '@/features/chapters/components/chapter-delete-dialog';
 import {
   useChapterQuery,
   useDeductChapterTaskMutation,
+  useDeleteChapterMutation,
   useNotifyChapterProgressMutation,
   useUpdateChapterConfigurationMutation,
   useUpdateChapterPublicationMutation,
@@ -105,8 +108,10 @@ const unassignedValue = '__UNASSIGNED__';
 export default function ChapterDetailPage(): ReactNode {
   const { i18n, t } = useTranslation();
   const { storyId = '', chapterId = '' } = useParams();
+  const navigate = useNavigate();
   const { activeWorkspaceId: workspaceId } = useWorkspaceStore();
   const [isChapterEditorOpen, setIsChapterEditorOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<ChapterTask | null>(null);
   const [chapterDifficulty, setChapterDifficulty] =
     useState<ChapterDifficulty>('NORMAL');
@@ -134,6 +139,7 @@ export default function ChapterDetailPage(): ReactNode {
     workspaceId,
     storyId,
   );
+  const deleteMutation = useDeleteChapterMutation(workspaceId, storyId);
   const taskMutation = useUpdateChapterTaskMutation(
     workspaceId,
     storyId,
@@ -180,6 +186,21 @@ export default function ChapterDetailPage(): ReactNode {
     setChapterPriority(detail.chapter.priority);
     setChapterAdultContent(detail.chapter.hasAdultContent);
     setIsChapterEditorOpen(true);
+  }
+
+  function openChapterDeleteDialog(): void {
+    if (detail) setIsDeleteDialogOpen(true);
+  }
+
+  function submitDelete(): void {
+    deleteMutation.mutate(chapterId, {
+      onSuccess: () => {
+        setIsDeleteDialogOpen(false);
+        toast.success(t(translations.management.stories.chapterDeleteSuccess));
+        navigate(storyPath, { replace: true });
+      },
+      onError: (error: Error) => toast.error(formatError(error)),
+    });
   }
 
   function openTaskEditor(task: ChapterTask): void {
@@ -448,6 +469,7 @@ export default function ChapterDetailPage(): ReactNode {
                 </a>
               </Button>
             ) : null}
+            <ChapterActionsMenu onDelete={openChapterDeleteDialog} />
           </div>
         </div>
 
@@ -730,6 +752,12 @@ export default function ChapterDetailPage(): ReactNode {
         onSubmit={submitDeduction}
         reason={deductionReason}
         task={deductionTask}
+      />
+      <ChapterDeleteDialog
+        chapter={isDeleteDialogOpen ? chapter : null}
+        isPending={deleteMutation.isPending}
+        onConfirm={submitDelete}
+        onOpenChange={setIsDeleteDialogOpen}
       />
     </section>
   );

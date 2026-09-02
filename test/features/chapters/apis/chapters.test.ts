@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   deductChapterTask,
+  deleteChapter,
   getChapter,
   notifyChapterProgress,
   updateChapterConfiguration,
@@ -43,6 +44,18 @@ describe('chapter APIs', () => {
     expect(patch).toHaveBeenCalledWith(
       '/api/story-workflow/workspace%20id/stories/story%2Fid/chapters/chapter%20id',
       { difficulty: 'VERY_HARD', priority: 'HIGH', hasAdultContent: true },
+    );
+  });
+
+  it('deletes a chapter with every route identifier encoded', async () => {
+    const deleteRequest = vi
+      .spyOn(backendService, 'delete')
+      .mockResolvedValue({ kind: 'ok', data: null } as never);
+
+    await deleteChapter('workspace id', 'story/id', 'chapter id');
+
+    expect(deleteRequest).toHaveBeenCalledWith(
+      '/api/story-workflow/workspace%20id/stories/story%2Fid/chapters/chapter%20id',
     );
   });
 

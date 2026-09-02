@@ -1,6 +1,7 @@
 export {
   createChapter,
   deductChapterTask,
+  deleteChapter,
   getChapter,
   getChapters,
   notifyChapterProgress,

@@ -1,6 +1,7 @@
 import {
   BookOpen,
   CalendarClock,
+  ChartNoAxesCombined,
   CircleDollarSign,
   LayoutDashboard,
   ListTodo,
@@ -59,6 +60,13 @@ export const navigationSections = [
         icon: CircleDollarSign,
         label: translations.navigation.payroll,
         description: translations.management.payroll.description,
+      },
+      {
+        id: 'statistics',
+        href: ROUTES.STATISTICS,
+        icon: ChartNoAxesCombined,
+        label: translations.navigation.statistics,
+        description: translations.statistics.description,
       },
     ],
   },

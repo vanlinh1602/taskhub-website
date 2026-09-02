@@ -9,15 +9,14 @@ import AuthRouter from './AuthRouter';
 
 const DashboardPage = lazy(() => import('@/pages/Dashboard'));
 const DeadlineExtensionsPage = lazy(() => import('@/pages/DeadlineExtensions'));
-const ManagementPlaceholderPage = lazy(
-  () => import('@/pages/ManagementPlaceholder'),
-);
 const NotFoundPage = lazy(() => import('@/pages/NotFound'));
 const StoriesPage = lazy(() => import('@/pages/Stories'));
 const StoryDetailPage = lazy(() => import('@/pages/Stories/Detail'));
 const ChapterDetailPage = lazy(() => import('@/pages/Stories/ChapterDetail'));
 const LoginPage = lazy(() => import('@/pages/Login'));
 const MembersPage = lazy(() => import('@/pages/Members'));
+const PayrollPage = lazy(() => import('@/pages/Payroll'));
+const StatisticsPage = lazy(() => import('@/pages/Statistics'));
 const TasksPage = lazy(() => import('@/pages/Tasks'));
 const StagesPage = lazy(() => import('@/pages/Stages'));
 const WorkspaceSettingsPage = lazy(() => import('@/pages/WorkspaceSettings'));
@@ -44,7 +43,8 @@ function App() {
                 element={<DeadlineExtensionsPage />}
               />
               <Route path="members" element={<MembersPage />} />
-              <Route path="payroll" element={<ManagementPlaceholderPage />} />
+              <Route path="payroll" element={<PayrollPage />} />
+              <Route path="statistics" element={<StatisticsPage />} />
               <Route path="stages" element={<StagesPage />} />
               <Route path="stories" element={<StoriesPage />} />
               <Route path="stories/:storyId" element={<StoryDetailPage />} />

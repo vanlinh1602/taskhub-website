@@ -7,6 +7,7 @@ import type viManagement from './vi/management.json';
 import type viMembers from './vi/members.json';
 import type viNavigation from './vi/navigation.json';
 import type viStages from './vi/stages.json';
+import type viStatistics from './vi/statistics.json';
 import type viWorkflows from './vi/workflows.json';
 import type viWorkspaceSettings from './vi/workspace-settings.json';
 
@@ -26,6 +27,7 @@ export interface TranslationJsonType {
   readonly management: typeof viManagement;
   readonly navigation: typeof viNavigation;
   readonly stages: typeof viStages;
+  readonly statistics: typeof viStatistics;
   readonly workspaceSettings: typeof viWorkspaceSettings;
   readonly workflows: typeof viWorkflows;
 }

@@ -10,6 +10,17 @@ export type ChapterWorkflowStatus =
 
 export type ChapterWorkflowFilter = ChapterWorkflowStatus | 'ALL';
 
+export type ChapterDeleteBlockReason =
+  | 'PUBLISHED'
+  | 'WORKFLOW_FINALIZED'
+  | 'TASK_ACTIVITY'
+  | 'PAYMENT_ACTIVITY';
+
+export interface ChapterDeleteState {
+  readonly canDelete: boolean;
+  readonly blockedReasons: readonly ChapterDeleteBlockReason[];
+}
+
 export type ChapterTaskStatus =
   | 'BLOCKED'
   | 'READY'
@@ -36,6 +47,7 @@ export interface Chapter {
   readonly publicationUrl: string | null;
   readonly completedTasks: number;
   readonly totalTasks: number;
+  readonly deleteState: ChapterDeleteState;
 }
 
 export interface ChapterPage {
