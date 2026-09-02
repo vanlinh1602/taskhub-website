@@ -109,5 +109,49 @@ describe('DashboardPage', () => {
     expect(markup).toContain('Tiến độ theo công đoạn');
     expect(markup).toContain('/stories/story-1/chapter/chapter-1');
     expect(markup).toContain('/deadline-extensions');
+    expect(markup).toContain('/payroll');
+  });
+
+  it('renders loading, retry, and empty action states', async () => {
+    await i18n.changeLanguage('vi');
+    vi.mocked(useWorkspaceStore).mockReturnValue({
+      activeWorkspaceId: 'workspace-1',
+    } as never);
+
+    vi.mocked(useDashboardQuery).mockReturnValue({
+      data: undefined,
+      isError: false,
+      isFetching: true,
+      isLoading: true,
+      refetch: vi.fn(),
+    } as never);
+    const loadingMarkup = renderToStaticMarkup(<DashboardPage />);
+    expect(loadingMarkup).toContain('min-h-96');
+
+    vi.mocked(useDashboardQuery).mockReturnValue({
+      data: undefined,
+      error: new Error('Network error'),
+      isError: true,
+      isFetching: false,
+      isLoading: false,
+      refetch: vi.fn(),
+    } as never);
+    const errorMarkup = renderToStaticMarkup(<DashboardPage />);
+    expect(errorMarkup).toContain('Không thể tải tổng quan');
+    expect(errorMarkup).toContain('Thử lại');
+
+    vi.mocked(useDashboardQuery).mockReturnValue({
+      data: { ...dashboard, actionItems: [] },
+      isError: false,
+      isFetching: false,
+      isLoading: false,
+      refetch: vi.fn(),
+    } as never);
+    const emptyMarkup = renderToStaticMarkup(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>,
+    );
+    expect(emptyMarkup).toContain('Workspace đang ổn');
   });
 });

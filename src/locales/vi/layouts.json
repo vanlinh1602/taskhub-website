@@ -3,11 +3,14 @@
   "accountMenu": "Menu tài khoản",
   "discord": "Discord",
   "discordUserId": "Discord user ID: {{discordUserId}}",
+  "english": "Tiếng Anh",
+  "language": "Ngôn ngữ",
   "navigation": "Điều hướng",
   "openAccountMenu": "Mở menu tài khoản",
   "sidebarHint": "Không gian làm việc của bạn",
   "switchToDark": "Chuyển sang giao diện tối",
   "switchToLight": "Chuyển sang giao diện sáng",
   "toggleSidebar": "Mở hoặc đóng thanh bên",
+  "vietnamese": "Tiếng Việt",
   "workspaceFallback": "Taskory Hub"
 }

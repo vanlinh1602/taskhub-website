@@ -3,11 +3,14 @@
   "accountMenu": "Account menu",
   "discord": "Discord",
   "discordUserId": "Discord user ID: {{discordUserId}}",
+  "english": "English",
+  "language": "Language",
   "navigation": "Navigation",
   "openAccountMenu": "Open account menu",
   "sidebarHint": "Your workspace",
   "switchToDark": "Switch to dark mode",
   "switchToLight": "Switch to light mode",
   "toggleSidebar": "Toggle sidebar",
+  "vietnamese": "Vietnamese",
   "workspaceFallback": "Taskory Hub"
 }

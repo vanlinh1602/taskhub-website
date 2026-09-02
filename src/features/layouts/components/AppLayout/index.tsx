@@ -1,4 +1,4 @@
-import { Fingerprint, LogOut, Moon, Sun } from 'lucide-react';
+import { Check, Fingerprint, Languages, LogOut, Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -39,7 +39,7 @@ import { getNextTheme } from '../../utils/theme';
 import AppSidebar from '../AppSidebar';
 
 export default function AppLayout() {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const { resolvedTheme, setTheme } = useTheme();
   const { pathname } = useLocation();
   const { activeWorkspaceId, setActiveWorkspace } = useWorkspaceStore();
@@ -51,6 +51,9 @@ export default function AppLayout() {
     })),
   );
   const isDarkTheme = resolvedTheme === 'dark';
+  const currentLanguage = i18n.resolvedLanguage?.startsWith('en')
+    ? 'en'
+    : 'vi';
   const pageTitle = useMemo(() => {
     const navigationItem = findNavigationItem(pathname);
 
@@ -74,6 +77,12 @@ export default function AppLayout() {
 
   async function handleLogout(): Promise<void> {
     await logout();
+  }
+
+  async function handleLanguageChange(language: 'en' | 'vi'): Promise<void> {
+    if (currentLanguage === language) return;
+
+    await i18n.changeLanguage(language);
   }
 
   return (
@@ -202,6 +211,29 @@ export default function AppLayout() {
                         </p>
                       </div>
                     </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="flex items-center gap-2 px-2.5 py-2 text-xs font-semibold text-muted-foreground">
+                      <Languages aria-hidden="true" className="size-3.5" />
+                      {t(translations.layouts.language)}
+                    </DropdownMenuLabel>
+                    <DropdownMenuItem
+                      className="justify-between py-2.5"
+                      onSelect={() => void handleLanguageChange('en')}
+                    >
+                      <span>{t(translations.layouts.english)}</span>
+                      {currentLanguage === 'en' ? (
+                        <Check aria-hidden="true" className="size-4 text-primary" />
+                      ) : null}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="justify-between py-2.5"
+                      onSelect={() => void handleLanguageChange('vi')}
+                    >
+                      <span>{t(translations.layouts.vietnamese)}</span>
+                      {currentLanguage === 'vi' ? (
+                        <Check aria-hidden="true" className="size-4 text-primary" />
+                      ) : null}
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="justify-center py-2.5 text-destructive focus:bg-destructive/10 focus:text-destructive"

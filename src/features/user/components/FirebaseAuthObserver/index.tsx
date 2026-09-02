@@ -1,15 +1,14 @@
 import { onAuthStateChanged } from 'firebase/auth';
 import { useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useShallow } from 'zustand/shallow';
 
 import { useUserStore } from '@/features/user/hooks';
+import i18n from '@/locales/i18n';
 import { translations } from '@/locales/translations';
 import { auth } from '@/services/firebase';
 
 export default function FirebaseAuthObserver() {
-  const { t } = useTranslation();
   const { authUser } = useUserStore(
     useShallow((state) => ({
       authUser: state.authUser,
@@ -22,12 +21,12 @@ export default function FirebaseAuthObserver() {
       }
 
       void authUser().catch(() => {
-        toast.error(t(translations.errors.login), {
-          description: t(translations.errors.unknown),
+        toast.error(i18n.t(translations.errors.login), {
+          description: i18n.t(translations.errors.unknown),
         });
       });
     });
-  }, [authUser, t]);
+  }, [authUser]);
 
   return null;
 }
