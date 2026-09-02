@@ -18,6 +18,7 @@ describe('admin query options', () => {
     expect(createDashboardQueryOptions('workspace-1')).toMatchObject({
       enabled: true,
       queryKey: ['admin', 'dashboard', 'workspace-1'],
+      staleTime: 60 * 1000,
     });
   });
 });

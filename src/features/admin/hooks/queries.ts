@@ -17,6 +17,7 @@ interface DashboardQueryOptions {
   readonly enabled: boolean;
   readonly queryFn: () => Promise<AdminDashboard>;
   readonly queryKey: ReturnType<typeof adminQueryKeys.dashboard>;
+  readonly staleTime: number;
 }
 
 export function createWorkspacesQueryOptions(): WorkspacesQueryOptions {
@@ -33,6 +34,7 @@ export function createDashboardQueryOptions(
     queryKey: adminQueryKeys.dashboard(workspaceId),
     queryFn: () => getDashboard(workspaceId),
     enabled: workspaceId.length > 0,
+    staleTime: 60 * 1000,
   };
 }
 

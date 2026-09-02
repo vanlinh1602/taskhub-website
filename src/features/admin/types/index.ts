@@ -1,1 +1,6 @@
-export type { AdminDashboard, Workspace } from './entity';
+export type {
+  AdminDashboard,
+  DashboardActionItem,
+  DashboardActionType,
+  Workspace,
+} from './entity';
