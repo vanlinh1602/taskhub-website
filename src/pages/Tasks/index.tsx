@@ -242,6 +242,10 @@ function TaskTable({
                   isDeductDisabled={task.paymentStatus === 'PAID'}
                   onDeduct={() => onDeduct(task)}
                   onEdit={() => onEdit(task)}
+                  viewChapterHref={getChapterDetailPath(
+                    task.storyId,
+                    task.chapterId,
+                  )}
                 />
               </TableCell>
             </TableRow>
@@ -323,12 +327,20 @@ function TaskCardList({
               isDeductDisabled={task.paymentStatus === 'PAID'}
               onDeduct={() => onDeduct(task)}
               onEdit={() => onEdit(task)}
+              viewChapterHref={getChapterDetailPath(
+                task.storyId,
+                task.chapterId,
+              )}
             />
           </div>
         </article>
       ))}
     </div>
   );
+}
+
+function getChapterDetailPath(storyId: string, chapterId: string): string {
+  return `/stories/${encodeURIComponent(storyId)}/chapter/${encodeURIComponent(chapterId)}`;
 }
 
 function LoadingTaskList({ label }: { readonly label: string }) {
