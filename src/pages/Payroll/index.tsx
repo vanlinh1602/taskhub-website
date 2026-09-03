@@ -1,3 +1,4 @@
+import { format } from 'date-fns';
 import {
   Banknote,
   Check,
@@ -11,11 +12,14 @@ import {
   ShieldOff,
   UserRound,
   UsersRound,
+  X,
 } from 'lucide-react';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import type { DateRange } from 'react-day-picker';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
+import DateRangePicker from '@/components/DateRangePicker';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +45,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty';
+import { Label } from '@/components/ui/label';
 import {
   Sheet,
   SheetContent,
@@ -745,15 +750,25 @@ export default function PayrollPage() {
   const [confirmRecipient, setConfirmRecipient] =
     useState<PayrollRecipient | null>(null);
   const [bankQrUrl, setBankQrUrl] = useState<string | null>(null);
+  const [paidDateRange, setPaidDateRange] = useState<DateRange | undefined>();
   const language = i18n.language;
   const dateFormatter = useMemo(
     () => new Intl.DateTimeFormat(language, { dateStyle: 'medium' }),
     [language],
   );
+  const paidDateQuery = useMemo(() => {
+    if (status !== 'PAID' || !paidDateRange?.from || !paidDateRange.to)
+      return {};
+    return {
+      from: format(paidDateRange.from, 'yyyy-MM-dd'),
+      to: format(paidDateRange.to, 'yyyy-MM-dd'),
+    };
+  }, [paidDateRange, status]);
   const activeQuery = usePayrollRecipientsQuery(activeWorkspaceId, {
     status,
     page,
     pageSize: PAGE_SIZE,
+    ...paidDateQuery,
   });
   const pendingQuery = usePayrollRecipientsQuery(activeWorkspaceId, {
     status: 'PENDING',
@@ -763,7 +778,7 @@ export default function PayrollPage() {
   const detailQuery = usePayrollRecipientQuery(
     activeWorkspaceId,
     selectedRecipient ?? '',
-    { status, page: detailPage, pageSize: PAGE_SIZE },
+    { status, page: detailPage, pageSize: PAGE_SIZE, ...paidDateQuery },
   );
   const bankQrQuery = usePayrollBankQrQuery(
     activeWorkspaceId,
@@ -801,11 +816,20 @@ export default function PayrollPage() {
     setDetailPage(0);
   }
 
+  function handlePaidDateRangeChange(range: DateRange | undefined): void {
+    setPaidDateRange(range);
+    setPage(0);
+    setDetailPage(0);
+    setSelectedRecipient(null);
+    setConfirmRecipient(null);
+  }
+
   useEffect(() => {
     setPage(0);
     setDetailPage(0);
     setSelectedRecipient(null);
     setConfirmRecipient(null);
+    setPaidDateRange(undefined);
   }, [activeWorkspaceId]);
 
   function handleRequestPayment(): void {
@@ -916,6 +940,31 @@ export default function PayrollPage() {
           </div>
         </CardHeader>
         <CardContent className="p-0 sm:p-0">
+          {status === 'PAID' ? (
+            <div className="flex flex-col gap-3 border-b border-border/60 bg-muted/15 p-4 sm:flex-row sm:items-end sm:p-6">
+              <div className="min-w-0 space-y-1.5 sm:w-80">
+                <Label className="text-xs font-semibold text-foreground/75">
+                  {t(translations.management.payroll.paidDateRange)}
+                </Label>
+                <DateRangePicker
+                  label={t(translations.management.payroll.paidDateRange)}
+                  onChange={handlePaidDateRangeChange}
+                  placeholder={t(translations.management.payroll.allDates)}
+                  value={paidDateRange}
+                />
+              </div>
+              {paidDateRange?.from ? (
+                <Button
+                  className="w-full sm:w-auto"
+                  onClick={() => handlePaidDateRangeChange(undefined)}
+                  variant="ghost"
+                >
+                  <X aria-hidden="true" />
+                  {t(translations.management.payroll.clearDateRange)}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
           {showError ? (
             <Empty className="min-h-72 border-0 bg-destructive/5">
               <EmptyHeader>
@@ -952,12 +1001,19 @@ export default function PayrollPage() {
                 <EmptyTitle>
                   {status === 'PENDING'
                     ? t(translations.management.payroll.emptyPending)
-                    : t(translations.management.payroll.emptyPaid)}
+                    : paidDateRange?.from && paidDateRange.to
+                      ? t(translations.management.payroll.emptyPaidFiltered)
+                      : t(translations.management.payroll.emptyPaid)}
                 </EmptyTitle>
                 <EmptyDescription>
                   {status === 'PENDING'
                     ? t(translations.management.payroll.emptyPendingDescription)
-                    : t(translations.management.payroll.emptyPaidDescription)}
+                    : paidDateRange?.from && paidDateRange.to
+                      ? t(
+                          translations.management.payroll
+                            .emptyPaidFilteredDescription,
+                        )
+                      : t(translations.management.payroll.emptyPaidDescription)}
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>

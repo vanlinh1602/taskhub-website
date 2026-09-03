@@ -70,6 +70,8 @@ export interface PayrollListQuery {
   readonly status: PayrollStatus;
   readonly page: number;
   readonly pageSize: number;
+  readonly from?: string;
+  readonly to?: string;
 }
 
 export interface PayrollPaymentResult {

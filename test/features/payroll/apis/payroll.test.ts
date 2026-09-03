@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  createPayrollQuery,
   getPayrollBankQr,
   getPayrollRecipient,
   getPayrollRecipients,
@@ -64,6 +65,38 @@ describe('payroll APIs', () => {
     expect(getBlob).toHaveBeenCalledWith(
       '/api/story-workflow/workspace%2Fid/payroll/recipients/member%2Fid/bank-qr',
     );
+  });
+
+  it('serializes an optional paid date range only when provided', () => {
+    expect(
+      createPayrollQuery({
+        status: 'PAID',
+        page: 0,
+        pageSize: 25,
+        from: '2026-08-01',
+        to: '2026-08-31',
+      }),
+    ).toBe('status=PAID&page=0&pageSize=25&from=2026-08-01&to=2026-08-31');
+    expect(
+      createPayrollQuery({ status: 'PAID', page: 0, pageSize: 25 }),
+    ).toBe('status=PAID&page=0&pageSize=25');
+    expect(
+      createPayrollQuery({
+        status: 'PAID',
+        page: 0,
+        pageSize: 25,
+        from: '2026-08-01',
+      }),
+    ).toBe('status=PAID&page=0&pageSize=25');
+    expect(
+      createPayrollQuery({
+        status: 'PENDING',
+        page: 0,
+        pageSize: 25,
+        from: '2026-08-01',
+        to: '2026-08-31',
+      }),
+    ).toBe('status=PENDING&page=0&pageSize=25');
   });
 
   it('marks all pending payroll tasks for a recipient as paid', async () => {

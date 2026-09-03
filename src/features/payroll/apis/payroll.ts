@@ -8,12 +8,17 @@ import type {
   PayrollRecipientList,
 } from '../types';
 
-function createPayrollQuery(query: PayrollListQuery): string {
-  return new URLSearchParams({
+export function createPayrollQuery(query: PayrollListQuery): string {
+  const params = new URLSearchParams({
     status: query.status,
     page: String(query.page),
     pageSize: String(query.pageSize),
-  }).toString();
+  });
+  if (query.status === 'PAID' && query.from && query.to) {
+    params.set('from', query.from);
+    params.set('to', query.to);
+  }
+  return params.toString();
 }
 
 function createPayrollPath(workspaceId: string, suffix: string): string {

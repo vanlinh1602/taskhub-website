@@ -59,6 +59,8 @@
     "description": "Review registered members, profile configuration, and task-claim access."
   },
   "payroll": {
+    "allDates": "All dates",
+    "clearDateRange": "Clear date range",
     "description": "Review completed work and track payments owed to workspace members.",
     "title": "Payroll",
     "pageDescription": "Review pay by member, inspect individual tasks, and record completed payments.",
@@ -107,6 +109,8 @@
     "emptyPendingDescription": "Completed tasks will appear here when they are ready for payment.",
     "emptyPaid": "No payment history",
     "emptyPaidDescription": "Payments recorded as paid will appear here.",
+    "emptyPaidFiltered": "No payments in this date range",
+    "emptyPaidFilteredDescription": "Try selecting a different date range.",
     "invalidDate": "Invalid date",
     "noDate": "No date",
     "pageSummary": "Page {{current}} of {{total}} · {{count}} members",
@@ -114,7 +118,8 @@
     "nextPage": "Next page",
     "retry": "Try again",
     "taskPageSummary": "Page {{current}} of {{total}} · {{count}} tasks",
-    "paymentFailed": "Unable to record payment"
+    "paymentFailed": "Unable to record payment",
+    "paidDateRange": "Payment date range"
   },
   "placeholder": {
     "description": "This management area will be available in a later phase.",

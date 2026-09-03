@@ -1,4 +1,5 @@
 export {
+  createPayrollQuery,
   getPayrollBankQr,
   getPayrollRecipient,
   getPayrollRecipients,

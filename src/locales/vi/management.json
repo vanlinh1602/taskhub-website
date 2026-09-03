@@ -59,6 +59,8 @@
     "description": "Theo dõi thành viên đã đăng ký, cấu hình hồ sơ và quyền nhận task."
   },
   "payroll": {
+    "allDates": "Tất cả thời gian",
+    "clearDateRange": "Xóa khoảng ngày",
     "description": "Theo dõi công việc đã hoàn thành và các khoản cần thanh toán cho thành viên.",
     "title": "Thanh toán",
     "pageDescription": "Kiểm tra lương theo thành viên, xem từng task và ghi nhận các khoản đã thanh toán.",
@@ -107,6 +109,8 @@
     "emptyPendingDescription": "Các task hoàn thành sẽ xuất hiện ở đây khi sẵn sàng thanh toán.",
     "emptyPaid": "Chưa có lịch sử thanh toán",
     "emptyPaidDescription": "Các khoản đã xác nhận thanh toán sẽ xuất hiện ở đây.",
+    "emptyPaidFiltered": "Không có khoản thanh toán trong khoảng này",
+    "emptyPaidFilteredDescription": "Thử chọn một khoảng thời gian khác.",
     "invalidDate": "Ngày không hợp lệ",
     "noDate": "Chưa có ngày",
     "pageSummary": "Trang {{current}} / {{total}} · {{count}} thành viên",
@@ -114,7 +118,8 @@
     "nextPage": "Trang sau",
     "retry": "Thử lại",
     "taskPageSummary": "Trang {{current}} / {{total}} · {{count}} task",
-    "paymentFailed": "Không thể ghi nhận trả lương"
+    "paymentFailed": "Không thể ghi nhận trả lương",
+    "paidDateRange": "Khoảng ngày thanh toán"
   },
   "placeholder": {
     "description": "Khu vực quản lý này sẽ được triển khai ở giai đoạn tiếp theo.",
