@@ -28,9 +28,10 @@ describe('TasksPage', () => {
     const workspaceId = 'workspace-1';
     const queryClient = new QueryClient();
     const query = {
-      dueAtOrder: 'ASC' as const,
       page: 0,
       pageSize: 25,
+      sortBy: 'DEADLINE' as const,
+      sortOrder: 'ASC' as const,
     };
     queryClient.setQueryData(createTasksQueryOptions(workspaceId, query).queryKey, {
       items: [
@@ -71,5 +72,7 @@ describe('TasksPage', () => {
 
     expect(markup).toContain('Chỉnh sửa task');
     expect(markup).toContain('Trừ tiền');
+    expect(markup).toContain('Tất cả trạng thái');
+    expect(markup).toContain('Sắp xếp theo');
   });
 });

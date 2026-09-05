@@ -3,7 +3,6 @@ export type {
   PaymentStatus,
   TaskActionTarget,
   TaskAssignee,
-  TaskDueAtOrder,
   TaskFilterOptions,
   TaskFilterStage,
   TaskFilterStory,
@@ -11,6 +10,8 @@ export type {
   TaskListPage,
   TaskListQuery,
   TaskManagerTaskStatus,
+  TaskSortBy,
+  TaskSortOrder,
   TaskStatus,
   UpdateTaskInput,
 } from './entity';

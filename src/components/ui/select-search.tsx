@@ -39,6 +39,7 @@ type SearchSelectProps = {
   value: Option | null;
   onChange: (option: Option | null) => void;
   placeholder?: string;
+  searchPlaceholder?: string;
   noOptionsText?: string;
   allowCreate?: boolean;
   onCreateOption?: (label: string) => Promise<Option> | Option;
@@ -195,6 +196,7 @@ export default function SearchSelect({
   value,
   onChange,
   placeholder = 'Chọn một mục...',
+  searchPlaceholder = 'Tìm kiếm hoặc thêm mới...',
   noOptionsText = 'Không có kết quả',
   allowCreate = false,
   onCreateOption,
@@ -447,7 +449,7 @@ export default function SearchSelect({
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Tìm kiếm hoặc thêm mới..."
+              placeholder={searchPlaceholder}
               className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
             />
             {query ? (
@@ -564,7 +566,7 @@ export default function SearchSelect({
                     ref={inputRef}
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Tìm kiếm hoặc thêm mới..."
+                    placeholder={searchPlaceholder}
                     className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
                   />
                   {query ? (

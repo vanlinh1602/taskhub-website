@@ -13,7 +13,8 @@ function createTaskListQuery(query: TaskListQuery): string {
   const parameters = new URLSearchParams({
     page: String(query.page),
     pageSize: String(query.pageSize),
-    dueAtOrder: query.dueAtOrder,
+    sortBy: query.sortBy,
+    sortOrder: query.sortOrder,
   });
 
   if (query.status) parameters.set('status', query.status);

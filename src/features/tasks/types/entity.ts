@@ -12,7 +12,13 @@ export type TaskManagerTaskStatus = Extract<
 
 export type PaymentStatus = 'NOT_READY' | 'PENDING' | 'PAID';
 
-export type TaskDueAtOrder = 'ASC' | 'DESC';
+export type TaskSortBy =
+  | 'DEADLINE'
+  | 'STORY_TITLE'
+  | 'CHAPTER_NAME'
+  | 'CHAPTER_ID';
+
+export type TaskSortOrder = 'ASC' | 'DESC';
 
 export interface TaskAssignee {
   readonly discordUserId: string;
@@ -76,7 +82,8 @@ export interface TaskListQuery {
   readonly status?: TaskStatus;
   readonly storyId?: string;
   readonly stageDefinitionId?: string;
-  readonly dueAtOrder: TaskDueAtOrder;
+  readonly sortBy: TaskSortBy;
+  readonly sortOrder: TaskSortOrder;
 }
 
 export interface TaskFilterStory {

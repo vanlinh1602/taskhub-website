@@ -10,9 +10,10 @@ import {
 describe('task hooks', () => {
   it('keeps all task list parameters in the query key', () => {
     const options = createTasksQueryOptions('workspace-1', {
-      dueAtOrder: 'DESC',
       page: 2,
       pageSize: 25,
+      sortBy: 'CHAPTER_ID',
+      sortOrder: 'DESC',
       stageDefinitionId: 'stage-1',
       status: 'COMPLETED',
       storyId: 'story-1',
@@ -23,9 +24,10 @@ describe('task hooks', () => {
       'list',
       'workspace-1',
       {
-        dueAtOrder: 'DESC',
         page: 2,
         pageSize: 25,
+        sortBy: 'CHAPTER_ID',
+        sortOrder: 'DESC',
         stageDefinitionId: 'stage-1',
         status: 'COMPLETED',
         storyId: 'story-1',

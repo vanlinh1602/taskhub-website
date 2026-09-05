@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUp, ListTodo, SearchX, ShieldOff } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -47,15 +47,24 @@ import {
 } from '@/features/tasks/hooks';
 import type {
   TaskActionTarget,
-  TaskDueAtOrder,
   TaskFilterStage,
   TaskFilterStory,
   TaskListItem,
+  TaskSortBy,
+  TaskSortOrder,
   TaskStatus,
 } from '@/features/tasks/types';
 import {
+  createTaskListSearchParams,
+  DEFAULT_TASK_LIST_VIEW,
   getTaskStatusLabelKey,
   isTaskOverdue,
+  isTaskSortBy,
+  isTaskStatus,
+  readTaskListView,
+  TASK_SORT_BY_VALUES,
+  TASK_STATUS_VALUES,
+  type TaskListViewState,
 } from '@/features/tasks/utils';
 import { toTaskActionTarget } from '@/features/tasks/utils/task-action-target';
 import { useWorkspaceStore } from '@/features/workspace/hooks';
@@ -63,13 +72,24 @@ import { translations } from '@/locales/translations';
 import formatError from '@/utils/formatError';
 
 const TASK_PAGE_SIZE = 25;
-const TASK_STATUSES: readonly TaskStatus[] = [
-  'BLOCKED',
-  'READY',
-  'IN_PROGRESS',
-  'COMPLETED',
-  'CANCELLED',
-];
+type TaskSortLabelKey =
+  | 'sortByChapterId'
+  | 'sortByChapterName'
+  | 'sortByDeadline'
+  | 'sortByStoryTitle';
+
+function getTaskSortLabelKey(sortBy: TaskSortBy): TaskSortLabelKey {
+  switch (sortBy) {
+    case 'DEADLINE':
+      return 'sortByDeadline';
+    case 'STORY_TITLE':
+      return 'sortByStoryTitle';
+    case 'CHAPTER_NAME':
+      return 'sortByChapterName';
+    case 'CHAPTER_ID':
+      return 'sortByChapterId';
+  }
+}
 
 function isForbiddenError(error: unknown): boolean {
   if (!error) return false;
@@ -356,24 +376,40 @@ function LoadingTaskList({ label }: { readonly label: string }) {
 export default function TasksPage() {
   const { t, i18n } = useTranslation();
   const { activeWorkspaceId: workspaceId } = useWorkspaceStore();
-  const [status, setStatus] = useState<TaskStatus | 'ALL'>('ALL');
-  const [storyId, setStoryId] = useState('');
-  const [stageDefinitionId, setStageDefinitionId] = useState('');
-  const [dueAtOrder, setDueAtOrder] = useState<TaskDueAtOrder>('ASC');
-  const [page, setPage] = useState(0);
+  const [view, setView] = useState<TaskListViewState>(() => {
+    if (typeof window === 'undefined') return DEFAULT_TASK_LIST_VIEW;
+    return readTaskListView(new URLSearchParams(window.location.search));
+  });
   const [taskAction, setTaskAction] = useState<{
     readonly mode: TaskActionMode;
     readonly target: TaskActionTarget;
   } | null>(null);
+  const { page, sortBy, sortOrder, stageDefinitionId, status, storyId } = view;
   const filterOptionsQuery = useTaskFilterOptionsQuery(workspaceId);
   const taskQuery = useTasksQuery(workspaceId, {
-    dueAtOrder,
     page,
     pageSize: TASK_PAGE_SIZE,
     stageDefinitionId: stageDefinitionId || undefined,
+    sortBy,
+    sortOrder,
     status: status === 'ALL' ? undefined : status,
     storyId: storyId || undefined,
   });
+  const statusOptions = useMemo<SelectSearchOption[]>(
+    () => [
+      {
+        label: t(translations.management.tasks.allStatuses),
+        value: 'ALL',
+      },
+      ...TASK_STATUS_VALUES.map((taskStatus) => ({
+        label: t(
+          translations.management.tasks[getTaskStatusLabelKey(taskStatus)],
+        ),
+        value: taskStatus,
+      })),
+    ],
+    [t],
+  );
   const dateFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat(i18n.language, {
@@ -410,6 +446,10 @@ export default function TasksPage() {
     () => storyOptions.find((option) => option.value === storyId) ?? null,
     [storyId, storyOptions],
   );
+  const selectedStatus = useMemo(
+    () => statusOptions.find((option) => option.value === status) ?? null,
+    [status, statusOptions],
+  );
   const selectedStage = useMemo(
     () =>
       stageOptions.find((option) => option.value === stageDefinitionId) ??
@@ -419,37 +459,81 @@ export default function TasksPage() {
   const tasks = taskQuery.data?.items ?? [];
   const hasActiveFilters =
     status !== 'ALL' || storyId.length > 0 || stageDefinitionId.length > 0;
+  const hasActiveViewState =
+    hasActiveFilters ||
+    sortBy !== DEFAULT_TASK_LIST_VIEW.sortBy ||
+    sortOrder !== DEFAULT_TASK_LIST_VIEW.sortOrder ||
+    page > DEFAULT_TASK_LIST_VIEW.page;
   const hasTaskError = taskQuery.isError || filterOptionsQuery.isError;
   const isForbidden = isForbiddenError(
     taskQuery.error ?? filterOptionsQuery.error,
   );
+  const sortLabel = t(
+    translations.management.tasks[getTaskSortLabelKey(sortBy)],
+  );
+  const sortOrderLabel = t(
+    sortOrder === 'ASC'
+      ? translations.management.tasks.ascending
+      : translations.management.tasks.descending,
+  );
+  const sortDirectionLabel = t(
+    translations.management.tasks.sortDirection,
+    { direction: sortOrderLabel, field: sortLabel },
+  );
 
-  function resetFilters(): void {
-    setStatus('ALL');
-    setStoryId('');
-    setStageDefinitionId('');
-    setDueAtOrder('ASC');
-    setPage(0);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const currentSearchParams = new URLSearchParams(window.location.search);
+    const nextSearch = createTaskListSearchParams(view, currentSearchParams);
+    const search = nextSearch.toString();
+    const nextUrl = `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`;
+    const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+
+    if (nextUrl !== currentUrl) {
+      window.history.replaceState(null, '', nextUrl);
+    }
+  }, [view]);
+
+  useEffect(() => {
+    const normalizedPage = taskQuery.data?.page;
+    if (normalizedPage === undefined || normalizedPage === page) return;
+
+    setView((current) =>
+      current.page === page ? { ...current, page: normalizedPage } : current,
+    );
+  }, [page, taskQuery.data?.page]);
+
+  function updateView(nextView: Partial<TaskListViewState>): void {
+    setView((current) => ({ ...current, ...nextView }));
   }
 
-  function handleStatusChange(value: string): void {
-    setStatus(value as TaskStatus | 'ALL');
-    setPage(0);
+  function resetFilters(): void {
+    setView(DEFAULT_TASK_LIST_VIEW);
+  }
+
+  function handleStatusChange(option: SelectSearchOption | null): void {
+    const nextStatus = option?.value ?? 'ALL';
+    if (nextStatus !== 'ALL' && !isTaskStatus(nextStatus)) return;
+    updateView({ page: 0, status: nextStatus });
   }
 
   function handleStoryChange(option: SelectSearchOption | null): void {
-    setStoryId(option?.value ?? '');
-    setPage(0);
+    updateView({ page: 0, storyId: option?.value ?? '' });
   }
 
   function handleStageChange(option: SelectSearchOption | null): void {
-    setStageDefinitionId(option?.value ?? '');
-    setPage(0);
+    updateView({ page: 0, stageDefinitionId: option?.value ?? '' });
   }
 
-  function toggleDueAtOrder(): void {
-    setDueAtOrder((current) => (current === 'ASC' ? 'DESC' : 'ASC'));
-    setPage(0);
+  function handleSortByChange(value: string): void {
+    if (!isTaskSortBy(value)) return;
+    updateView({ page: 0, sortBy: value });
+  }
+
+  function toggleSortOrder(): void {
+    const nextSortOrder: TaskSortOrder = sortOrder === 'ASC' ? 'DESC' : 'ASC';
+    updateView({ page: 0, sortOrder: nextSortOrder });
   }
 
   function retryQueries(): void {
@@ -487,31 +571,21 @@ export default function TasksPage() {
       </div>
 
       <div className="rounded-2xl border border-border/70 bg-card/70 p-4 shadow-sm sm:p-5">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[1fr_1.3fr_1.3fr_auto_auto] xl:items-end">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[1fr_1.3fr_1.3fr_1.2fr_auto_auto] xl:items-end">
           <label className="grid gap-1.5 text-xs font-semibold text-muted-foreground">
             {t(translations.management.tasks.filterStatus)}
-            <Select onValueChange={handleStatusChange} value={status}>
-              <SelectTrigger
-                aria-label={t(translations.management.tasks.filterStatus)}
-                className="w-full bg-card"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">
-                  {t(translations.management.tasks.allStatuses)}
-                </SelectItem>
-                {TASK_STATUSES.map((taskStatus) => (
-                  <SelectItem key={taskStatus} value={taskStatus}>
-                    {t(
-                      translations.management.tasks[
-                        getTaskStatusLabelKey(taskStatus)
-                      ],
-                    )}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SelectSearch
+              noOptionsText={t(
+                translations.management.tasks.noMatchingOptions,
+              )}
+              onChange={handleStatusChange}
+              options={statusOptions}
+              placeholder={t(translations.management.tasks.allStatuses)}
+              searchPlaceholder={t(
+                translations.management.tasks.searchStatuses,
+              )}
+              value={selectedStatus}
+            />
           </label>
 
           <label className="grid gap-1.5 text-xs font-semibold text-muted-foreground">
@@ -524,6 +598,7 @@ export default function TasksPage() {
               onChange={handleStoryChange}
               options={storyOptions}
               placeholder={t(translations.management.tasks.allStories)}
+              searchPlaceholder={t(translations.management.tasks.searchStories)}
               value={selectedStory}
             />
           </label>
@@ -538,39 +613,59 @@ export default function TasksPage() {
               onChange={handleStageChange}
               options={stageOptions}
               placeholder={t(translations.management.tasks.allStages)}
+              searchPlaceholder={t(translations.management.tasks.searchStages)}
               value={selectedStage}
             />
           </label>
 
+          <label className="grid gap-1.5 text-xs font-semibold text-muted-foreground">
+            {t(translations.management.tasks.sortBy)}
+            <Select onValueChange={handleSortByChange} value={sortBy}>
+              <SelectTrigger
+                aria-label={t(translations.management.tasks.sortBy)}
+                className="w-full bg-card"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TASK_SORT_BY_VALUES.map((sortValue: TaskSortBy) => (
+                  <SelectItem key={sortValue} value={sortValue}>
+                    {t(
+                      translations.management.tasks[
+                        getTaskSortLabelKey(sortValue)
+                      ],
+                    )}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </label>
+
           <Button
-            aria-label={t(
-              dueAtOrder === 'ASC'
-                ? translations.management.tasks.deadlineAscending
-                : translations.management.tasks.deadlineDescending,
-            )}
+            aria-label={sortDirectionLabel}
             className="justify-start bg-card sm:justify-center"
-            onClick={toggleDueAtOrder}
-            title={t(
-              dueAtOrder === 'ASC'
-                ? translations.management.tasks.deadlineAscending
-                : translations.management.tasks.deadlineDescending,
-            )}
+            onClick={toggleSortOrder}
+            title={sortDirectionLabel}
             type="button"
             variant="outline"
           >
-            {dueAtOrder === 'ASC' ? (
+            {sortOrder === 'ASC' ? (
               <ArrowUp aria-hidden="true" />
             ) : (
               <ArrowDown aria-hidden="true" />
             )}
             <span className="hidden xl:inline">
-              {t(translations.management.tasks.deadline)}
+              {t(
+                sortOrder === 'ASC'
+                  ? translations.management.tasks.ascending
+                  : translations.management.tasks.descending,
+              )}
             </span>
           </Button>
 
           <Button
             className="justify-start sm:justify-center"
-            disabled={!hasActiveFilters}
+            disabled={!hasActiveViewState}
             onClick={resetFilters}
             type="button"
             variant="ghost"
@@ -687,7 +782,7 @@ export default function TasksPage() {
                     aria-label={t(translations.management.tasks.previousPage)}
                     disabled={page <= 0 || taskQuery.isFetching}
                     onClick={() =>
-                      setPage((current) => Math.max(0, current - 1))
+                      updateView({ page: Math.max(0, page - 1) })
                     }
                     size="sm"
                     variant="outline"
@@ -700,7 +795,7 @@ export default function TasksPage() {
                       taskQuery.isFetching ||
                       page + 1 >= (taskQuery.data?.pageCount ?? 1)
                     }
-                    onClick={() => setPage((current) => current + 1)}
+                    onClick={() => updateView({ page: page + 1 })}
                     size="sm"
                   >
                     {t(translations.management.tasks.nextPage)}

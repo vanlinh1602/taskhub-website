@@ -19,9 +19,10 @@ describe('task APIs', () => {
 
     await expect(
       getTasks('workspace id', {
-        dueAtOrder: 'DESC',
         page: 2,
         pageSize: 10,
+        sortBy: 'STORY_TITLE',
+        sortOrder: 'DESC',
         stageDefinitionId: 'stage/id',
         status: 'IN_PROGRESS',
         storyId: 'story/id',
@@ -29,7 +30,7 @@ describe('task APIs', () => {
     ).resolves.toBe(page);
 
     expect(get).toHaveBeenCalledWith(
-      '/api/story-workflow/workspace%20id/tasks?page=2&pageSize=10&dueAtOrder=DESC&status=IN_PROGRESS&storyId=story%2Fid&stageDefinitionId=stage%2Fid',
+      '/api/story-workflow/workspace%20id/tasks?page=2&pageSize=10&sortBy=STORY_TITLE&sortOrder=DESC&status=IN_PROGRESS&storyId=story%2Fid&stageDefinitionId=stage%2Fid',
     );
   });
 
@@ -40,13 +41,14 @@ describe('task APIs', () => {
     } as never);
 
     await getTasks('workspace-id', {
-      dueAtOrder: 'ASC',
       page: 0,
       pageSize: 25,
+      sortBy: 'DEADLINE',
+      sortOrder: 'ASC',
     });
 
     expect(backendService.get).toHaveBeenCalledWith(
-      '/api/story-workflow/workspace-id/tasks?page=0&pageSize=25&dueAtOrder=ASC',
+      '/api/story-workflow/workspace-id/tasks?page=0&pageSize=25&sortBy=DEADLINE&sortOrder=ASC',
     );
   });
 
