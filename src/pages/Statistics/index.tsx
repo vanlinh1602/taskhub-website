@@ -46,13 +46,9 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import SelectSearch, {
+  type Option as SelectSearchOption,
+} from '@/components/ui/select-search';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -75,7 +71,6 @@ import {
 } from '@/features/statistics/hooks';
 import type {
   StatisticsChapterRow,
-  StatisticsDateBasis,
   StatisticsFilters,
   StatisticsPaymentStatus,
   StatisticsStageColumn,
@@ -206,26 +201,35 @@ function isForbidden(error: unknown): boolean {
 }
 
 function FilterSelect({
-  children,
   label,
-  onValueChange,
+  noOptionsText,
+  onChange,
+  options,
+  placeholder,
+  searchPlaceholder,
   value,
 }: {
-  readonly children: ReactNode;
   readonly label: string;
-  readonly onValueChange: (value: string) => void;
+  readonly noOptionsText: string;
+  readonly onChange: (option: SelectSearchOption | null) => void;
+  readonly options: SelectSearchOption[];
+  readonly placeholder: string;
+  readonly searchPlaceholder: string;
   readonly value: string;
 }) {
   return (
-    <div className="min-w-0 space-y-1.5">
-      <Label className="text-xs font-semibold text-foreground/75">{label}</Label>
-      <Select onValueChange={onValueChange} value={value || undefined}>
-        <SelectTrigger className="h-10 w-full bg-background/80" aria-label={label}>
-          <SelectValue placeholder={label} />
-        </SelectTrigger>
-        <SelectContent>{children}</SelectContent>
-      </Select>
-    </div>
+    <label className="block min-w-0 space-y-1.5">
+      <span className="text-xs font-semibold text-foreground/75">{label}</span>
+      <SelectSearch
+        noOptionsText={noOptionsText}
+        onChange={onChange}
+        options={options}
+        placeholder={placeholder}
+        searchPlaceholder={searchPlaceholder}
+        usePortal
+        value={options.find((option) => option.value === value) ?? null}
+      />
+    </label>
   );
 }
 
@@ -410,6 +414,105 @@ export default function StatisticsPage() {
     activeWorkspaceId || '',
     publishingChapter?.storyId || '',
   );
+  const dateBasisOptions = useMemo<SelectSearchOption[]>(
+    () => [
+      {
+        label: t(translations.statistics.dateBasisCreated),
+        value: 'CREATED',
+      },
+      {
+        label: t(translations.statistics.dateBasisCompleted),
+        value: 'COMPLETED',
+      },
+      {
+        label: t(translations.statistics.dateBasisPaid),
+        value: 'PAID',
+      },
+    ],
+    [t],
+  );
+  const storyOptions = useMemo<SelectSearchOption[]>(
+    () => [
+      {
+        label: t(translations.statistics.allStories),
+        value: 'all',
+      },
+      ...(filtersQuery.data?.stories ?? []).map((story) => ({
+        label: story.title,
+        value: story.id,
+      })),
+    ],
+    [filtersQuery.data?.stories, t],
+  );
+  const workflowOptions = useMemo<SelectSearchOption[]>(
+    () => [
+      {
+        label: t(translations.statistics.allWorkflows),
+        value: 'all',
+      },
+      ...(filtersQuery.data?.workflows ?? []).map((workflow) => ({
+        label: workflow.name,
+        value: workflow.id,
+      })),
+    ],
+    [filtersQuery.data?.workflows, t],
+  );
+  const assigneeOptions = useMemo<SelectSearchOption[]>(
+    () => [
+      {
+        label: t(translations.statistics.allAssignees),
+        value: 'all',
+      },
+      ...(filtersQuery.data?.assignees ?? []).map((assignee) => ({
+        label:
+          assignee.id === null
+            ? t(translations.statistics.unassigned)
+            : assignee.displayName,
+        value: assignee.id ?? UNASSIGNED,
+      })),
+    ],
+    [filtersQuery.data?.assignees, t],
+  );
+  const stageOptions = useMemo<SelectSearchOption[]>(
+    () => [
+      {
+        label: t(translations.statistics.allStages),
+        value: 'all',
+      },
+      ...(filtersQuery.data?.stages ?? []).map((stage) => ({
+        label: stage.name,
+        value: stage.id,
+      })),
+    ],
+    [filtersQuery.data?.stages, t],
+  );
+  const statusOptions = useMemo<SelectSearchOption[]>(
+    () => [
+      {
+        label: t(translations.statistics.allTaskStatuses),
+        value: 'all',
+      },
+      ...TASK_STATUSES.map((status) => ({
+        label: statusLabel(status, t),
+        value: status,
+      })),
+    ],
+    [t],
+  );
+  const paymentStatusOptions = useMemo<SelectSearchOption[]>(
+    () => [
+      {
+        label: t(translations.statistics.allPaymentStatuses),
+        value: 'all',
+      },
+      ...PAYMENT_STATUSES.map((status) => ({
+        label: paymentLabel(status, t),
+        value: status,
+      })),
+    ],
+    [t],
+  );
+  const noMatchingOptionsText = t(translations.statistics.noMatchingOptions);
   const selectedTask = useMemo<SelectedTask | null>(() => {
     if (!selectedTaskReference || !statisticsQuery.data) return null;
     const row = statisticsQuery.data.items.find(
@@ -471,8 +574,62 @@ export default function StatisticsPage() {
     setFilters((current) => ({ ...current, [key]: value, page: key === 'page' ? (value as number) : 0 }));
   }
 
-  function handleStoryChange(value: string): void {
-    setFilters((current) => ({ ...current, storyId: value === 'all' ? '' : value, page: 0 }));
+  function handleDateBasisChange(option: SelectSearchOption | null): void {
+    if (!option) return;
+    if (
+      option.value === 'CREATED' ||
+      option.value === 'COMPLETED' ||
+      option.value === 'PAID'
+    ) {
+      updateFilter('dateBasis', option.value);
+    }
+  }
+
+  function handleStoryChange(option: SelectSearchOption | null): void {
+    updateFilter('storyId', option?.value === 'all' ? '' : option?.value ?? '');
+  }
+
+  function handleWorkflowChange(option: SelectSearchOption | null): void {
+    updateFilter(
+      'workflowTemplateId',
+      option?.value === 'all' ? '' : option?.value ?? '',
+    );
+  }
+
+  function handleAssigneeChange(option: SelectSearchOption | null): void {
+    updateFilter(
+      'assigneeDiscordUserId',
+      option?.value === 'all' ? '' : option?.value ?? '',
+    );
+  }
+
+  function handleStageChange(option: SelectSearchOption | null): void {
+    updateFilter(
+      'stageDefinitionId',
+      option?.value === 'all' ? '' : option?.value ?? '',
+    );
+  }
+
+  function handleStatusChange(option: SelectSearchOption | null): void {
+    const value = option?.value ?? '';
+    if (value === '' || value === 'all') {
+      updateFilter('status', '');
+      return;
+    }
+    if (TASK_STATUSES.includes(value as StatisticsTaskStatus)) {
+      updateFilter('status', value as StatisticsTaskStatus);
+    }
+  }
+
+  function handlePaymentStatusChange(option: SelectSearchOption | null): void {
+    const value = option?.value ?? '';
+    if (value === '' || value === 'all') {
+      updateFilter('paymentStatus', '');
+      return;
+    }
+    if (PAYMENT_STATUSES.includes(value as StatisticsPaymentStatus)) {
+      updateFilter('paymentStatus', value as StatisticsPaymentStatus);
+    }
   }
 
   function handleDateChange(range: DateRange | undefined): void {
@@ -609,47 +766,81 @@ export default function StatisticsPage() {
             <StatisticsDateRangePicker from={filters.from} label={t(translations.statistics.dateRange)} onChange={handleDateChange} to={filters.to} />
           </div>
           <div className="lg:col-span-2">
-            <FilterSelect label={t(translations.statistics.dateBasis)} onValueChange={(value) => updateFilter('dateBasis', value as StatisticsDateBasis)} value={filters.dateBasis}>
-              <SelectItem value="CREATED">{t(translations.statistics.dateBasisCreated)}</SelectItem>
-              <SelectItem value="COMPLETED">{t(translations.statistics.dateBasisCompleted)}</SelectItem>
-              <SelectItem value="PAID">{t(translations.statistics.dateBasisPaid)}</SelectItem>
-            </FilterSelect>
+            <FilterSelect
+              label={t(translations.statistics.dateBasis)}
+              noOptionsText={noMatchingOptionsText}
+              onChange={handleDateBasisChange}
+              options={dateBasisOptions}
+              placeholder={t(translations.statistics.dateBasis)}
+              searchPlaceholder={t(translations.statistics.searchDateBasis)}
+              value={filters.dateBasis}
+            />
           </div>
           <div className="lg:col-span-3">
-            <FilterSelect label={t(translations.statistics.story)} onValueChange={handleStoryChange} value={filters.storyId || 'all'}>
-              <SelectItem value="all">{t(translations.statistics.allStories)}</SelectItem>
-              {filtersQuery.data?.stories.map((story) => <SelectItem key={story.id} value={story.id}>{story.title}</SelectItem>)}
-            </FilterSelect>
+            <FilterSelect
+              label={t(translations.statistics.story)}
+              noOptionsText={noMatchingOptionsText}
+              onChange={handleStoryChange}
+              options={storyOptions}
+              placeholder={t(translations.statistics.allStories)}
+              searchPlaceholder={t(translations.statistics.searchStories)}
+              value={filters.storyId || 'all'}
+            />
           </div>
           <div className="lg:col-span-3">
-            <FilterSelect label={t(translations.statistics.workflow)} onValueChange={(value) => updateFilter('workflowTemplateId', value === 'all' ? '' : value)} value={filters.workflowTemplateId || 'all'}>
-              <SelectItem value="all">{t(translations.statistics.allWorkflows)}</SelectItem>
-              {filtersQuery.data?.workflows.map((workflow) => <SelectItem key={workflow.id} value={workflow.id}>{workflow.name}</SelectItem>)}
-            </FilterSelect>
+            <FilterSelect
+              label={t(translations.statistics.workflow)}
+              noOptionsText={noMatchingOptionsText}
+              onChange={handleWorkflowChange}
+              options={workflowOptions}
+              placeholder={t(translations.statistics.allWorkflows)}
+              searchPlaceholder={t(translations.statistics.searchWorkflows)}
+              value={filters.workflowTemplateId || 'all'}
+            />
           </div>
           <div className="lg:col-span-3">
-            <FilterSelect label={t(translations.statistics.assignee)} onValueChange={(value) => updateFilter('assigneeDiscordUserId', value === 'all' ? '' : value)} value={filters.assigneeDiscordUserId || 'all'}>
-              <SelectItem value="all">{t(translations.statistics.allAssignees)}</SelectItem>
-              {filtersQuery.data?.assignees.map((assignee) => <SelectItem key={assignee.id ?? UNASSIGNED} value={assignee.id ?? UNASSIGNED}>{assignee.id === null ? t(translations.statistics.unassigned) : assignee.displayName}</SelectItem>)}
-            </FilterSelect>
+            <FilterSelect
+              label={t(translations.statistics.assignee)}
+              noOptionsText={noMatchingOptionsText}
+              onChange={handleAssigneeChange}
+              options={assigneeOptions}
+              placeholder={t(translations.statistics.allAssignees)}
+              searchPlaceholder={t(translations.statistics.searchAssignees)}
+              value={filters.assigneeDiscordUserId || 'all'}
+            />
           </div>
           <div className="lg:col-span-3">
-            <FilterSelect label={t(translations.statistics.stage)} onValueChange={(value) => updateFilter('stageDefinitionId', value === 'all' ? '' : value)} value={filters.stageDefinitionId || 'all'}>
-              <SelectItem value="all">{t(translations.statistics.allStages)}</SelectItem>
-              {filtersQuery.data?.stages.map((stage) => <SelectItem key={stage.id} value={stage.id}>{stage.name}</SelectItem>)}
-            </FilterSelect>
+            <FilterSelect
+              label={t(translations.statistics.stage)}
+              noOptionsText={noMatchingOptionsText}
+              onChange={handleStageChange}
+              options={stageOptions}
+              placeholder={t(translations.statistics.allStages)}
+              searchPlaceholder={t(translations.statistics.searchStages)}
+              value={filters.stageDefinitionId || 'all'}
+            />
           </div>
           <div className="lg:col-span-3">
-            <FilterSelect label={t(translations.statistics.taskStatus)} onValueChange={(value) => updateFilter('status', value === 'all' ? '' : value as StatisticsTaskStatus)} value={filters.status || 'all'}>
-              <SelectItem value="all">{t(translations.statistics.allTaskStatuses)}</SelectItem>
-              {TASK_STATUSES.map((status) => <SelectItem key={status} value={status}>{statusLabel(status, t)}</SelectItem>)}
-            </FilterSelect>
+            <FilterSelect
+              label={t(translations.statistics.taskStatus)}
+              noOptionsText={noMatchingOptionsText}
+              onChange={handleStatusChange}
+              options={statusOptions}
+              placeholder={t(translations.statistics.allTaskStatuses)}
+              searchPlaceholder={t(translations.statistics.searchTaskStatuses)}
+              value={filters.status || 'all'}
+            />
           </div>
           <div className="lg:col-span-3">
-            <FilterSelect label={t(translations.statistics.paymentStatus)} onValueChange={(value) => updateFilter('paymentStatus', value === 'all' ? '' : value as StatisticsPaymentStatus)} value={filters.paymentStatus || 'all'}>
-              <SelectItem value="all">{t(translations.statistics.allPaymentStatuses)}</SelectItem>
-              {PAYMENT_STATUSES.map((status) => <SelectItem key={status} value={status}>{paymentLabel(status, t)}</SelectItem>)}
-            </FilterSelect>
+            <FilterSelect
+              label={t(translations.statistics.paymentStatus)}
+              noOptionsText={noMatchingOptionsText}
+              onChange={handlePaymentStatusChange}
+              options={paymentStatusOptions}
+              placeholder={t(translations.statistics.allPaymentStatuses)}
+              searchPlaceholder={t(translations.statistics.searchPaymentStatuses)}
+              value={filters.paymentStatus || 'all'}
+            />
           </div>
           <div className="flex flex-wrap items-end gap-2 border-t border-border/60 pt-3 sm:col-span-2 lg:col-span-12">
             <Button className="flex-1 sm:flex-none" onClick={handleClearFilters} variant="outline"><RotateCcw aria-hidden="true" />{t(translations.statistics.clearFilters)}</Button>

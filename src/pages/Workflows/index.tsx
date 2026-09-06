@@ -3,6 +3,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Edit3,
+  MoreHorizontal,
   Plus,
   Trash2,
   Workflow,
@@ -39,6 +40,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Empty,
   EmptyDescription,
@@ -132,12 +141,14 @@ function StatusBadge({
 }
 
 function WorkflowActions({
+  isPending,
   workflow,
   onAction,
   onDefault,
   onEdit,
   t,
 }: {
+  readonly isPending: boolean;
   readonly workflow: WorkflowTemplateSummary;
   readonly onAction: (
     kind: ActionKind,
@@ -147,8 +158,12 @@ function WorkflowActions({
   readonly onEdit: (workflow: WorkflowTemplateSummary) => void;
   readonly t: ReturnType<typeof useTranslation>['t'];
 }) {
+  function requestAction(kind: ActionKind): void {
+    onAction(kind, workflow);
+  }
+
   return (
-    <div className="flex flex-wrap items-center justify-end gap-2">
+    <div className="flex items-center justify-end gap-1">
       <Button
         aria-label={`${t(translations.workflows.edit)}: ${workflow.name}`}
         onClick={() => onEdit(workflow)}
@@ -157,80 +172,64 @@ function WorkflowActions({
         variant="ghost"
       >
         <Edit3 aria-hidden="true" />
-        <span>{t(translations.workflows.edit)}</span>
+        <span className="hidden sm:inline">{t(translations.workflows.edit)}</span>
       </Button>
-      {workflow.status === 'ACTIVE' ? (
-        <Button
-          aria-label={
-            workflow.isDefault
-              ? t(translations.workflows.clearDefault)
-              : t(translations.workflows.setDefault)
-          }
-          onClick={() => onDefault(workflow)}
-          size="sm"
-          type="button"
-          variant="ghost"
-        >
-          {workflow.isDefault ? (
-            <XCircle aria-hidden="true" />
-          ) : (
-            <Check aria-hidden="true" />
-          )}
-          <span>
-            {workflow.isDefault
-              ? t(translations.workflows.clearDefault)
-              : t(translations.workflows.setDefault)}
-          </span>
-        </Button>
-      ) : null}
-      {workflow.status === 'DRAFT' ? (
-        <Button
-          aria-label={t(translations.workflows.publish)}
-          onClick={() => onAction('publish', workflow)}
-          size="sm"
-          type="button"
-          variant="ghost"
-        >
-          <Workflow aria-hidden="true" />
-          <span>{t(translations.workflows.publish)}</span>
-        </Button>
-      ) : null}
-      {workflow.status === 'ACTIVE' ? (
-        <Button
-          aria-label={t(translations.workflows.deactivate)}
-          onClick={() => onAction('deactivate', workflow)}
-          size="sm"
-          type="button"
-          variant="ghost"
-        >
-          <XCircle aria-hidden="true" />
-          <span>{t(translations.workflows.deactivate)}</span>
-        </Button>
-      ) : null}
-      {workflow.status === 'INACTIVE' ? (
-        <Button
-          aria-label={t(translations.workflows.restore)}
-          onClick={() => onAction('restore', workflow)}
-          size="sm"
-          type="button"
-          variant="ghost"
-        >
-          <Check aria-hidden="true" />
-          <span>{t(translations.workflows.restore)}</span>
-        </Button>
-      ) : null}
-      {workflow.status === 'DRAFT' ? (
-        <Button
-          aria-label={t(translations.workflows.delete)}
-          onClick={() => onAction('delete', workflow)}
-          size="sm"
-          type="button"
-          variant="ghost"
-        >
-          <Trash2 aria-hidden="true" />
-          <span>{t(translations.workflows.delete)}</span>
-        </Button>
-      ) : null}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            aria-label={`${t(translations.workflows.actions)}: ${workflow.name}`}
+            disabled={isPending}
+            size="icon-sm"
+            type="button"
+            variant="ghost"
+          >
+            <MoreHorizontal aria-hidden="true" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuLabel>{t(translations.workflows.actions)}</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {workflow.status === 'ACTIVE' ? (
+            <DropdownMenuItem onSelect={() => onDefault(workflow)}>
+              {workflow.isDefault ? (
+                <XCircle aria-hidden="true" />
+              ) : (
+                <Check aria-hidden="true" />
+              )}
+              {workflow.isDefault
+                ? t(translations.workflows.clearDefault)
+                : t(translations.workflows.setDefault)}
+            </DropdownMenuItem>
+          ) : null}
+          {workflow.status === 'DRAFT' ? (
+            <DropdownMenuItem onSelect={() => requestAction('publish')}>
+              <Workflow aria-hidden="true" />
+              {t(translations.workflows.publish)}
+            </DropdownMenuItem>
+          ) : null}
+          {workflow.status === 'ACTIVE' ? (
+            <DropdownMenuItem onSelect={() => requestAction('deactivate')}>
+              <XCircle aria-hidden="true" />
+              {t(translations.workflows.deactivate)}
+            </DropdownMenuItem>
+          ) : null}
+          {workflow.status === 'INACTIVE' ? (
+            <DropdownMenuItem onSelect={() => requestAction('restore')}>
+              <Check aria-hidden="true" />
+              {t(translations.workflows.restore)}
+            </DropdownMenuItem>
+          ) : null}
+          {workflow.status === 'DRAFT' ? (
+            <DropdownMenuItem
+              className="text-destructive data-[highlighted]:bg-destructive/10 data-[highlighted]:text-destructive"
+              onSelect={() => requestAction('delete')}
+            >
+              <Trash2 aria-hidden="true" />
+              {t(translations.workflows.delete)}
+            </DropdownMenuItem>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
@@ -306,9 +305,9 @@ function CreateWorkflowDialog({
   );
 }
 
-function LoadingState() {
+function LoadingState({ label }: { readonly label: string }) {
   return (
-    <div className="grid gap-3" aria-busy="true" aria-label="Loading">
+    <div className="grid gap-3" aria-busy="true" aria-label={label} role="status">
       {[1, 2, 3].map((item) => (
         <Skeleton className="h-20 rounded-2xl" key={item} />
       ))}
@@ -339,7 +338,8 @@ export default function WorkflowsPage() {
     publishMutation.isPending ||
     deactivateMutation.isPending ||
     restoreMutation.isPending ||
-    deleteMutation.isPending;
+    deleteMutation.isPending ||
+    defaultMutation.isPending;
 
   function handleError(error: unknown): void {
     toast.error(formatError(error));
@@ -449,53 +449,66 @@ export default function WorkflowsPage() {
     <section className="flex min-h-96 flex-col gap-6">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
-          <p className="text-sm font-medium text-muted-foreground">
-            {t(translations.management.eyebrow)}
-          </p>
-          <h2 className="text-2xl font-extrabold tracking-tight">
+          <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
             {t(translations.workflows.title)}
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
             {t(translations.workflows.description)}
           </p>
         </div>
-        <Button onClick={() => setCreateOpen(true)} type="button">
+        <Button
+          className="shadow-[var(--control-shadow)]"
+          disabled={createMutation.isPending}
+          onClick={() => setCreateOpen(true)}
+          type="button"
+        >
           <Plus aria-hidden="true" />
           {t(translations.workflows.create)}
         </Button>
       </div>
 
-      <div
-        className="flex flex-wrap gap-2"
-        role="tablist"
-        aria-label={t(translations.workflows.status)}
-      >
-        {(['ALL', ...ALL_STATUSES] as const).map((value) => {
-          const selected = filter === value;
-          const label =
-            value === 'ALL'
-              ? t(translations.workflows.all)
-              : statusLabel(value, t);
-          return (
-            <Button
-              aria-selected={selected}
-              key={value}
-              onClick={() => {
-                setFilter(value);
-                setPage(0);
-              }}
-              role="tab"
-              size="sm"
-              type="button"
-              variant={selected ? 'default' : 'outline'}
-            >
-              {label}
-            </Button>
-          );
-        })}
+      <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-card/70 p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-4">
+        <div
+          className="flex flex-wrap items-center gap-2"
+          role="group"
+          aria-label={t(translations.workflows.status)}
+        >
+          <span className="mr-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+            {t(translations.workflows.status)}
+          </span>
+          {(['ALL', ...ALL_STATUSES] as const).map((value) => {
+            const selected = filter === value;
+            const label =
+              value === 'ALL'
+                ? t(translations.workflows.all)
+                : statusLabel(value, t);
+            return (
+              <Button
+                aria-pressed={selected}
+                key={value}
+                onClick={() => {
+                  setFilter(value);
+                  setPage(0);
+                }}
+                size="sm"
+                type="button"
+                variant={selected ? 'default' : 'outline'}
+              >
+                {label}
+              </Button>
+            );
+          })}
+        </div>
+        {query.data ? (
+          <span className="text-xs text-muted-foreground" aria-live="polite">
+            {query.data.total} · {query.data.page + 1} / {query.data.pageCount}
+          </span>
+        ) : null}
       </div>
 
-      {query.isPending ? <LoadingState /> : null}
+      {query.isPending ? (
+        <LoadingState label={t(translations.workflows.loading)} />
+      ) : null}
       {query.isError ? (
         <Card>
           <CardHeader>
@@ -534,7 +547,10 @@ export default function WorkflowsPage() {
       ) : null}
       {query.data && query.data.items.length > 0 ? (
         <>
-          <Card className="hidden overflow-hidden md:block">
+          <Card
+            aria-busy={query.isFetching}
+            className="hidden overflow-hidden border-border/70 shadow-[var(--soft-shadow)] md:block"
+          >
             <Table>
               <TableHeader>
                 <TableRow>
@@ -583,6 +599,7 @@ export default function WorkflowsPage() {
                     </TableCell>
                     <TableCell>
                       <WorkflowActions
+                        isPending={isActionPending}
                         workflow={workflow}
                         onAction={(kind, item) =>
                           setPendingAction({ kind, workflow: item })
@@ -599,7 +616,11 @@ export default function WorkflowsPage() {
           </Card>
           <div className="grid gap-3 md:hidden">
             {query.data.items.map((workflow) => (
-              <Card key={workflow.id}>
+              <Card
+                aria-busy={isActionPending}
+                className="border-border/70 shadow-[var(--soft-shadow)]"
+                key={workflow.id}
+              >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -639,6 +660,7 @@ export default function WorkflowsPage() {
                         : t(translations.workflows.no)}
                     </span>
                     <WorkflowActions
+                      isPending={isActionPending}
                       workflow={workflow}
                       onAction={(kind, item) =>
                         setPendingAction({ kind, workflow: item })

@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { type FormEvent, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate } from 'react-router';
+import { Link } from 'react-router';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -36,6 +36,15 @@ import {
 } from '@/components/ui/empty';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import {
   useCreateStoryMutation,
   useStoriesQuery,
@@ -47,7 +56,6 @@ import formatError from '@/utils/formatError';
 export default function StoriesPage() {
   const { i18n, t } = useTranslation();
   const { activeWorkspaceId: workspaceId } = useWorkspaceStore();
-  const navigate = useNavigate();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [query, setQuery] = useState('');
   const storiesQuery = useStoriesQuery(workspaceId, query);
@@ -150,7 +158,7 @@ export default function StoriesPage() {
         </Dialog>
       </div>
 
-      <Card className="border-border/70 shadow-[var(--soft-shadow)]">
+      <Card className="overflow-hidden border-border/70 shadow-[var(--soft-shadow)]">
         <CardHeader className="gap-4 sm:flex sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle>{t(translations.management.stories.library)}</CardTitle>
@@ -173,89 +181,125 @@ export default function StoriesPage() {
             />
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {storiesQuery.isLoading ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              {t(translations.management.stories.loading)}
-            </p>
+            <div
+              aria-label={t(translations.management.stories.loading)}
+              className="space-y-0 px-6 py-2"
+              role="status"
+            >
+              {Array.from({ length: 4 }, (_, index) => (
+                <div
+                  className="flex items-center gap-4 border-b border-border/60 py-4 last:border-b-0"
+                  key={`story-skeleton-${index}`}
+                >
+                  <Skeleton className="h-10 min-w-0 flex-1" />
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="hidden h-4 w-28 sm:block" />
+                  <Skeleton className="hidden h-9 w-9 sm:block" />
+                  <Skeleton className="h-9 w-36" />
+                </div>
+              ))}
+            </div>
           ) : null}
           {storiesQuery.isError ? (
-            <p className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-              {formatError(storiesQuery.error)}
-            </p>
+            <div className="p-6">
+              <p className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+                {formatError(storiesQuery.error)}
+              </p>
+            </div>
           ) : null}
           {storiesQuery.data?.length === 0 ? (
-            <Empty className="border-border bg-muted/20 py-12">
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <BookOpenText />
-                </EmptyMedia>
-                <EmptyTitle>
-                  {t(translations.management.stories.emptyStories)}
-                </EmptyTitle>
-                <EmptyDescription>
-                  {t(translations.management.stories.emptyStoriesDescription)}
-                </EmptyDescription>
-              </EmptyHeader>
-              <EmptyContent>
-                <Button onClick={() => setIsCreateOpen(true)}>
-                  <Plus />
-                  {t(translations.management.stories.createStory)}
-                </Button>
-              </EmptyContent>
-            </Empty>
+            <div className="p-6">
+              <Empty className="border-border bg-muted/20 py-12">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <BookOpenText />
+                  </EmptyMedia>
+                  <EmptyTitle>
+                    {t(translations.management.stories.emptyStories)}
+                  </EmptyTitle>
+                  <EmptyDescription>
+                    {t(
+                      translations.management.stories.emptyStoriesDescription,
+                    )}
+                  </EmptyDescription>
+                </EmptyHeader>
+                <EmptyContent>
+                  <Button onClick={() => setIsCreateOpen(true)}>
+                    <Plus />
+                    {t(translations.management.stories.createStory)}
+                  </Button>
+                </EmptyContent>
+              </Empty>
+            </div>
           ) : null}
           {storiesQuery.data && storiesQuery.data.length > 0 ? (
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {storiesQuery.data.map((story) => (
-                <article
-                  key={story.id}
-                  className="group flex min-h-56 cursor-pointer flex-col rounded-2xl border border-border/70 bg-card p-5 transition-shadow hover:shadow-[var(--soft-shadow)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
-                  onClick={() =>
-                    navigate(`/stories/${encodeURIComponent(story.id)}`)
-                  }
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      navigate(`/stories/${encodeURIComponent(story.id)}`);
-                    }
-                  }}
-                  role="link"
-                  tabIndex={0}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <BookOpenText aria-hidden="true" className="size-5" />
-                    </div>
-                    <span
-                      className={
-                        story.status === 'ACTIVE'
-                          ? 'rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary'
-                          : 'rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground'
-                      }
-                    >
-                      {story.status}
-                    </span>
-                  </div>
-                  <div className="mt-5 min-w-0">
-                    <h3 className="truncate text-lg font-bold tracking-tight">
-                      {story.title}
-                    </h3>
-                    <p className="mt-1 truncate text-sm text-muted-foreground">
-                      {story.alternativeTitle ??
-                        t(translations.management.stories.noAlternativeTitle)}
-                    </p>
-                  </div>
-                  <div className="mt-auto flex items-center justify-between gap-3 pt-6">
-                    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <CalendarDays aria-hidden="true" className="size-3.5" />
-                      {dateFormatter.format(new Date(story.createdAt))}
-                    </span>
-                    <div className="flex items-center gap-1">
+            <Table className="min-w-[760px]">
+              <TableHeader className="bg-muted/35">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="min-w-64">
+                    {t(translations.management.stories.name)}
+                  </TableHead>
+                  <TableHead className="min-w-28">
+                    {t(translations.management.stories.status)}
+                  </TableHead>
+                  <TableHead className="min-w-36">
+                    {t(translations.management.stories.createdAt)}
+                  </TableHead>
+                  <TableHead className="w-20 text-center">
+                    {t(translations.management.stories.drive)}
+                  </TableHead>
+                  <TableHead className="w-48 text-right">
+                    {t(translations.management.stories.actions)}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {storiesQuery.data.map((story) => (
+                  <TableRow className="group align-middle" key={story.id}>
+                    <TableCell>
+                      <Link
+                        className="flex min-w-0 items-center gap-3 rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                        to={`/stories/${encodeURIComponent(story.id)}`}
+                      >
+                        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary/15">
+                          <BookOpenText aria-hidden="true" className="size-4" />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate font-semibold tracking-tight">
+                            {story.title}
+                          </span>
+                          <span className="mt-1 block truncate text-xs text-muted-foreground">
+                            {story.alternativeTitle ??
+                              t(
+                                translations.management.stories
+                                  .noAlternativeTitle,
+                              )}
+                          </span>
+                        </span>
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <span className="inline-flex items-center gap-2 text-sm font-medium">
+                        <span
+                          aria-hidden="true"
+                          className={`size-2 rounded-full ${story.status === 'ACTIVE' ? 'bg-primary' : 'bg-muted-foreground/50'}`}
+                        />
+                        {story.status}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
+                      <span className="inline-flex items-center gap-1.5">
+                        <CalendarDays aria-hidden="true" className="size-3.5" />
+                        {dateFormatter.format(new Date(story.createdAt))}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-center">
                       <Button
                         asChild
-                        onClick={(event) => event.stopPropagation()}
                         size="icon-sm"
+                        title={t(translations.management.stories.drive)}
                         variant="ghost"
                       >
                         <a
@@ -267,21 +311,19 @@ export default function StoriesPage() {
                           <ExternalLink aria-hidden="true" />
                         </a>
                       </Button>
-                      <Button
-                        asChild
-                        onClick={(event) => event.stopPropagation()}
-                        size="sm"
-                      >
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      <Button asChild size="sm">
                         <Link to={`/stories/${encodeURIComponent(story.id)}`}>
                           <FolderOpen aria-hidden="true" />
                           {t(translations.management.stories.viewChapters)}
                         </Link>
                       </Button>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           ) : null}
         </CardContent>
       </Card>

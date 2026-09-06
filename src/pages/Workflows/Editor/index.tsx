@@ -183,11 +183,13 @@ function validationMessage(
 }
 
 function InspectorContent({
+  idPrefix,
   node,
   onChange,
   onRemove,
   t,
 }: {
+  readonly idPrefix: string;
   readonly node: FlowNode | undefined;
   readonly onChange: (patch: Partial<WorkflowGraphNodeData>) => void;
   readonly onRemove: () => void;
@@ -201,6 +203,10 @@ function InspectorContent({
     );
   }
   const { data } = node;
+  const durationOverrideId = `${idPrefix}-workflow-duration-override`;
+  const durationInputId = `${idPrefix}-workflow-duration`;
+  const priceOverrideId = `${idPrefix}-workflow-price-override`;
+  const priceInputId = `${idPrefix}-workflow-price`;
   return (
     <div className="grid gap-5">
       <div>
@@ -233,10 +239,10 @@ function InspectorContent({
         </div>
       </div>
       <div className="grid gap-4">
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-3 rounded-xl border border-border/70 p-3 transition-colors has-[:focus-visible]:border-primary/50 has-[:hover]:bg-muted/30">
           <Checkbox
             checked={data.durationOverrideEnabled === true}
-            id="workflow-duration-override"
+            id={durationOverrideId}
             onCheckedChange={(checked) =>
               onChange({
                 durationHoursOverride: checked
@@ -248,7 +254,7 @@ function InspectorContent({
             }
           />
           <div className="grid gap-1">
-            <Label htmlFor="workflow-duration-override">
+            <Label htmlFor={durationOverrideId}>
               {t(translations.workflows.overrideDuration)}
             </Label>
             <p className="text-xs text-muted-foreground">
@@ -257,12 +263,12 @@ function InspectorContent({
           </div>
         </div>
         {data.durationOverrideEnabled ? (
-          <div className="grid gap-2">
-            <Label htmlFor="workflow-duration">
+          <div className="grid gap-2 pl-7">
+            <Label htmlFor={durationInputId}>
               {t(translations.workflows.durationInput)}
             </Label>
             <Input
-              id="workflow-duration"
+              id={durationInputId}
               min={1}
               onChange={(event) =>
                 onChange({
@@ -276,10 +282,10 @@ function InspectorContent({
             />
           </div>
         ) : null}
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-3 rounded-xl border border-border/70 p-3 transition-colors has-[:focus-visible]:border-primary/50 has-[:hover]:bg-muted/30">
           <Checkbox
             checked={data.priceOverrideEnabled === true}
-            id="workflow-price-override"
+            id={priceOverrideId}
             onCheckedChange={(checked) =>
               onChange({
                 priceOverride: checked
@@ -290,7 +296,7 @@ function InspectorContent({
             }
           />
           <div className="grid gap-1">
-            <Label htmlFor="workflow-price-override">
+            <Label htmlFor={priceOverrideId}>
               {t(translations.workflows.overridePrice)}
             </Label>
             <p className="text-xs text-muted-foreground">
@@ -299,12 +305,12 @@ function InspectorContent({
           </div>
         </div>
         {data.priceOverrideEnabled ? (
-          <div className="grid gap-2">
-            <Label htmlFor="workflow-price">
+          <div className="grid gap-2 pl-7">
+            <Label htmlFor={priceInputId}>
               {t(translations.workflows.priceInput)}
             </Label>
             <Input
-              id="workflow-price"
+              id={priceInputId}
               inputMode="decimal"
               onChange={(event) =>
                 onChange({ priceOverride: event.target.value || null })
@@ -377,6 +383,11 @@ export default function WorkflowEditorPage() {
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
   const [removeNodeId, setRemoveNodeId] = useState<string | null>(null);
   const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
+
+  function openMobileInspector(): void {
+    if (window.matchMedia('(max-width: 1023px)').matches)
+      setMobileInspectorOpen(true);
+  }
 
   useEffect(() => {
     const configuration = detailQuery.data;
@@ -493,7 +504,7 @@ export default function WorkflowEditorPage() {
       },
     ]);
     setSelectedNodeId(stageId);
-    setMobileInspectorOpen(true);
+    openMobileInspector();
     setIsDirty(true);
     setEditorError(null);
     toast.success(t(translations.workflows.stageAdded));
@@ -668,18 +679,23 @@ export default function WorkflowEditorPage() {
   const configuration = detailQuery.data;
   const status = configuration.template.status;
   const isActionPending =
+    saveMutation.isPending ||
     publishMutation.isPending ||
     restoreMutation.isPending ||
     deactivateMutation.isPending ||
     defaultMutation.isPending;
-  const selectedInspector = (
-    <InspectorContent
-      node={selectedNode}
-      onChange={updateSelectedNode}
-      onRemove={removeSelectedNode}
-      t={t}
-    />
-  );
+
+  function renderInspector(idPrefix: string): React.ReactNode {
+    return (
+      <InspectorContent
+        idPrefix={idPrefix}
+        node={selectedNode}
+        onChange={updateSelectedNode}
+        onRemove={removeSelectedNode}
+        t={t}
+      />
+    );
+  }
 
   return (
     <section className="flex min-h-0 flex-col gap-5">
@@ -695,13 +711,13 @@ export default function WorkflowEditorPage() {
             <ArrowLeft aria-hidden="true" />
           </Button>
           <div>
-            <p className="text-sm font-medium text-muted-foreground">
-              {t(translations.workflows.editorTitle)}
-            </p>
-            <div className="mt-1 flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="sr-only">
+                {t(translations.workflows.editorTitle)}
+              </h2>
               <Input
                 aria-label={t(translations.workflows.name)}
-                className="h-10 max-w-lg text-2xl font-extrabold tracking-tight"
+                className="h-11 max-w-lg min-w-0 border-transparent bg-transparent px-2 text-2xl font-extrabold tracking-tight shadow-none hover:bg-card/60 focus-visible:border-input focus-visible:bg-card sm:text-3xl"
                 maxLength={100}
                 onChange={(event) => {
                   setName(event.target.value);
@@ -775,7 +791,8 @@ export default function WorkflowEditorPage() {
             </Button>
           ) : null}
           <Button
-            disabled={saveMutation.isPending}
+            className="w-full sm:w-auto"
+            disabled={saveMutation.isPending || isActionPending}
             onClick={requestSave}
             type="button"
           >
@@ -804,12 +821,21 @@ export default function WorkflowEditorPage() {
         </div>
       ) : null}
 
-      <div className="grid min-h-0 gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
-        <aside className="hidden rounded-2xl border bg-card p-4 lg:block">
-          <h3 className="font-semibold">{t(translations.workflows.palette)}</h3>
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            {t(translations.workflows.paletteDescription)}
-          </p>
+      <div className="grid min-h-0 gap-4 lg:grid-cols-[15rem_minmax(0,1fr)_18rem]">
+        <aside className="hidden self-start rounded-2xl border border-border/70 bg-card p-4 shadow-sm lg:sticky lg:top-24 lg:block">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="font-semibold tracking-tight">
+                {t(translations.workflows.palette)}
+              </h3>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                {t(translations.workflows.paletteDescription)}
+              </p>
+            </div>
+            <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
+              {availableStages.length}
+            </span>
+          </div>
           <div className="mt-4 grid max-h-[32rem] gap-2 overflow-y-auto pr-1">
             {availableStages.map((stage) => (
               <Button
@@ -829,21 +855,33 @@ export default function WorkflowEditorPage() {
               </Button>
             ))}
             {availableStages.length === 0 ? (
-              <p className="rounded-xl bg-muted/40 px-3 py-3 text-xs leading-5 text-muted-foreground">
-                {t(translations.workflows.noStages)}
-              </p>
+              <div className="rounded-xl bg-muted/40 px-3 py-3 text-xs leading-5 text-muted-foreground">
+                <p className="font-medium text-foreground">
+                  {t(translations.workflows.noStages)}
+                </p>
+                <p className="mt-1">
+                  {t(translations.workflows.noStagesDescription)}
+                </p>
+              </div>
             ) : null}
           </div>
         </aside>
-        <div className="grid min-h-0 gap-3">
+        <div className="grid min-h-0 min-w-0 gap-3">
           <Card className="lg:hidden">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">
-                {t(translations.workflows.palette)}
-              </CardTitle>
-              <CardDescription>
-                {t(translations.workflows.paletteDescription)}
-              </CardDescription>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="text-base">
+                    {t(translations.workflows.palette)}
+                  </CardTitle>
+                  <CardDescription>
+                    {t(translations.workflows.paletteDescription)}
+                  </CardDescription>
+                </div>
+                <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
+                  {availableStages.length}
+                </span>
+              </div>
             </CardHeader>
             <CardContent className="flex gap-2 overflow-x-auto pb-4">
               {availableStages.map((stage) => (
@@ -858,10 +896,20 @@ export default function WorkflowEditorPage() {
                   {stage.name}
                 </Button>
               ))}
+              {availableStages.length === 0 ? (
+                <div className="text-sm text-muted-foreground">
+                  <p className="font-medium text-foreground">
+                    {t(translations.workflows.noStages)}
+                  </p>
+                  <p className="mt-1">
+                    {t(translations.workflows.noStagesDescription)}
+                  </p>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
-          <Card className="overflow-hidden">
-            <CardHeader className="border-b bg-muted/20 py-3">
+          <Card className="overflow-hidden border-border/70 shadow-[var(--soft-shadow)]">
+            <CardHeader className="border-b border-border/60 bg-muted/20 py-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <GitBranch aria-hidden="true" className="size-4 text-primary" />
                 {t(translations.workflows.canvas)}
@@ -871,6 +919,7 @@ export default function WorkflowEditorPage() {
               <div
                 className="h-[34rem] min-h-[34rem] w-full bg-[radial-gradient(circle_at_top,var(--canvas-glow-primary),transparent_45%)]"
                 aria-label={t(translations.workflows.canvas)}
+                role="region"
               >
                 <ReactFlow
                   deleteKeyCode={null}
@@ -881,7 +930,7 @@ export default function WorkflowEditorPage() {
                   onEdgesChange={handleEdgesChange}
                   onNodeClick={(_, node) => {
                     setSelectedNodeId(node.id);
-                    setMobileInspectorOpen(true);
+                    openMobileInspector();
                   }}
                   onNodesChange={handleNodesChange}
                   edges={edges}
@@ -901,8 +950,8 @@ export default function WorkflowEditorPage() {
           <p className="text-xs leading-5 text-muted-foreground lg:hidden">
             {t(translations.workflows.mobileGraphHint)}
           </p>
-          <Card>
-            <CardHeader className="pb-3">
+          <Card className="border-border/70 shadow-sm">
+            <CardHeader className="border-b border-border/60 pb-3">
               <CardTitle className="text-base">
                 {t(translations.workflows.steps)}
               </CardTitle>
@@ -918,7 +967,7 @@ export default function WorkflowEditorPage() {
               ) : null}
               {layers.map((layer, layerIndex) => (
                 <div
-                  className="rounded-xl border border-border/70 p-3"
+                  className="rounded-xl bg-muted/20 p-3"
                   key={`step-${layerIndex}`}
                 >
                   <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
@@ -938,11 +987,11 @@ export default function WorkflowEditorPage() {
                         .filter(Boolean);
                       return (
                         <button
-                          className="rounded-lg bg-muted/50 px-2.5 py-1.5 text-left text-sm hover:bg-muted"
+                          className="rounded-lg bg-card px-2.5 py-1.5 text-left text-sm ring-1 ring-border/70 transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-primary/60"
                           key={nodeId}
                           onClick={() => {
                             setSelectedNodeId(nodeId);
-                            setMobileInspectorOpen(true);
+                            openMobileInspector();
                           }}
                           type="button"
                         >
@@ -968,11 +1017,27 @@ export default function WorkflowEditorPage() {
             </CardContent>
           </Card>
         </div>
+        <aside className="hidden self-start lg:sticky lg:top-24 lg:block">
+          <Card className="border-border/70 shadow-sm">
+            <CardHeader className="border-b border-border/60 pb-3">
+              <CardTitle className="text-base">
+                {t(translations.workflows.inspector)}
+              </CardTitle>
+              <CardDescription>
+                {selectedNode?.data.stageDefinition.name ??
+                  t(translations.workflows.selectNode)}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-4">
+              {renderInspector('desktop')}
+            </CardContent>
+          </Card>
+        </aside>
       </div>
 
       <Sheet open={mobileInspectorOpen} onOpenChange={setMobileInspectorOpen}>
         <SheetContent
-          className="w-[min(92vw,24rem)] overflow-y-auto"
+          className="w-[min(92vw,24rem)] overflow-y-auto lg:hidden"
           side="right"
         >
           <SheetHeader>
@@ -982,7 +1047,7 @@ export default function WorkflowEditorPage() {
                 t(translations.workflows.selectNode)}
             </SheetDescription>
           </SheetHeader>
-          <div className="px-4 pb-6">{selectedInspector}</div>
+          <div className="px-4 pb-6">{renderInspector('mobile')}</div>
         </SheetContent>
       </Sheet>
       <AlertDialog open={saveConfirmOpen} onOpenChange={setSaveConfirmOpen}>

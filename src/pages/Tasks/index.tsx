@@ -6,9 +6,6 @@ import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import {
   Empty,
@@ -118,7 +115,7 @@ function TaskStatusBadge({
 }) {
   return (
     <span
-      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusClassName(status)}`}
+      className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${getStatusClassName(status)}`}
     >
       {t(translations.management.tasks[getTaskStatusLabelKey(status)])}
     </span>
@@ -153,9 +150,13 @@ function TaskDeadline({
 
   const overdue = isTaskOverdue(task);
   return (
-    <div className="space-y-1">
+    <div className="space-y-0.5">
       <time
-        className={overdue ? 'font-semibold text-destructive' : 'text-sm'}
+        className={
+          overdue
+            ? 'font-medium whitespace-nowrap text-destructive'
+            : 'text-sm whitespace-nowrap'
+        }
         dateTime={task.dueAt}
         title={dueAt.toLocaleString()}
       >
@@ -213,52 +214,69 @@ function TaskTable({
   readonly t: ReturnType<typeof useTranslation>['t'];
 }) {
   return (
-    <div className="hidden overflow-x-auto lg:block">
-      <Table className="min-w-[1180px]">
+    <div className="hidden lg:block">
+      <Table className="min-w-[66rem] table-fixed">
         <TableHeader>
           <TableRow className="border-border/60 hover:bg-transparent">
-            <TableHead>{t(translations.management.tasks.task)}</TableHead>
-            <TableHead>{t(translations.management.tasks.story)}</TableHead>
-            <TableHead>{t(translations.management.tasks.chapter)}</TableHead>
-            <TableHead>{t(translations.management.tasks.stage)}</TableHead>
-            <TableHead>{t(translations.management.tasks.assignee)}</TableHead>
-            <TableHead>{t(translations.management.tasks.status)}</TableHead>
-            <TableHead>{t(translations.management.tasks.deadline)}</TableHead>
-            <TableHead className="text-right">
+            <TableHead className="h-9 w-20 px-3 py-2 text-[11px] font-medium tracking-wide uppercase">
+              {t(translations.management.tasks.task)}
+            </TableHead>
+            <TableHead className="h-9 w-44 px-3 py-2 text-[11px] font-medium tracking-wide uppercase">
+              {t(translations.management.tasks.story)}
+            </TableHead>
+            <TableHead className="h-9 w-40 px-3 py-2 text-[11px] font-medium tracking-wide uppercase">
+              {t(translations.management.tasks.chapter)}
+            </TableHead>
+            <TableHead className="h-9 w-28 px-3 py-2 text-[11px] font-medium tracking-wide uppercase">
+              {t(translations.management.tasks.stage)}
+            </TableHead>
+            <TableHead className="h-9 w-40 px-3 py-2 text-[11px] font-medium tracking-wide uppercase">
+              {t(translations.management.tasks.assignee)}
+            </TableHead>
+            <TableHead className="h-9 w-28 px-3 py-2 text-[11px] font-medium tracking-wide uppercase">
+              {t(translations.management.tasks.status)}
+            </TableHead>
+            <TableHead className="h-9 w-36 px-3 py-2 text-[11px] font-medium tracking-wide uppercase">
+              {t(translations.management.tasks.deadline)}
+            </TableHead>
+            <TableHead className="h-9 w-28 px-3 py-2 text-right text-[11px] font-medium tracking-wide uppercase">
               {t(translations.management.stories.actions)}
             </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {tasks.map((task) => (
-            <TableRow key={task.id}>
-              <TableCell className="font-semibold text-primary">
+            <TableRow className="border-border/50 hover:bg-muted/30" key={task.id}>
+              <TableCell className="px-3 py-2.5 font-mono text-xs font-medium text-primary">
                 {t(translations.management.tasks.taskId, { id: task.id })}
               </TableCell>
-              <TableCell className="max-w-52 font-medium">
+              <TableCell className="px-3 py-2.5 font-medium">
                 <span className="block truncate" title={task.storyTitle}>
                   {task.storyTitle}
                 </span>
               </TableCell>
-              <TableCell className="max-w-44">
+              <TableCell className="px-3 py-2.5">
                 <span className="block truncate" title={task.chapterName}>
                   {task.chapterName}
                 </span>
               </TableCell>
-              <TableCell>
-                <span title={task.stageCode}>{task.stageName}</span>
+              <TableCell className="px-3 py-2.5">
+                <span className="block truncate" title={task.stageCode}>
+                  {task.stageName}
+                </span>
               </TableCell>
-              <TableCell>
+              <TableCell className="px-3 py-2.5">
                 <TaskAssignee task={task} t={t} />
               </TableCell>
-              <TableCell>
+              <TableCell className="px-3 py-2.5">
                 <TaskStatusBadge status={task.status} t={t} />
               </TableCell>
-              <TableCell>
+              <TableCell className="px-3 py-2.5">
                 <TaskDeadline dateFormatter={dateFormatter} task={task} t={t} />
               </TableCell>
-              <TableCell className="text-right whitespace-nowrap">
+              <TableCell className="px-3 py-2.5 text-right whitespace-nowrap">
                 <TaskActionButtons
+                  compact
                   isDeductDisabled={task.paymentStatus === 'PAID'}
                   onDeduct={() => onDeduct(task)}
                   onEdit={() => onEdit(task)}
@@ -558,11 +576,11 @@ export default function TasksPage() {
             {t(translations.management.tasks.description)}
           </p>
         </div>
-        <div className="rounded-xl border border-primary/15 bg-primary/5 px-4 py-3 text-sm">
-          <span className="block text-xs text-muted-foreground">
+        <div className="flex shrink-0 items-center gap-2 rounded-lg border border-primary/15 bg-primary/5 px-3 py-2 text-sm">
+          <span className="text-xs text-muted-foreground">
             {t(translations.management.tasks.status)}
           </span>
-          <strong className="text-lg text-primary">
+          <strong className="text-sm font-semibold text-primary">
             {t(translations.management.tasks.taskCount, {
               count: taskQuery.data?.total ?? 0,
             })}
@@ -570,9 +588,9 @@ export default function TasksPage() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border/70 bg-card/70 p-4 shadow-sm sm:p-5">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[1fr_1.3fr_1.3fr_1.2fr_auto_auto] xl:items-end">
-          <label className="grid gap-1.5 text-xs font-semibold text-muted-foreground">
+      <div className="rounded-2xl border border-border/70 bg-card/70 p-3 shadow-sm sm:p-4">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1.2fr_1.2fr_1fr_auto_auto] xl:items-end">
+          <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">
             {t(translations.management.tasks.filterStatus)}
             <SelectSearch
               noOptionsText={t(
@@ -588,7 +606,7 @@ export default function TasksPage() {
             />
           </label>
 
-          <label className="grid gap-1.5 text-xs font-semibold text-muted-foreground">
+          <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">
             {t(translations.management.tasks.filterStory)}
             <SelectSearch
               disabled={!workspaceId || filterOptionsQuery.isLoading}
@@ -603,7 +621,7 @@ export default function TasksPage() {
             />
           </label>
 
-          <label className="grid gap-1.5 text-xs font-semibold text-muted-foreground">
+          <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">
             {t(translations.management.tasks.filterStage)}
             <SelectSearch
               disabled={!workspaceId || filterOptionsQuery.isLoading}
@@ -618,7 +636,7 @@ export default function TasksPage() {
             />
           </label>
 
-          <label className="grid gap-1.5 text-xs font-semibold text-muted-foreground">
+          <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">
             {t(translations.management.tasks.sortBy)}
             <Select onValueChange={handleSortByChange} value={sortBy}>
               <SelectTrigger
@@ -676,12 +694,6 @@ export default function TasksPage() {
       </div>
 
       <Card className="overflow-hidden border-border/70 shadow-sm">
-        <CardHeader className="border-b border-border/60 bg-muted/20">
-          <CardTitle>{t(translations.navigation.tasks)}</CardTitle>
-          <CardDescription>
-            {t(translations.management.tasks.description)}
-          </CardDescription>
-        </CardHeader>
         <CardContent className="p-0" aria-busy={taskQuery.isFetching}>
           {!workspaceId ? (
             <Empty className="min-h-72 rounded-none border-0">

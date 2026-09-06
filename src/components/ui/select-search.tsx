@@ -1,6 +1,6 @@
 import { DismissableLayerBranch } from '@radix-ui/react-dismissable-layer';
 import { FocusScope } from '@radix-ui/react-focus-scope';
-import { Check, ChevronDown, Search } from 'lucide-react';
+import { Check, ChevronDown, Plus, Search, X } from 'lucide-react';
 import React, {
   useCallback,
   useEffect,
@@ -71,6 +71,14 @@ const SEARCH_SECTION_APPROX_PX = 52;
 const MENU_MIN_HEIGHT_PX = 120;
 /** Extra pixels allowed past the portal host bottom/top so the panel can grow when the dialog uses overflow-visible. */
 const MENU_HOST_OVERFLOW_ALLOWANCE_PX = 48;
+const SEARCH_SELECT_TRIGGER_CLASS_NAME =
+  "flex h-8 w-full items-center justify-between gap-1.5 rounded-lg border border-input bg-transparent py-2 pr-2 pl-2.5 text-sm font-normal whitespace-nowrap transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 data-placeholder:text-muted-foreground dark:bg-input/30 dark:hover:bg-input/50 [&>span]:line-clamp-1 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4";
+const SEARCH_SELECT_MENU_CLASS_NAME =
+  'overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10';
+const SEARCH_SELECT_ITEM_CLASS_NAME =
+  'relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none';
+const SEARCH_SELECT_SEARCH_ROW_CLASS_NAME =
+  'flex shrink-0 items-center gap-1.5 border-b border-border px-2.5 py-1.5';
 
 function computeMenuLayoutAdaptive(
   triggerRect: DOMRect,
@@ -405,11 +413,7 @@ export default function SearchSelect({
         aria-expanded={open}
         onClick={toggleOpen}
         className={cn(
-          'flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background',
-          'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
-          open && 'ring-2 ring-ring ring-offset-2',
-          'disabled:cursor-not-allowed disabled:opacity-50',
-          '[&>span]:line-clamp-1',
+          SEARCH_SELECT_TRIGGER_CLASS_NAME,
         )}
         disabled={disabled}
       >
@@ -425,7 +429,10 @@ export default function SearchSelect({
             <span className="text-muted-foreground">{placeholder}</span>
           )}
         </span>
-        <ChevronDown className="h-4 w-4 shrink-0 opacity-50" aria-hidden />
+        <ChevronDown
+          className="pointer-events-none size-4 shrink-0 text-muted-foreground"
+          aria-hidden
+        />
       </button>
 
       {/* Popup (inline — clipped by overflow ancestors) */}
@@ -434,14 +441,15 @@ export default function SearchSelect({
           role="dialog"
           aria-label="Select options"
           className={cn(
-            'absolute z-50 w-full overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md',
+            'absolute z-50 w-full',
+            SEARCH_SELECT_MENU_CLASS_NAME,
             position === 'bottom' ? 'top-full mt-1' : 'bottom-full mb-1',
           )}
         >
           {/* Search */}
-          <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
+          <div className={SEARCH_SELECT_SEARCH_ROW_CLASS_NAME}>
             <Search
-              className="h-4 w-4 shrink-0 text-muted-foreground"
+              className="size-4 shrink-0 text-muted-foreground"
               aria-hidden
             />
             <input
@@ -450,16 +458,16 @@ export default function SearchSelect({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={searchPlaceholder}
-              className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+              className="h-8 min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
             />
             {query ? (
               <button
                 type="button"
                 onClick={() => setQuery('')}
-                className="rounded-sm p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                 aria-label="Xóa tìm kiếm"
               >
-                ✕
+                <X className="size-3.5" aria-hidden />
               </button>
             ) : null}
           </div>
@@ -483,15 +491,13 @@ export default function SearchSelect({
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleCreate(query)}
                 className={cn(
-                  'relative flex w-full cursor-default select-none items-center gap-2 rounded-sm py-1.5 pl-2 pr-2 text-sm outline-none',
+                  SEARCH_SELECT_ITEM_CLASS_NAME,
                   highlight === 0
                     ? 'bg-accent text-accent-foreground'
                     : 'text-foreground',
                 )}
               >
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm border border-input text-xs">
-                  +
-                </span>
+                <Plus className="size-4 shrink-0" aria-hidden />
                 Thêm "{query.trim()}"
               </li>
             )}
@@ -517,19 +523,18 @@ export default function SearchSelect({
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleSelect(opt)}
                   className={cn(
-                    'relative flex w-full cursor-default select-none items-center justify-between rounded-sm py-1.5 pl-2 pr-2 text-sm outline-none',
-                    highlight === idx && 'bg-accent',
-                    isMuted
-                      ? 'text-muted-foreground'
-                      : highlight === idx
-                        ? 'text-accent-foreground'
+                    SEARCH_SELECT_ITEM_CLASS_NAME,
+                    highlight === idx
+                      ? 'bg-accent text-accent-foreground'
+                      : isMuted
+                        ? 'text-muted-foreground'
                         : 'text-foreground',
                   )}
                 >
                   <span>{opt.label}</span>
-                  {selected && (
-                    <Check className="h-4 w-4 shrink-0" aria-hidden />
-                  )}
+                  <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center">
+                    {selected && <Check aria-hidden />}
+                  </span>
                 </li>
               );
             })}
@@ -546,7 +551,10 @@ export default function SearchSelect({
                 data-slot="search-select-portal"
                 role="dialog"
                 aria-label="Select options"
-                className="pointer-events-auto z-[100] flex !max-h-[300px] flex-col overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md"
+                className={cn(
+                  'pointer-events-auto z-[100] flex !max-h-[300px] flex-col',
+                  SEARCH_SELECT_MENU_CLASS_NAME,
+                )}
                 style={{
                   position: menuLayout.positionStrategy,
                   left: menuLayout.left,
@@ -557,9 +565,9 @@ export default function SearchSelect({
                     : { bottom: menuLayout.bottom }),
                 }}
               >
-                <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
+                <div className={SEARCH_SELECT_SEARCH_ROW_CLASS_NAME}>
                   <Search
-                    className="h-4 w-4 shrink-0 text-muted-foreground"
+                    className="size-4 shrink-0 text-muted-foreground"
                     aria-hidden
                   />
                   <input
@@ -567,16 +575,16 @@ export default function SearchSelect({
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder={searchPlaceholder}
-                    className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                    className="h-8 min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
                   />
                   {query ? (
                     <button
                       type="button"
                       onClick={() => setQuery('')}
-                      className="rounded-sm p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                       aria-label="Xóa tìm kiếm"
                     >
-                      ✕
+                      <X className="size-3.5" aria-hidden />
                     </button>
                   ) : null}
                 </div>
@@ -601,15 +609,13 @@ export default function SearchSelect({
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={() => handleCreate(query)}
                       className={cn(
-                        'relative flex w-full cursor-default select-none items-center gap-2 rounded-sm py-1.5 pl-2 pr-2 text-sm outline-none',
+                        SEARCH_SELECT_ITEM_CLASS_NAME,
                         highlight === 0
                           ? 'bg-accent text-accent-foreground'
                           : 'text-foreground',
                       )}
                     >
-                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm border border-input text-xs">
-                        +
-                      </span>
+                      <Plus className="size-4 shrink-0" aria-hidden />
                       Thêm "{query.trim()}"
                     </li>
                   )}
@@ -635,19 +641,18 @@ export default function SearchSelect({
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => handleSelect(opt)}
                         className={cn(
-                          'relative flex w-full cursor-default select-none items-center justify-between rounded-sm py-1.5 pl-2 pr-2 text-sm outline-none',
-                          highlight === idx && 'bg-accent',
-                          isMuted
-                            ? 'text-muted-foreground'
-                            : highlight === idx
-                              ? 'text-accent-foreground'
+                          SEARCH_SELECT_ITEM_CLASS_NAME,
+                          highlight === idx
+                            ? 'bg-accent text-accent-foreground'
+                            : isMuted
+                              ? 'text-muted-foreground'
                               : 'text-foreground',
                         )}
                       >
                         <span>{opt.label}</span>
-                        {selected && (
-                          <Check className="h-4 w-4 shrink-0" aria-hidden />
-                        )}
+                        <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center">
+                          {selected && <Check aria-hidden />}
+                        </span>
                       </li>
                     );
                   })}
