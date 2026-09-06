@@ -85,9 +85,11 @@ import {
   type TaskActionMode,
 } from '@/features/tasks/components/task-action-dialogs';
 import type { TaskActionTarget } from '@/features/tasks/types';
+import { canCompleteTask } from '@/features/tasks/utils';
 import { useWorkspaceStore } from '@/features/workspace/hooks';
 import { translations } from '@/locales/translations';
 import formatError from '@/utils/formatError';
+import { formatMoney } from '@/utils/money';
 
 const PAGE_SIZE = 25;
 const UNASSIGNED = '__UNASSIGNED__';
@@ -183,12 +185,6 @@ function paymentLabel(status: StatisticsPaymentStatus, t: ReturnType<typeof useT
   return t(keys[status]);
 }
 
-function formatMoney(value: string, currency: string, language: string): string {
-  const amount = Number(value);
-  if (!Number.isFinite(amount)) return `${value} ${currency}`;
-  return `${new Intl.NumberFormat(language.startsWith('en') ? 'en-US' : 'vi-VN', { maximumFractionDigits: 2 }).format(amount)} ${currency}`;
-}
-
 function formatDate(value: string | null, language: string, fallback: string): string {
   if (!value) return fallback;
   const date = new Date(value);
@@ -245,7 +241,7 @@ function StatusMark({ done, label }: { readonly done: boolean; readonly label: s
 const STORY_COLUMN_WIDTH = '11rem';
 const CHAPTER_COLUMN_WIDTH = '12rem';
 const METRIC_COLUMN_WIDTH = '9rem';
-const PUBLICATION_COLUMN_WIDTH = '13rem';
+const PUBLICATION_COLUMN_WIDTH = '10rem';
 
 function StatisticsTable({
   language,
@@ -879,6 +875,7 @@ export default function StatisticsPage() {
             <TaskDetail
               language={language}
               navigate={navigate}
+              onComplete={() => openSelectedTaskAction('complete')}
               onDeduct={() => openSelectedTaskAction('deduct')}
               onEdit={() => openSelectedTaskAction('edit')}
               selected={selectedTask}
@@ -936,6 +933,7 @@ function getChapterDetailPath(storyId: string, chapterId: string): string {
 function TaskDetail({
   language,
   navigate,
+  onComplete,
   onDeduct,
   onEdit,
   selected,
@@ -943,6 +941,7 @@ function TaskDetail({
 }: {
   readonly language: string;
   readonly navigate: ReturnType<typeof useNavigate>;
+  readonly onComplete: () => void;
   readonly onDeduct: () => void;
   readonly onEdit: () => void;
   readonly selected: SelectedTask;
@@ -989,7 +988,15 @@ function TaskDetail({
       </div>
        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 bg-card px-6 py-4">
          <TaskActionButtons
+           isCompleteDisabled={
+             !canCompleteTask({
+               assigneeDiscordUserId: cell.assigneeDiscordUserId,
+               dueAt: cell.dueAt,
+               status: cell.taskStatus,
+             })
+           }
            isDeductDisabled={cell.paymentStatus === 'PAID'}
+           onComplete={onComplete}
            onDeduct={onDeduct}
            onEdit={onEdit}
          />

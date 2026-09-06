@@ -25,7 +25,7 @@ export default function AppSidebar() {
   const { pathname } = useLocation();
 
   return (
-    <Sidebar collapsible="icon" variant="floating" className="md:py-3 md:pl-3">
+    <Sidebar collapsible="icon" variant="floating" className="z-40 md:py-3 md:pl-3">
       <SidebarHeader className="px-3 py-3 group-data-[collapsible=icon]:px-1.5">
         <div className="flex items-center gap-3 overflow-hidden rounded-xl px-1 py-1 group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:px-0">
           <img

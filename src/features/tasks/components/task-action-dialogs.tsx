@@ -1,4 +1,4 @@
-import { CircleMinus, RefreshCw } from 'lucide-react';
+import { CheckCircle2, CircleMinus, RefreshCw } from 'lucide-react';
 import {
   type FormEvent,
   type ReactNode,
@@ -9,6 +9,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
+import MoneyInput from '@/components/MoneyInput';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -28,6 +29,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { useMembersQuery } from '@/features/members/hooks';
 import {
+  useCompleteTaskMutation,
   useDeductTaskMutation,
   useUpdateTaskMutation,
 } from '@/features/tasks/hooks';
@@ -39,6 +41,7 @@ import type {
   UpdateTaskInput,
 } from '@/features/tasks/types';
 import { filterTaskAssignees } from '@/features/tasks/utils/filter-task-assignees';
+import { canCompleteTask } from '@/features/tasks/utils/task-state';
 import {
   canDeductTask,
   hasDeductionReason,
@@ -47,6 +50,7 @@ import {
 } from '@/features/tasks/utils/task-validation';
 import { translations } from '@/locales/translations';
 import formatError from '@/utils/formatError';
+import { formatMoney } from '@/utils/money';
 
 const managerTaskStatuses: readonly TaskManagerTaskStatus[] = [
   'BLOCKED',
@@ -55,7 +59,7 @@ const managerTaskStatuses: readonly TaskManagerTaskStatus[] = [
 ];
 const unassignedValue = '__UNASSIGNED__';
 
-export type TaskActionMode = 'edit' | 'deduct';
+export type TaskActionMode = 'edit' | 'deduct' | 'complete';
 
 export default function TaskActionDialogs({
   mode,
@@ -73,6 +77,8 @@ export default function TaskActionDialogs({
   const [taskStatusDirty, setTaskStatusDirty] = useState(false);
   const [taskPrice, setTaskPrice] = useState('');
   const [taskAssignee, setTaskAssignee] = useState(unassignedValue);
+  const [taskDueAt, setTaskDueAt] = useState('');
+  const [taskDueAtDirty, setTaskDueAtDirty] = useState(false);
   const [deductionAmount, setDeductionAmount] = useState('');
   const [deductionReason, setDeductionReason] = useState('');
   const [deductionEvidenceUrl, setDeductionEvidenceUrl] = useState('');
@@ -86,6 +92,11 @@ export default function TaskActionDialogs({
     target?.chapterId ?? '',
   );
   const deductionMutation = useDeductTaskMutation(
+    workspaceId,
+    target?.storyId ?? '',
+    target?.chapterId ?? '',
+  );
+  const completionMutation = useCompleteTaskMutation(
     workspaceId,
     target?.storyId ?? '',
     target?.chapterId ?? '',
@@ -122,6 +133,8 @@ export default function TaskActionDialogs({
     setTaskStatusDirty(false);
     setTaskPrice(target.agreedPrice ?? '');
     setTaskAssignee(target.assigneeDiscordUserId ?? unassignedValue);
+    setTaskDueAt(formatDateTimeLocal(target.dueAt));
+    setTaskDueAtDirty(false);
     setDeductionAmount('');
     setDeductionReason('');
     setDeductionEvidenceUrl('');
@@ -134,15 +147,25 @@ export default function TaskActionDialogs({
       toast.error(t(translations.management.stories.taskPriceInvalid));
       return;
     }
+    if (taskDueAtDirty && taskDueAt && !parseDateTimeLocal(taskDueAt)) {
+      toast.error(t(translations.management.stories.taskDeadlineInvalid));
+      return;
+    }
     const previousAssignee = target.assigneeDiscordUserId;
     const nextAssignee =
       taskAssignee === unassignedValue ? null : taskAssignee;
-    const input: UpdateTaskInput =
-      nextAssignee !== previousAssignee
-        ? { agreedPrice: taskPrice, assigneeDiscordUserId: nextAssignee }
-        : taskStatusDirty
-          ? { agreedPrice: taskPrice, status: taskStatus }
-          : { agreedPrice: taskPrice };
+    const input: UpdateTaskInput = {
+      agreedPrice: taskPrice,
+      ...(taskDueAtDirty
+        ? { dueAt: taskDueAt ? parseDateTimeLocal(taskDueAt) : null }
+        : {}),
+      ...(nextAssignee !== previousAssignee
+        ? { assigneeDiscordUserId: nextAssignee }
+        : {}),
+      ...(taskStatusDirty && nextAssignee === previousAssignee
+        ? { status: taskStatus }
+        : {}),
+    };
 
     taskMutation.mutate(
       { input, taskId: target.id },
@@ -151,6 +174,20 @@ export default function TaskActionDialogs({
         onSuccess: () => {
           onOpenChange(false);
           toast.success(t(translations.management.stories.taskSaved));
+        },
+      },
+    );
+  }
+
+  function submitCompletion(): void {
+    if (!target || !canCompleteTask(target)) return;
+    completionMutation.mutate(
+      { taskId: target.id },
+      {
+        onError: (error: Error) => toast.error(formatError(error)),
+        onSuccess: () => {
+          onOpenChange(false);
+          toast.success(t(translations.management.stories.taskCompleted));
         },
       },
     );
@@ -209,6 +246,24 @@ export default function TaskActionDialogs({
                 </p>
               </div>
               <div className="space-y-2">
+                <Label htmlFor="task-edit-deadline">
+                  {t(translations.management.stories.dueAt)}
+                </Label>
+                <Input
+                  id="task-edit-deadline"
+                  onChange={(event) => {
+                    setTaskDueAt(event.target.value);
+                    setTaskDueAtDirty(true);
+                  }}
+                  step="60"
+                  type="datetime-local"
+                  value={taskDueAt}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t(translations.management.stories.taskDueAtHint)}
+                </p>
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="task-edit-status">
                   {t(translations.management.stories.status)}
                 </Label>
@@ -235,13 +290,10 @@ export default function TaskActionDialogs({
                 <Label htmlFor="task-edit-price">
                   {t(translations.management.stories.agreedPrice)}
                 </Label>
-                <Input
+                <MoneyInput
                   id="task-edit-price"
-                  inputMode="decimal"
-                  min="0"
-                  onChange={(event) => setTaskPrice(event.target.value)}
-                  step="0.01"
-                  type="number"
+                  language={i18n.language}
+                  onValueChange={setTaskPrice}
                   value={taskPrice}
                   required
                 />
@@ -324,6 +376,58 @@ export default function TaskActionDialogs({
       </Dialog>
 
       <Dialog
+        open={mode === 'complete' && target !== null}
+        onOpenChange={onOpenChange}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {t(translations.management.stories.completeTaskTitle)}
+            </DialogTitle>
+          </DialogHeader>
+          {target ? (
+            <div className="space-y-4">
+              <div className="rounded-xl bg-muted/50 px-3 py-2.5">
+                <p className="font-semibold">{target.stageName}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t(translations.management.stories.taskId, { id: target.id })}
+                  {' · '}
+                  {target.assigneeDisplayName ?? target.assigneeDiscordUserId}
+                </p>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {t(translations.management.stories.completeTaskDescription)}
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button
+                  disabled={completionMutation.isPending}
+                  onClick={() => onOpenChange(false)}
+                  type="button"
+                  variant="outline"
+                >
+                  {t(translations.management.stories.cancel)}
+                </Button>
+                <Button
+                  disabled={
+                    completionMutation.isPending || !canCompleteTask(target)
+                  }
+                  onClick={submitCompletion}
+                  type="button"
+                >
+                  {completionMutation.isPending ? (
+                    <RefreshCw aria-hidden="true" className="animate-spin" />
+                  ) : (
+                    <CheckCircle2 aria-hidden="true" />
+                  )}
+                  {t(translations.management.stories.completeTaskSubmit)}
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
         open={mode === 'deduct' && target !== null}
         onOpenChange={onOpenChange}
       >
@@ -351,13 +455,10 @@ export default function TaskActionDialogs({
                 <Label htmlFor="task-deduction-amount">
                   {t(translations.management.stories.deductAmount)}
                 </Label>
-                <Input
+                <MoneyInput
                   id="task-deduction-amount"
-                  inputMode="decimal"
-                  min="0.01"
-                  onChange={(event) => setDeductionAmount(event.target.value)}
-                  step="0.01"
-                  type="number"
+                  language={i18n.language}
+                  onValueChange={setDeductionAmount}
                   value={deductionAmount}
                   required
                 />
@@ -415,22 +516,18 @@ export default function TaskActionDialogs({
   );
 }
 
-function formatMoney(
-  amount: string | null,
-  currency: string,
-  language: string,
-): string {
-  if (amount === null) return '-';
-  try {
-    return new Intl.NumberFormat(language, {
-      currency,
-      maximumFractionDigits: 2,
-      minimumFractionDigits: 0,
-      style: 'currency',
-    }).format(Number(amount));
-  } catch {
-    return `${amount} ${currency}`;
-  }
+function formatDateTimeLocal(value: string | null): string {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const pad = (part: number): string => String(part).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function parseDateTimeLocal(value: string): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
 function getTaskStatusLabel(

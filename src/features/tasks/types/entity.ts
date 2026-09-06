@@ -32,6 +32,7 @@ export interface TaskActionTarget {
   readonly stageCode: string;
   readonly stageName: string;
   readonly status: TaskStatus;
+  readonly dueAt: string | null;
   readonly paymentStatus: PaymentStatus;
   readonly agreedPrice: string | null;
   readonly currency: string;
@@ -43,6 +44,7 @@ export interface UpdateTaskInput {
   readonly status?: TaskManagerTaskStatus;
   readonly agreedPrice?: string;
   readonly assigneeDiscordUserId?: string | null;
+  readonly dueAt?: string | null;
 }
 
 export interface DeductTaskInput {

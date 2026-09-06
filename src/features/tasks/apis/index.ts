@@ -1,4 +1,5 @@
 export {
+  completeTask,
   deductTask,
   getTaskFilterOptions,
   getTasks,

@@ -70,6 +70,10 @@ import type {
   ChapterWorkflowFilter,
   ChapterWorkflowStatus,
 } from '@/features/chapters/types';
+import {
+  type ChapterNameSortOrder,
+  sortChaptersByName,
+} from '@/features/chapters/utils/sort-chapters-by-name';
 import { useStoryQuery } from '@/features/stories/hooks';
 import { useWorkspaceStore } from '@/features/workspace/hooks';
 import { translations } from '@/locales/translations';
@@ -90,6 +94,7 @@ const workflows: readonly ChapterWorkflowFilter[] = [
 ];
 const publications = ['ALL', 'PUBLISHED', 'UNPUBLISHED'] as const;
 type PublicationFilter = (typeof publications)[number];
+const chapterNameSortOrders: readonly ChapterNameSortOrder[] = ['ASC', 'DESC'];
 const chapterPageSize = 25;
 
 export default function StoryDetailPage(): ReactNode {
@@ -100,6 +105,8 @@ export default function StoryDetailPage(): ReactNode {
   const [workflow, setWorkflow] = useState<ChapterWorkflowFilter>('ALL');
   const [publication, setPublication] = useState<PublicationFilter>('ALL');
   const [priority, setPriority] = useState<ChapterPriority | 'ALL'>('ALL');
+  const [chapterNameSortOrder, setChapterNameSortOrder] =
+    useState<ChapterNameSortOrder>('ASC');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingChapter, setEditingChapter] = useState<Chapter | null>(null);
   const [deletingChapter, setDeletingChapter] = useState<Chapter | null>(null);
@@ -115,16 +122,15 @@ export default function StoryDetailPage(): ReactNode {
     workflow,
     page,
   );
-  const chapters = useMemo(
-    () =>
-      (chaptersQuery.data?.items ?? []).filter(
-        (chapter) =>
-          (publication === 'ALL' ||
-            chapter.publicationStatus === publication) &&
-          (priority === 'ALL' || chapter.priority === priority),
-      ),
-    [chaptersQuery.data, priority, publication],
-  );
+  const chapters = useMemo(() => {
+    const filteredChapters = (chaptersQuery.data?.items ?? []).filter(
+      (chapter) =>
+        (publication === 'ALL' || chapter.publicationStatus === publication) &&
+        (priority === 'ALL' || chapter.priority === priority),
+    );
+
+    return sortChaptersByName(filteredChapters, chapterNameSortOrder);
+  }, [chapterNameSortOrder, chaptersQuery.data, priority, publication]);
   const createMutation = useCreateChapterMutation(workspaceId, storyId);
   const deleteMutation = useDeleteChapterMutation(workspaceId, storyId);
   const configurationMutation = useUpdateChapterConfigurationMutation(
@@ -148,6 +154,11 @@ export default function StoryDetailPage(): ReactNode {
 
   function changePriority(value: ChapterPriority | 'ALL'): void {
     setPriority(value);
+    setPage(0);
+  }
+
+  function changeChapterNameSortOrder(value: ChapterNameSortOrder): void {
+    setChapterNameSortOrder(value);
     setPage(0);
   }
 
@@ -343,6 +354,20 @@ export default function StoryDetailPage(): ReactNode {
             value === 'ALL'
               ? t(translations.management.stories.allPriorities)
               : getPriorityLabel(t, value as ChapterPriority)
+          }
+        />
+        <FilterSelect
+          id="chapter-name-sort"
+          label={t(translations.management.stories.sortByChapterName)}
+          value={chapterNameSortOrder}
+          values={chapterNameSortOrders}
+          onChange={(value) =>
+            changeChapterNameSortOrder(value as ChapterNameSortOrder)
+          }
+          getLabel={(value) =>
+            value === 'ASC'
+              ? t(translations.management.stories.chapterNameAscending)
+              : t(translations.management.stories.chapterNameDescending)
           }
         />
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>

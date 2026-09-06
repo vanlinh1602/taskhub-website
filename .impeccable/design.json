@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-06T00:00:00.000Z",
+  "title": "Design System: Taskory Hub",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Lavender action",
+        "canonical": "#9fa1ff",
+        "tonalRamp": ["#29295c", "#41418a", "#5d5fb7", "#7a7bd2", "#9fa1ff", "#b5baff", "#d4d6ff", "#f0f1ff"]
+      },
+      "sky": {
+        "role": "secondary",
+        "displayName": "Sky support",
+        "canonical": "#aee2ff",
+        "tonalRamp": ["#16415a", "#286786", "#438db0", "#72b7d9", "#aee2ff", "#c3ebff", "#ddf4ff", "#f3fbff"]
+      },
+      "mint": {
+        "role": "tertiary",
+        "displayName": "Mint support",
+        "canonical": "#d9f9df",
+        "tonalRamp": ["#254c31", "#397348", "#549c65", "#86c98f", "#d9f9df", "#e3fbe8", "#effdf2", "#f9fffa"]
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Cool canvas",
+        "canonical": "#f8f9ff",
+        "tonalRamp": ["#242642", "#444766", "#666a8a", "#8b8eaa", "#b3b6cb", "#d2d4e2", "#e7e8f0", "#f8f9ff"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "System UI display", "purpose": "Workspace names and dominant operational context." },
+      "label": { "displayName": "Tracked system label", "purpose": "Small section markers and status context only." }
+    },
+    "shadows": [
+      { "name": "soft-surface", "value": "0 22px 56px -34px rgb(61 64 117 / 24%)", "purpose": "Ambient lift for the primary summary and contextual map." },
+      { "name": "control", "value": "0 12px 26px -16px rgb(68 70 137 / 34%)", "purpose": "Small elevated controls in the application shell." }
+    ],
+    "motion": [
+      { "name": "state-transition", "value": "150–250ms ease-out", "purpose": "Focus, hover, progress, and state changes." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Compact lavender commit action with visible focus state.",
+      "html": "<button class=\"ds-btn-primary\">SAVE CHANGES</button>",
+      "css": ".ds-btn-primary { background: #9fa1ff; color: #242642; padding: 0 10px; height: 32px; border: 1px solid transparent; border-radius: 12px; font: 500 14px/1 ui-sans-serif, system-ui, sans-serif; transition: opacity 180ms ease-out, box-shadow 180ms ease-out; } .ds-btn-primary:hover { opacity: .8; } .ds-btn-primary:focus-visible { outline: 0; box-shadow: 0 0 0 3px rgb(119 123 227 / 50%); }"
+    },
+    {
+      "name": "Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Compact field shared by workspace details and folder IDs.",
+      "html": "<input class=\"ds-input\" value=\"Asia/Ho_Chi_Minh\" aria-label=\"Timezone\" />",
+      "css": ".ds-input { width: 100%; height: 32px; padding: 4px 10px; border: 1px solid #d8dcef; border-radius: 12px; background: transparent; color: #242642; font: 400 14px/1.5 ui-sans-serif, system-ui, sans-serif; transition: border-color 180ms ease-out, box-shadow 180ms ease-out; } .ds-input:focus-visible { outline: 0; border-color: #777be3; box-shadow: 0 0 0 3px rgb(119 123 227 / 50%); }"
+    },
+    {
+      "name": "Status Chip",
+      "kind": "chip",
+      "refersTo": "chip-status",
+      "description": "Text-led configured or incomplete state marker.",
+      "html": "<span class=\"ds-chip\"><span aria-hidden=\"true\">✓</span> CONFIGURED</span>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: rgb(159 161 255 / 10%); color: #5d5fb7; font: 600 12px/1.25 ui-sans-serif, system-ui, sans-serif; }"
+    },
+    {
+      "name": "Open Setting Row",
+      "kind": "custom",
+      "refersTo": "workspace-settings-sections",
+      "description": "Divided row for one integration setting with an inline action.",
+      "html": "<div class=\"ds-setting-row\"><div><strong>Manager</strong><small>Choose a Discord role</small></div><button class=\"ds-row-action\">SELECT</button></div>",
+      "css": ".ds-setting-row { display: flex; gap: 12px; align-items: flex-end; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #dfe2f3; } .ds-setting-row strong { display: block; color: #242642; font: 600 14px/1.25 ui-sans-serif, system-ui, sans-serif; } .ds-setting-row small { display: block; margin-top: 4px; color: #697092; font: 400 12px/1.5 ui-sans-serif, system-ui, sans-serif; } .ds-row-action { color: #5d5fb7; background: transparent; border: 0; padding: 6px 8px; border-radius: 8px; font: 600 12px/1 ui-sans-serif, system-ui, sans-serif; } .ds-row-action:hover { background: #eef0ff; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Calm Control Room",
+    "overview": "Taskory Hub uses a friendly, operational visual language: a cool canvas, soft pastel accents, compact controls, and generous separation between configuration groups. The interface should feel like a dependable team workspace rather than a promotional dashboard. Workspace settings uses one clear status surface at the top, then open sections with quiet dividers.",
+    "keyCharacteristics": ["Lavender action on a cool canvas", "Open section rows", "System sans with tracked labels", "Ambient depth, not stacked shadows"],
+    "rules": [
+      { "name": "The Signal Rule", "body": "Use the lavender accent for action and state, not for decorative repetition.", "section": "colors" }
+    ],
+    "dos": ["Do lead settings screens with current state and progress before edit controls.", "Do group fields by the integration they support."],
+    "donts": ["Don't create a mosaic of equal cards for routine configuration.", "Don't use color as the only way to communicate state."]
+  }
+}

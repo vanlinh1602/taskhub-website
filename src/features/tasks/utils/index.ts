@@ -10,12 +10,14 @@ import {
   type TaskListViewState,
 } from './task-list-search-params';
 import {
+  canCompleteTask,
   getTaskStatusLabelKey,
   isTaskOverdue,
   normalizeTaskFilterValue,
 } from './task-state';
 
 export {
+  canCompleteTask,
   createTaskListSearchParams,
   DEFAULT_TASK_LIST_VIEW,
   getTaskStatusLabelKey,

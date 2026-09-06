@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowUp, ListTodo, SearchX, ShieldOff } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -52,6 +53,7 @@ import type {
   TaskStatus,
 } from '@/features/tasks/types';
 import {
+  canCompleteTask,
   createTaskListSearchParams,
   DEFAULT_TASK_LIST_VIEW,
   getTaskStatusLabelKey,
@@ -115,7 +117,7 @@ function TaskStatusBadge({
 }) {
   return (
     <span
-      className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${getStatusClassName(status)}`}
+      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getStatusClassName(status)}`}
     >
       {t(translations.management.tasks[getTaskStatusLabelKey(status)])}
     </span>
@@ -202,12 +204,14 @@ function TaskAssignee({
 
 function TaskTable({
   dateFormatter,
+  onComplete,
   onDeduct,
   onEdit,
   tasks,
   t,
 }: {
   readonly dateFormatter: Intl.DateTimeFormat;
+  readonly onComplete: (task: TaskListItem) => void;
   readonly onDeduct: (task: TaskListItem) => void;
   readonly onEdit: (task: TaskListItem) => void;
   readonly tasks: readonly TaskListItem[];
@@ -215,31 +219,31 @@ function TaskTable({
 }) {
   return (
     <div className="hidden lg:block">
-      <Table className="min-w-[66rem] table-fixed">
+      <Table className="min-w-[65rem] table-fixed">
         <TableHeader>
           <TableRow className="border-border/60 hover:bg-transparent">
-            <TableHead className="h-9 w-20 px-3 py-2 text-[11px] font-medium tracking-wide uppercase">
+            <TableHead className="h-9 w-20 px-3 py-2 text-xs font-medium tracking-wide uppercase">
               {t(translations.management.tasks.task)}
             </TableHead>
-            <TableHead className="h-9 w-44 px-3 py-2 text-[11px] font-medium tracking-wide uppercase">
+            <TableHead className="h-9 w-44 px-3 py-2 text-xs font-medium tracking-wide uppercase">
               {t(translations.management.tasks.story)}
             </TableHead>
-            <TableHead className="h-9 w-40 px-3 py-2 text-[11px] font-medium tracking-wide uppercase">
+            <TableHead className="h-9 w-40 px-3 py-2 text-xs font-medium tracking-wide uppercase">
               {t(translations.management.tasks.chapter)}
             </TableHead>
-            <TableHead className="h-9 w-28 px-3 py-2 text-[11px] font-medium tracking-wide uppercase">
+            <TableHead className="h-9 w-28 px-3 py-2 text-xs font-medium tracking-wide uppercase">
               {t(translations.management.tasks.stage)}
             </TableHead>
-            <TableHead className="h-9 w-40 px-3 py-2 text-[11px] font-medium tracking-wide uppercase">
+            <TableHead className="h-9 w-40 px-3 py-2 text-xs font-medium tracking-wide uppercase">
               {t(translations.management.tasks.assignee)}
             </TableHead>
-            <TableHead className="h-9 w-28 px-3 py-2 text-[11px] font-medium tracking-wide uppercase">
+            <TableHead className="h-9 w-28 px-3 py-2 text-xs font-medium tracking-wide uppercase">
               {t(translations.management.tasks.status)}
             </TableHead>
-            <TableHead className="h-9 w-36 px-3 py-2 text-[11px] font-medium tracking-wide uppercase">
+            <TableHead className="h-9 w-36 px-3 py-2 text-xs font-medium tracking-wide uppercase">
               {t(translations.management.tasks.deadline)}
             </TableHead>
-            <TableHead className="h-9 w-28 px-3 py-2 text-right text-[11px] font-medium tracking-wide uppercase">
+            <TableHead className="h-9 w-24 px-3 py-2 text-right text-xs font-medium tracking-wide uppercase">
               {t(translations.management.stories.actions)}
             </TableHead>
           </TableRow>
@@ -256,9 +260,13 @@ function TaskTable({
                 </span>
               </TableCell>
               <TableCell className="px-3 py-2.5">
-                <span className="block truncate" title={task.chapterName}>
+                <Link
+                  className="block truncate text-primary underline decoration-primary/40 underline-offset-4 transition-colors hover:decoration-primary focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+                  title={task.chapterName}
+                  to={getChapterDetailPath(task.storyId, task.chapterId)}
+                >
                   {task.chapterName}
-                </span>
+                </Link>
               </TableCell>
               <TableCell className="px-3 py-2.5">
                 <span className="block truncate" title={task.stageCode}>
@@ -277,13 +285,11 @@ function TaskTable({
               <TableCell className="px-3 py-2.5 text-right whitespace-nowrap">
                 <TaskActionButtons
                   compact
+                  isCompleteDisabled={!canCompleteTask(task)}
                   isDeductDisabled={task.paymentStatus === 'PAID'}
+                  onComplete={() => onComplete(task)}
                   onDeduct={() => onDeduct(task)}
                   onEdit={() => onEdit(task)}
-                  viewChapterHref={getChapterDetailPath(
-                    task.storyId,
-                    task.chapterId,
-                  )}
                 />
               </TableCell>
             </TableRow>
@@ -296,12 +302,14 @@ function TaskTable({
 
 function TaskCardList({
   dateFormatter,
+  onComplete,
   onDeduct,
   onEdit,
   tasks,
   t,
 }: {
   readonly dateFormatter: Intl.DateTimeFormat;
+  readonly onComplete: (task: TaskListItem) => void;
   readonly onDeduct: (task: TaskListItem) => void;
   readonly onEdit: (task: TaskListItem) => void;
   readonly tasks: readonly TaskListItem[];
@@ -325,12 +333,13 @@ function TaskCardList({
               >
                 {task.storyTitle}
               </h3>
-              <p
-                className="truncate text-sm text-muted-foreground"
+              <Link
+                className="mt-0.5 block truncate text-sm text-primary underline decoration-primary/40 underline-offset-4 transition-colors hover:decoration-primary focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
                 title={task.chapterName}
+                to={getChapterDetailPath(task.storyId, task.chapterId)}
               >
                 {task.chapterName}
-              </p>
+              </Link>
             </div>
             <TaskStatusBadge status={task.status} t={t} />
           </div>
@@ -362,13 +371,11 @@ function TaskCardList({
           </dl>
           <div className="mt-4 border-t border-border/60 pt-3">
             <TaskActionButtons
+              isCompleteDisabled={!canCompleteTask(task)}
               isDeductDisabled={task.paymentStatus === 'PAID'}
+              onComplete={() => onComplete(task)}
               onDeduct={() => onDeduct(task)}
               onEdit={() => onEdit(task)}
-              viewChapterHref={getChapterDetailPath(
-                task.storyId,
-                task.chapterId,
-              )}
             />
           </div>
         </article>
@@ -769,6 +776,7 @@ export default function TasksPage() {
             <>
               <TaskTable
                 dateFormatter={dateFormatter}
+                onComplete={(task) => openTaskAction('complete', task)}
                 onDeduct={(task) => openTaskAction('deduct', task)}
                 onEdit={(task) => openTaskAction('edit', task)}
                 tasks={tasks}
@@ -776,6 +784,7 @@ export default function TasksPage() {
               />
               <TaskCardList
                 dateFormatter={dateFormatter}
+                onComplete={(task) => openTaskAction('complete', task)}
                 onDeduct={(task) => openTaskAction('deduct', task)}
                 onEdit={(task) => openTaskAction('edit', task)}
                 tasks={tasks}

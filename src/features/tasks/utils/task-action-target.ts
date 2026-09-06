@@ -7,6 +7,7 @@ export function toTaskActionTarget(task: TaskListItem): TaskActionTarget {
     assigneeDisplayName: task.assigneeDisplayName,
     chapterId: task.chapterId,
     currency: task.currency,
+    dueAt: task.dueAt,
     id: task.id,
     paymentStatus: task.paymentStatus,
     stageCode: task.stageCode,

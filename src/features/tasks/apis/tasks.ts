@@ -60,6 +60,18 @@ export async function updateTask(
   if (response.kind !== 'ok') throw new Error(formatError(response));
 }
 
+export async function completeTask(
+  workspaceId: string,
+  storyId: string,
+  chapterId: string,
+  taskId: string,
+): Promise<void> {
+  const response = await backendService.post(
+    `/api/story-workflow/${encodeURIComponent(workspaceId)}/stories/${encodeURIComponent(storyId)}/chapters/${encodeURIComponent(chapterId)}/tasks/${encodeURIComponent(taskId)}/complete`,
+  );
+  if (response.kind !== 'ok') throw new Error(formatError(response));
+}
+
 export async function deductTask(
   workspaceId: string,
   storyId: string,

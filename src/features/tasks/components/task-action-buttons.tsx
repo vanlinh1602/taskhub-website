@@ -1,28 +1,29 @@
-import { ArrowRight, CircleMinus, Settings2 } from 'lucide-react';
+import { CheckCircle2, CircleMinus, Settings2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router';
 
 import { Button } from '@/components/ui/button';
 import { translations } from '@/locales/translations';
 
 export default function TaskActionButtons({
   compact = false,
+  isCompleteDisabled,
   isDeductDisabled,
+  onComplete,
   onDeduct,
   onEdit,
-  viewChapterHref,
 }: {
   readonly compact?: boolean;
+  readonly isCompleteDisabled: boolean;
   readonly isDeductDisabled: boolean;
+  readonly onComplete: () => void;
   readonly onDeduct: () => void;
   readonly onEdit: () => void;
-  readonly viewChapterHref?: string;
 }): ReactNode {
   const { t } = useTranslation();
   const deductMoneyLabel = t(translations.management.stories.deductMoney);
   const editTaskLabel = t(translations.management.stories.editTask);
-  const viewChapterLabel = t(translations.management.stories.viewChapter);
+  const completeTaskLabel = t(translations.management.stories.completeTask);
 
   return (
     <div
@@ -32,21 +33,6 @@ export default function TaskActionButtons({
           : 'flex flex-wrap items-center gap-2'
       }
     >
-      {viewChapterHref ? (
-        <Button
-          asChild
-          aria-label={viewChapterLabel}
-          className="text-primary hover:bg-primary/10 hover:text-primary"
-          size={compact ? 'icon-sm' : 'sm'}
-          title={compact ? viewChapterLabel : undefined}
-          variant="outline"
-        >
-          <Link to={viewChapterHref}>
-            <ArrowRight aria-hidden="true" />
-            {compact ? null : viewChapterLabel}
-          </Link>
-        </Button>
-      ) : null}
       <Button
         aria-label={editTaskLabel}
         className="text-primary hover:bg-primary/10 hover:text-primary"
@@ -58,6 +44,19 @@ export default function TaskActionButtons({
       >
         <Settings2 aria-hidden="true" />
         {compact ? null : editTaskLabel}
+      </Button>
+      <Button
+        aria-label={completeTaskLabel}
+        className="text-primary hover:bg-primary/10 hover:text-primary"
+        disabled={isCompleteDisabled}
+        onClick={onComplete}
+        size={compact ? 'icon-sm' : 'sm'}
+        type="button"
+        title={compact ? completeTaskLabel : undefined}
+        variant="outline"
+      >
+        <CheckCircle2 aria-hidden="true" />
+        {compact ? null : completeTaskLabel}
       </Button>
       <Button
         aria-label={deductMoneyLabel}

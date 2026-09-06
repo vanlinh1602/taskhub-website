@@ -77,9 +77,11 @@ import type {
 } from '@/features/chapters/types';
 import TaskActionDialogs from '@/features/tasks/components/task-action-dialogs';
 import type { TaskActionTarget } from '@/features/tasks/types';
+import { canCompleteTask } from '@/features/tasks/utils';
 import { useWorkspaceStore } from '@/features/workspace/hooks';
 import { translations } from '@/locales/translations';
 import formatError from '@/utils/formatError';
+import { formatMoney } from '@/utils/money';
 
 const terminalTaskStatuses: readonly ChapterTaskStatus[] = [
   'COMPLETED',
@@ -104,7 +106,7 @@ export default function ChapterDetailPage(): ReactNode {
   const [publicationNotificationError, setPublicationNotificationError] =
     useState<string | null>(null);
   const [taskAction, setTaskAction] = useState<{
-    readonly mode: 'edit' | 'deduct';
+    readonly mode: 'edit' | 'deduct' | 'complete';
     readonly target: TaskActionTarget;
   } | null>(null);
   const [chapterDifficulty, setChapterDifficulty] =
@@ -182,6 +184,14 @@ export default function ChapterDetailPage(): ReactNode {
     if (task.paymentStatus === 'PAID') return;
     setTaskAction({
       mode: 'deduct',
+      target: toTaskActionTarget(storyId, chapterId, task),
+    });
+  }
+
+  function openTaskCompletion(task: ChapterTask): void {
+    if (!canCompleteChapterTask(task)) return;
+    setTaskAction({
+      mode: 'complete',
       target: toTaskActionTarget(storyId, chapterId, task),
     });
   }
@@ -579,6 +589,7 @@ export default function ChapterDetailPage(): ReactNode {
               compactDateFormatter={compactDateFormatter}
               dateFormatter={dateFormatter}
               language={i18n.language}
+              onComplete={openTaskCompletion}
               onDeduct={openTaskDeduction}
               onEdit={openTaskEditor}
               tasks={tasks}
@@ -589,6 +600,7 @@ export default function ChapterDetailPage(): ReactNode {
                   dateFormatter={dateFormatter}
                   key={task.id}
                   language={i18n.language}
+                  onComplete={() => openTaskCompletion(task)}
                   onDeduct={() => openTaskDeduction(task)}
                   onEdit={() => openTaskEditor(task)}
                   task={task}
@@ -717,6 +729,7 @@ function toTaskActionTarget(
     assigneeDisplayName: task.assignee?.displayName ?? null,
     chapterId,
     currency: task.currency,
+    dueAt: task.dueAt,
     id: task.id,
     paymentStatus: task.paymentStatus,
     stageCode: task.stageCode,
@@ -726,10 +739,19 @@ function toTaskActionTarget(
   };
 }
 
+function canCompleteChapterTask(task: ChapterTask): boolean {
+  return canCompleteTask({
+    assigneeDiscordUserId: task.assignee?.discordUserId ?? null,
+    dueAt: task.dueAt,
+    status: task.status,
+  });
+}
+
 function TaskTable({
   compactDateFormatter,
   dateFormatter,
   language,
+  onComplete,
   onDeduct,
   onEdit,
   tasks,
@@ -737,6 +759,7 @@ function TaskTable({
   compactDateFormatter: Intl.DateTimeFormat;
   dateFormatter: Intl.DateTimeFormat;
   language: string;
+  onComplete: (task: ChapterTask) => void;
   onDeduct: (task: ChapterTask) => void;
   onEdit: (task: ChapterTask) => void;
   tasks: readonly ChapterTask[];
@@ -803,6 +826,17 @@ function TaskTable({
               </TableCell>
               <TableCell className="text-right">
                 <div className="inline-flex items-center gap-1">
+                  <Button
+                    aria-label={t(translations.management.stories.completeTask)}
+                    className="text-primary hover:bg-primary/10 hover:text-primary"
+                    disabled={!canCompleteChapterTask(task)}
+                    onClick={() => onComplete(task)}
+                    size="icon-sm"
+                    title={t(translations.management.stories.completeTask)}
+                    variant="ghost"
+                  >
+                    <CheckCircle2 aria-hidden="true" />
+                  </Button>
                   <Button
                     aria-label={t(translations.management.stories.deductMoney)}
                     className="text-destructive hover:bg-destructive/10 hover:text-destructive"
@@ -897,12 +931,14 @@ function CompactTime({
 function TaskCard({
   dateFormatter,
   language,
+  onComplete,
   onDeduct,
   onEdit,
   task,
 }: {
   dateFormatter: Intl.DateTimeFormat;
   language: string;
+  onComplete: () => void;
   onDeduct: () => void;
   onEdit: () => void;
   task: ChapterTask;
@@ -920,6 +956,17 @@ function TaskCard({
         <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
           <TaskStatusBadge status={task.status} />
           <PaymentStatusBadge status={task.paymentStatus} />
+          <Button
+            aria-label={t(translations.management.stories.completeTask)}
+            className="text-primary hover:bg-primary/10 hover:text-primary"
+            disabled={!canCompleteChapterTask(task)}
+            onClick={onComplete}
+            size="icon-sm"
+            title={t(translations.management.stories.completeTask)}
+            variant="ghost"
+          >
+            <CheckCircle2 aria-hidden="true" />
+          </Button>
           <Button
             aria-label={t(translations.management.stories.deductMoney)}
             className="text-destructive hover:bg-destructive/10 hover:text-destructive"
@@ -1207,26 +1254,6 @@ function formatCompactDate(
   if (!value) return '—';
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? '—' : formatter.format(date);
-}
-
-function formatMoney(
-  amount: number | string | null,
-  currency: string,
-  language: string,
-): string {
-  if (amount === null || amount === '') return '—';
-  const value = typeof amount === 'number' ? amount : Number(amount);
-  if (!Number.isFinite(value)) return `${amount} ${currency}`;
-  try {
-    return new Intl.NumberFormat(language, {
-      currency,
-      maximumFractionDigits: 2,
-      minimumFractionDigits: 0,
-      style: 'currency',
-    }).format(value);
-  } catch {
-    return `${new Intl.NumberFormat(language).format(value)} ${currency}`;
-  }
 }
 
 function getWorkflowLabel(

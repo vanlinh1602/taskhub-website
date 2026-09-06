@@ -34,6 +34,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 
+import MoneyInput from '@/components/MoneyInput';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -92,6 +93,7 @@ import {
 import { useWorkspaceStore } from '@/features/workspace/hooks';
 import { translations } from '@/locales/translations';
 import formatError from '@/utils/formatError';
+import { formatMoney } from '@/utils/money';
 
 type FlowNode = Node<WorkflowGraphNodeData, 'workflow'>;
 type FlowEdge = Edge;
@@ -116,6 +118,8 @@ function effectivePrice(data: WorkflowGraphNodeData): string {
 }
 
 function WorkflowNode({ data, selected }: NodeProps<FlowNode>) {
+  const { i18n } = useTranslation();
+
   return (
     <div
       className={`relative min-w-52 rounded-2xl border bg-card px-4 py-3 shadow-sm transition ${selected ? 'border-primary ring-2 ring-primary/20' : 'border-border/80'}`}
@@ -149,7 +153,11 @@ function WorkflowNode({ data, selected }: NodeProps<FlowNode>) {
       <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-muted-foreground">
         <span>{effectiveDuration(data)}h</span>
         <span className="text-right">
-          {effectivePrice(data)} {data.stageDefinition.currency}
+          {formatMoney(
+            effectivePrice(data),
+            data.stageDefinition.currency,
+            i18n.language,
+          )}
         </span>
       </div>
     </div>
@@ -184,12 +192,14 @@ function validationMessage(
 
 function InspectorContent({
   idPrefix,
+  language,
   node,
   onChange,
   onRemove,
   t,
 }: {
   readonly idPrefix: string;
+  readonly language: string;
   readonly node: FlowNode | undefined;
   readonly onChange: (patch: Partial<WorkflowGraphNodeData>) => void;
   readonly onRemove: () => void;
@@ -234,7 +244,11 @@ function InspectorContent({
             {t(translations.workflows.price)}
           </span>
           <span className="font-semibold">
-            {effectivePrice(data)} {data.stageDefinition.currency}
+            {formatMoney(
+              effectivePrice(data),
+              data.stageDefinition.currency,
+              language,
+            )}
           </span>
         </div>
       </div>
@@ -309,11 +323,11 @@ function InspectorContent({
             <Label htmlFor={priceInputId}>
               {t(translations.workflows.priceInput)}
             </Label>
-            <Input
+            <MoneyInput
               id={priceInputId}
-              inputMode="decimal"
-              onChange={(event) =>
-                onChange({ priceOverride: event.target.value || null })
+              language={language}
+              onValueChange={(value) =>
+                onChange({ priceOverride: value || null })
               }
               value={data.priceOverride ?? ''}
             />
@@ -358,7 +372,7 @@ function ErrorState({
 }
 
 export default function WorkflowEditorPage() {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const navigate = useNavigate();
   const { workflowId = '' } = useParams<{ workflowId: string }>();
   const workspaceId = useWorkspaceStore((state) => state.activeWorkspaceId);
@@ -689,6 +703,7 @@ export default function WorkflowEditorPage() {
     return (
       <InspectorContent
         idPrefix={idPrefix}
+        language={i18n.language}
         node={selectedNode}
         onChange={updateSelectedNode}
         onRemove={removeSelectedNode}

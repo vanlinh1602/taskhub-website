@@ -80,6 +80,7 @@ import type {
 import { useWorkspaceStore } from '@/features/workspace/hooks';
 import { translations } from '@/locales/translations';
 import formatError from '@/utils/formatError';
+import { formatMoney } from '@/utils/money';
 
 const PAGE_SIZE = 25;
 const PAYROLL_STATUSES: readonly PayrollStatus[] = ['PENDING', 'PAID'];
@@ -101,24 +102,9 @@ function formatTotals(
   if (!totals.length) return '—';
   return totals
     .map(
-      (item) =>
-        `${new Intl.NumberFormat(language, {
-          maximumFractionDigits: 2,
-        }).format(item.total)} ${item.currency}`,
+      (item) => formatMoney(item.total, item.currency, language),
     )
     .join(' · ');
-}
-
-function formatMoney(
-  value: string,
-  currency: string,
-  language: string,
-): string {
-  const amount = Number(value);
-  if (!Number.isFinite(amount)) return '—';
-  return `${new Intl.NumberFormat(language, {
-    maximumFractionDigits: 2,
-  }).format(amount)} ${currency}`;
 }
 
 function formatDate(

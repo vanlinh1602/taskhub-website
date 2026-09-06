@@ -90,7 +90,7 @@ export default function AppLayout() {
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset className="app-canvas min-h-svh bg-transparent md:my-3 md:mr-3 md:rounded-3xl md:border md:border-border/70">
-          <header className="sticky top-0 z-20 shrink-0 border-b border-border/60 bg-background/72 px-4 backdrop-blur-xl sm:px-6 lg:px-8">
+          <header className="sticky top-0 z-40 shrink-0 border-b border-border/60 bg-background/72 px-4 backdrop-blur-xl sm:px-6 lg:px-8">
             <div className="mx-auto flex h-[4.5rem] w-full max-w-7xl items-center gap-3">
               <SidebarTrigger
                 aria-label={t(translations.layouts.toggleSidebar)}

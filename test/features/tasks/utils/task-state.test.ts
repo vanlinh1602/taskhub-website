@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  canCompleteTask,
   getTaskStatusLabelKey,
   isTaskOverdue,
   normalizeTaskFilterValue,
@@ -26,6 +27,47 @@ describe('task state utilities', () => {
       }),
     ).toBe(false);
     expect(isTaskOverdue({ dueAt: null, status: 'READY' })).toBe(false);
+  });
+
+  it('enables completion only for assigned in-progress tasks before their deadline', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-01T12:00:00.000Z'));
+
+    expect(
+      canCompleteTask({
+        assigneeDiscordUserId: 'member-id',
+        dueAt: '2026-09-01T13:00:00.000Z',
+        status: 'IN_PROGRESS',
+      }),
+    ).toBe(true);
+    expect(
+      canCompleteTask({
+        assigneeDiscordUserId: null,
+        dueAt: '2026-09-01T13:00:00.000Z',
+        status: 'IN_PROGRESS',
+      }),
+    ).toBe(false);
+    expect(
+      canCompleteTask({
+        assigneeDiscordUserId: 'member-id',
+        dueAt: '2026-09-01T11:00:00.000Z',
+        status: 'IN_PROGRESS',
+      }),
+    ).toBe(false);
+    expect(
+      canCompleteTask({
+        assigneeDiscordUserId: 'member-id',
+        dueAt: '2026-09-01T13:00:00.000Z',
+        status: 'READY',
+      }),
+    ).toBe(false);
+    expect(
+      canCompleteTask({
+        assigneeDiscordUserId: 'member-id',
+        dueAt: null,
+        status: 'IN_PROGRESS',
+      }),
+    ).toBe(false);
   });
 
   it('maps every API status to a translation key', () => {

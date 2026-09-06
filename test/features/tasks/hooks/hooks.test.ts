@@ -75,5 +75,11 @@ describe('task hooks', () => {
     expect(invalidateQueries).toHaveBeenCalledWith({
       queryKey: ['statistics', 'summary'],
     });
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['payroll', 'list'],
+    });
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['payroll', 'detail'],
+    });
   });
 });

@@ -41,6 +41,7 @@ export interface StatisticsTaskCell {
   readonly taskStatus: StatisticsTaskStatus;
   readonly paymentStatus: StatisticsPaymentStatus;
   readonly createdAt: string;
+  readonly dueAt: string | null;
   readonly completedAt: string | null;
   readonly paidAt: string | null;
   readonly storyId: string;

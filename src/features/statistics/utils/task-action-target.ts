@@ -15,6 +15,7 @@ export function toTaskActionTarget(
     assigneeDisplayName: cell.assigneeDisplayName,
     chapterId: cell.chapterId,
     currency: cell.currency,
+    dueAt: cell.dueAt,
     id: cell.taskId,
     paymentStatus: cell.paymentStatus,
     stageCode: stage.code,

@@ -7,9 +7,10 @@ import {
 
 import { adminQueryKeys } from '@/features/admin/hooks/queryKeys';
 import { chaptersQueryKeys } from '@/features/chapters/hooks/queryKeys';
+import { payrollQueryKeys } from '@/features/payroll/hooks/queryKeys';
 import { statisticsQueryKeys } from '@/features/statistics/hooks/queryKeys';
 
-import { deductTask, updateTask } from '../apis';
+import { completeTask, deductTask, updateTask } from '../apis';
 import type { DeductTaskInput, UpdateTaskInput } from '../types';
 import { tasksQueryKeys } from './queryKeys';
 
@@ -32,6 +33,10 @@ interface UpdateTaskMutationInput {
 interface DeductTaskMutationInput {
   readonly taskId: string;
   readonly input: DeductTaskInput;
+}
+
+interface CompleteTaskMutationInput {
+  readonly taskId: string;
 }
 
 export async function invalidateTaskMutationQueries(
@@ -60,6 +65,12 @@ export async function invalidateTaskMutationQueries(
     }),
     queryClient.invalidateQueries({
       queryKey: statisticsQueryKeys.summaryRoot(),
+    }),
+    queryClient.invalidateQueries({
+      queryKey: payrollQueryKeys.listRoot(),
+    }),
+    queryClient.invalidateQueries({
+      queryKey: payrollQueryKeys.detailRoot(),
     }),
   ]);
 }
@@ -98,7 +109,25 @@ export function useDeductTaskMutation(
   });
 }
 
+export function useCompleteTaskMutation(
+  workspaceId: string,
+  storyId: string,
+  chapterId: string,
+): UseMutationResult<void, Error, CompleteTaskMutationInput, unknown> {
+  const queryClient = useQueryClient();
+  const scope = { chapterId, storyId, workspaceId };
+
+  return useMutation({
+    mutationFn: ({ taskId }: CompleteTaskMutationInput) =>
+      completeTask(workspaceId, storyId, chapterId, taskId),
+    onSuccess: async () => {
+      await invalidateTaskMutationQueries(queryClient, scope);
+    },
+  });
+}
+
 export type {
+  CompleteTaskMutationInput,
   DeductTaskMutationInput,
   TaskMutationInput,
   TaskMutationScope,

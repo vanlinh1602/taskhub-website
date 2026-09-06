@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  completeTask,
   deductTask,
   getTaskFilterOptions,
   getTasks,
@@ -116,6 +117,33 @@ describe('task APIs', () => {
         evidenceUrl: 'https://discord.com/channels/1/2/3',
         reason: 'Late delivery',
       },
+    );
+  });
+
+  it('updates a deadline as an ISO value', async () => {
+    const patch = vi
+      .spyOn(backendService, 'patch')
+      .mockResolvedValue({ kind: 'ok' } as never);
+
+    await updateTask('workspace-id', 'story-id', 'chapter-id', 'task-id', {
+      dueAt: '2026-09-10T12:00:00.000Z',
+    });
+
+    expect(patch).toHaveBeenCalledWith(
+      '/api/story-workflow/workspace-id/stories/story-id/chapters/chapter-id/tasks/task-id',
+      { dueAt: '2026-09-10T12:00:00.000Z' },
+    );
+  });
+
+  it('posts task completion with every nested identifier encoded', async () => {
+    const post = vi
+      .spyOn(backendService, 'post')
+      .mockResolvedValue({ kind: 'ok' } as never);
+
+    await completeTask('workspace/id', 'story id', 'chapter/id', 'task/id');
+
+    expect(post).toHaveBeenCalledWith(
+      '/api/story-workflow/workspace%2Fid/stories/story%20id/chapters/chapter%2Fid/tasks/task%2Fid/complete',
     );
   });
 });

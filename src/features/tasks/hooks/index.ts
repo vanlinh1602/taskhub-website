@@ -1,9 +1,11 @@
 export {
+  type CompleteTaskMutationInput,
   type DeductTaskMutationInput,
   invalidateTaskMutationQueries,
   type TaskMutationInput,
   type TaskMutationScope,
   type UpdateTaskMutationInput,
+  useCompleteTaskMutation,
   useDeductTaskMutation,
   useUpdateTaskMutation,
 } from './mutations';

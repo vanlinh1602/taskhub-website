@@ -11,6 +11,7 @@ import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
+import MoneyInput from '@/components/MoneyInput';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -71,6 +72,7 @@ import type {
 import { useWorkspaceStore } from '@/features/workspace/hooks';
 import { translations } from '@/locales/translations';
 import formatError from '@/utils/formatError';
+import { formatMoney } from '@/utils/money';
 
 const PAGE_SIZE = 25;
 
@@ -90,24 +92,6 @@ function isForbiddenError(error: unknown): boolean {
     message.includes('permission') ||
     message.includes('quyền')
   );
-}
-
-function formatStagePrice(
-  value: string,
-  currency: string,
-  locale: string,
-): string {
-  const amount = Number(value);
-  if (!Number.isFinite(amount)) return `${value} ${currency}`;
-  try {
-    return new Intl.NumberFormat(locale, {
-      currency,
-      maximumFractionDigits: 2,
-      style: 'currency',
-    }).format(amount);
-  } catch {
-    return `${value} ${currency}`;
-  }
 }
 
 function StageStatus({
@@ -147,12 +131,14 @@ function StageRewardStatus({
 
 function StageForm({
   editingStage,
+  language,
   isPending,
   onCancel,
   onSubmit,
   t,
 }: {
   readonly editingStage: Stage | null;
+  readonly language: string;
   readonly isPending: boolean;
   readonly onCancel: () => void;
   readonly onSubmit: (payload: StagePayload) => void;
@@ -266,10 +252,10 @@ function StageForm({
           <Label htmlFor="stage-price">
             {t(translations.stages.defaultPrice)}
           </Label>
-          <Input
+          <MoneyInput
             id="stage-price"
-            inputMode="decimal"
-            onChange={(event) => setValue('defaultPrice', event.target.value)}
+            language={language}
+            onValueChange={(value) => setValue('defaultPrice', value)}
             placeholder={t(translations.stages.defaultPriceHint)}
             value={values.defaultPrice}
           />
@@ -362,8 +348,7 @@ function StageRow({
         {stage.defaultDurationHours} {t(translations.stages.hoursShort)}
       </TableCell>
       <TableCell className="font-medium whitespace-nowrap">
-        {formatStagePrice(stage.defaultPrice, stage.currency, locale)} ·{' '}
-        {stage.currency}
+        {formatMoney(stage.defaultPrice, stage.currency, locale)}
       </TableCell>
       <TableCell>
         <StageRewardStatus eligible={stage.isRewardEligible !== false} t={t} />
@@ -440,8 +425,7 @@ function StageCard({
             {t(translations.stages.defaultPrice)}
           </p>
           <p className="mt-1 font-semibold">
-            {formatStagePrice(stage.defaultPrice, stage.currency, locale)} ·{' '}
-            {stage.currency}
+            {formatMoney(stage.defaultPrice, stage.currency, locale)}
           </p>
         </div>
       </div>
@@ -774,6 +758,7 @@ export default function StagesPage() {
           <StageForm
             editingStage={editingStage}
             isPending={isFormPending}
+            language={locale}
             onCancel={closeForm}
             onSubmit={saveStage}
             t={t}

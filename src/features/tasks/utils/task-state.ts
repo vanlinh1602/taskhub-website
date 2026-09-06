@@ -16,6 +16,19 @@ export function isTaskOverdue(task: Pick<TaskListItem, 'dueAt' | 'status'>): boo
   return !Number.isNaN(dueAt.getTime()) && dueAt.getTime() < Date.now();
 }
 
+export function canCompleteTask(
+  task: Pick<
+    TaskListItem,
+    'assigneeDiscordUserId' | 'dueAt' | 'status'
+  >,
+): boolean {
+  if (task.status !== 'IN_PROGRESS' || !task.assigneeDiscordUserId || !task.dueAt)
+    return false;
+
+  const dueAt = new Date(task.dueAt);
+  return !Number.isNaN(dueAt.getTime()) && dueAt.getTime() > Date.now();
+}
+
 export function getTaskStatusLabelKey(status: TaskStatus):
   | 'taskStatusBlocked'
   | 'taskStatusReady'
