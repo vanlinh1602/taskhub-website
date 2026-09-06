@@ -82,3 +82,10 @@ export interface PayrollPaymentResult {
   readonly rewardTotal: number;
   readonly grandTotals: readonly PayrollTotals[];
 }
+
+export interface PayrollRewardRecalculationResult {
+  readonly processedTaskCount: number;
+  readonly updatedTaskCount: number;
+  readonly recipientCount: number;
+  readonly rewardTotal: number;
+}

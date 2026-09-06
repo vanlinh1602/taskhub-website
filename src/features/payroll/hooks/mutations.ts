@@ -9,8 +9,11 @@ import { adminQueryKeys } from '@/features/admin/hooks';
 import { chaptersQueryKeys } from '@/features/chapters/hooks';
 import { tasksQueryKeys } from '@/features/tasks/hooks';
 
-import { payPayrollRecipient } from '../apis';
-import type { PayrollPaymentResult } from '../types';
+import { payPayrollRecipient, recalculatePayrollRewards } from '../apis';
+import type {
+  PayrollPaymentResult,
+  PayrollRewardRecalculationResult,
+} from '../types';
 import { payrollQueryKeys } from './queryKeys';
 
 export async function invalidatePayrollQueries(
@@ -32,6 +35,18 @@ export function usePayPayrollRecipientMutation(
   return useMutation({
     mutationFn: (discordUserId: string) =>
       payPayrollRecipient(workspaceId, discordUserId),
+    onSuccess: async () => {
+      await invalidatePayrollQueries(queryClient);
+    },
+  });
+}
+
+export function useRecalculatePayrollRewardsMutation(
+  workspaceId: string,
+): UseMutationResult<PayrollRewardRecalculationResult, Error, void, unknown> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => recalculatePayrollRewards(workspaceId),
     onSuccess: async () => {
       await invalidatePayrollQueries(queryClient);
     },

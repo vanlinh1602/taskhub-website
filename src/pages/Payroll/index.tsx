@@ -9,6 +9,7 @@ import {
   FileText,
   History,
   LoaderCircle,
+  RefreshCw,
   ShieldOff,
   UserRound,
   UsersRound,
@@ -67,6 +68,7 @@ import {
   usePayrollBankQrQuery,
   usePayrollRecipientQuery,
   usePayrollRecipientsQuery,
+  useRecalculatePayrollRewardsMutation,
 } from '@/features/payroll/hooks';
 import type {
   PayrollRecipient,
@@ -313,7 +315,7 @@ function PayrollCardList({
     <div className="grid gap-3 lg:hidden">
       {recipients.map((recipient) => (
         <article
-          className="rounded-xl border border-border/70 bg-card p-4 shadow-sm"
+          className="rounded-2xl border border-border/70 bg-card p-4 shadow-sm shadow-black/5"
           key={recipient.discordUserId}
         >
           <div className="flex items-start justify-between gap-3">
@@ -321,7 +323,7 @@ function PayrollCardList({
             <PayrollStatusBadge status={status} t={t} />
           </div>
           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-            <div>
+            <div className="min-w-0">
               <p className="text-xs text-muted-foreground">
                 {t(translations.management.payroll.taskCount)}
               </p>
@@ -329,19 +331,19 @@ function PayrollCardList({
                 {recipient.taskCount}
               </p>
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-xs text-muted-foreground">
                 {t(translations.management.payroll.baseSalary)}
               </p>
-              <p className="mt-1 font-semibold">
+              <p className="mt-1 font-semibold break-words">
                 {formatTotals(recipient.baseTotals, language)}
               </p>
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-xs text-muted-foreground">
                 {t(translations.management.payroll.reward)}
               </p>
-              <p className="mt-1 font-semibold">
+              <p className="mt-1 font-semibold break-words">
                 {formatTotals(
                   recipient.rewardTotal
                     ? [{ currency: 'VND', total: recipient.rewardTotal }]
@@ -350,11 +352,11 @@ function PayrollCardList({
                 )}
               </p>
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-xs text-muted-foreground">
                 {t(translations.management.payroll.grandTotal)}
               </p>
-              <p className="mt-1 font-bold">
+              <p className="mt-1 font-bold break-words">
                 {formatTotals(recipient.grandTotals, language)}
               </p>
             </div>
@@ -396,7 +398,7 @@ function DetailTaskTable({
   readonly t: ReturnType<typeof useTranslation>['t'];
 }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-border/70">
+    <div className="hidden overflow-x-auto rounded-xl border border-border/70 lg:block">
       <Table className="min-w-[900px]">
         <TableHeader>
           <TableRow className="border-border/60 hover:bg-transparent">
@@ -476,6 +478,107 @@ function DetailTaskTable({
   );
 }
 
+function DetailTaskCards({
+  dateFormatter,
+  language,
+  tasks,
+  t,
+}: {
+  readonly dateFormatter: Intl.DateTimeFormat;
+  readonly language: string;
+  readonly tasks: readonly PayrollTask[];
+  readonly t: ReturnType<typeof useTranslation>['t'];
+}) {
+  return (
+    <div className="space-y-3 lg:hidden">
+      {tasks.map((task) => (
+        <article
+          className="rounded-xl border border-border/70 bg-card p-4 shadow-sm shadow-black/5"
+          key={task.id}
+        >
+          <div className="min-w-0 space-y-1">
+            <p className="font-semibold break-words" title={task.storyTitle}>
+              {task.storyTitle}
+            </p>
+            <p className="text-xs break-words text-muted-foreground">
+              {task.chapterName}
+            </p>
+            <p className="text-xs break-words text-muted-foreground">
+              {task.stageName} · {task.stageCode}
+            </p>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-3 border-t border-border/60 pt-3">
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">
+                {t(translations.management.payroll.baseSalary)}
+              </p>
+              <p className="mt-1 text-sm font-semibold break-words">
+                {formatMoney(task.agreedPrice, task.currency, language)}
+              </p>
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">
+                {t(translations.management.payroll.reward)}
+              </p>
+              <p className="mt-1 text-sm font-semibold break-words">
+                {Number(task.rewardAmount) > 0
+                  ? formatMoney(task.rewardAmount, task.currency, language)
+                  : '—'}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-2 border-t border-border/60 pt-3 text-xs">
+            <div className="flex items-start justify-between gap-3">
+              <span className="text-muted-foreground">
+                {t(translations.management.payroll.completedAt)}
+              </span>
+              <span className="text-right font-medium">
+                {formatDate(
+                  task.completedAt,
+                  dateFormatter,
+                  t(translations.management.payroll.noDate),
+                  t(translations.management.payroll.invalidDate),
+                )}
+              </span>
+            </div>
+            <div className="flex items-start justify-between gap-3">
+              <span className="text-muted-foreground">
+                {t(translations.management.payroll.paymentInfo)}
+              </span>
+              <span className="flex max-w-[65%] flex-col items-end gap-1 text-right">
+                <PayrollStatusBadge status={task.paymentStatus} t={t} />
+                {task.paidAt ? (
+                  <span className="text-muted-foreground">
+                    {t(translations.management.payroll.paidAt)}:{' '}
+                    {formatDate(
+                      task.paidAt,
+                      dateFormatter,
+                      t(translations.management.payroll.noDate),
+                      t(translations.management.payroll.invalidDate),
+                    )}
+                  </span>
+                ) : null}
+                {task.paidByDiscordUserId ? (
+                  <span className="break-all text-muted-foreground">
+                    {t(translations.management.payroll.paidBy)}:{' '}
+                    {task.paidByDiscordUserId}
+                  </span>
+                ) : null}
+                <span className="break-all text-muted-foreground">
+                  {task.paymentReference ??
+                    t(translations.management.payroll.noPaymentReference)}
+                </span>
+              </span>
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
 function DetailSkeleton({ label }: { readonly label: string }) {
   return (
     <div aria-label={label} className="space-y-4" role="status">
@@ -495,9 +598,9 @@ function SummaryMetric({
   readonly value: string;
 }) {
   return (
-    <div className="rounded-xl border border-border/70 bg-muted/25 p-3">
+    <div className="min-w-0 rounded-xl border border-border/70 bg-muted/25 p-3">
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 truncate text-sm font-bold" title={value}>
+      <p className="mt-1 text-sm font-bold break-words tabular-nums" title={value}>
         {value}
       </p>
     </div>
@@ -600,7 +703,7 @@ function PayrollDetailPanel({
         </div>
       </SheetHeader>
 
-      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto py-5">
+      <div className="min-h-0 min-w-0 flex-1 space-y-5 overflow-x-hidden overflow-y-auto py-5">
         <div className="grid grid-cols-2 gap-2">
           <SummaryMetric
             label={t(translations.management.payroll.taskCount)}
@@ -635,7 +738,7 @@ function PayrollDetailPanel({
           </p>
         ) : null}
 
-        <section className="space-y-3">
+        <section className="space-y-3 rounded-2xl border border-border/70 bg-muted/10 p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h3 className="font-semibold">
@@ -679,12 +782,20 @@ function PayrollDetailPanel({
             </h3>
           </div>
           {detail.tasks.length ? (
-            <DetailTaskTable
-              dateFormatter={dateFormatter}
-              language={language}
-              tasks={detail.tasks}
-              t={t}
-            />
+            <>
+              <DetailTaskTable
+                dateFormatter={dateFormatter}
+                language={language}
+                tasks={detail.tasks}
+                t={t}
+              />
+              <DetailTaskCards
+                dateFormatter={dateFormatter}
+                language={language}
+                tasks={detail.tasks}
+                t={t}
+              />
+            </>
           ) : (
             <p className="rounded-xl bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
               {t(translations.management.payroll.emptyPending)}
@@ -749,6 +860,8 @@ export default function PayrollPage() {
   );
   const [confirmRecipient, setConfirmRecipient] =
     useState<PayrollRecipient | null>(null);
+  const [isRecalculateDialogOpen, setIsRecalculateDialogOpen] =
+    useState(false);
   const [bankQrUrl, setBankQrUrl] = useState<string | null>(null);
   const [paidDateRange, setPaidDateRange] = useState<DateRange | undefined>();
   const language = i18n.language;
@@ -786,6 +899,8 @@ export default function PayrollPage() {
     Boolean(detailQuery.data?.bankQr.configured),
   );
   const payMutation = usePayPayrollRecipientMutation(activeWorkspaceId);
+  const recalculateMutation =
+    useRecalculatePayrollRewardsMutation(activeWorkspaceId);
   const pendingSummary: PayrollSummary | undefined = pendingQuery.data?.summary;
   const recipients = activeQuery.data?.items ?? [];
   const selectedRecipientValue: PayrollRecipient | undefined =
@@ -859,9 +974,48 @@ export default function PayrollPage() {
     });
   }
 
+  function handleSubmitRecalculate(): void {
+    recalculateMutation.mutate(undefined, {
+      onSuccess: (result) => {
+        setIsRecalculateDialogOpen(false);
+        if (result.processedTaskCount === 0) {
+          toast.success(
+            t(translations.management.payroll.recalculateRewardsNoop),
+          );
+          return;
+        }
+        toast.success(
+          t(translations.management.payroll.recalculateRewardsSuccess, {
+            count: result.updatedTaskCount,
+          }),
+          {
+            description: t(
+              translations.management.payroll
+                .recalculateRewardsSuccessDescription,
+              {
+                processed: result.processedTaskCount,
+                recipients: result.recipientCount,
+                total: new Intl.NumberFormat(language).format(
+                  result.rewardTotal,
+                ),
+                updated: result.updatedTaskCount,
+              },
+            ),
+          },
+        );
+      },
+      onError: (error) => {
+        toast.error(
+          t(translations.management.payroll.recalculateRewardsFailed),
+          { description: formatError(error) },
+        );
+      },
+    });
+  }
+
   if (!activeWorkspaceId) {
     return (
-      <section className="space-y-6">
+      <section className="mx-auto w-full max-w-[1600px] space-y-5">
         <PageIntro t={t} />
         <Empty className="min-h-80 border bg-card/50">
           <EmptyHeader>
@@ -884,10 +1038,10 @@ export default function PayrollPage() {
   const showEmpty = !showLoading && !showError && recipients.length === 0;
 
   return (
-    <section className="space-y-6">
+    <section className="mx-auto w-full max-w-[1600px] space-y-5">
       <PageIntro t={t} />
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard
           icon={<FileText aria-hidden="true" />}
           label={t(translations.management.payroll.pendingTasks)}
@@ -905,38 +1059,58 @@ export default function PayrollPage() {
         />
       </div>
 
-      <Card className="overflow-hidden">
-        <CardHeader className="gap-4 border-b border-border/60 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <CardTitle>{t(translations.management.payroll.title)}</CardTitle>
+      <Card className="overflow-hidden rounded-2xl border-border/70 shadow-sm shadow-black/5">
+        <CardHeader className="gap-5 border-b border-border/60 bg-card sm:flex sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <CardTitle className="text-lg">
+              {getStatusLabel(status, t)}
+            </CardTitle>
             <CardDescription>
               {t(translations.management.payroll.pageDescription)}
             </CardDescription>
           </div>
-          <div
-            aria-label={t(translations.management.payroll.status)}
-            className="flex w-full rounded-xl border border-border/70 bg-muted/30 p-1 sm:w-auto"
-            role="tablist"
-          >
-            {PAYROLL_STATUSES.map((item) => (
+          <div className="flex w-full min-w-0 flex-col gap-3 sm:w-auto sm:items-end">
+            {status === 'PENDING' ? (
               <Button
-                aria-selected={status === item}
-                className="flex-1 rounded-lg sm:flex-none"
-                key={item}
-                onClick={() => handleStatusChange(item)}
-                role="tab"
-                variant={status === item ? 'default' : 'ghost'}
+                className="w-full sm:w-auto"
+                disabled={recalculateMutation.isPending}
+                onClick={() => setIsRecalculateDialogOpen(true)}
+                size="sm"
+                variant="outline"
               >
-                {item === 'PENDING' ? (
-                  <Clock3 aria-hidden="true" />
+                {recalculateMutation.isPending ? (
+                  <LoaderCircle aria-hidden="true" className="animate-spin" />
                 ) : (
-                  <History aria-hidden="true" />
+                  <RefreshCw aria-hidden="true" />
                 )}
-                {item === 'PENDING'
-                  ? t(translations.management.payroll.pendingTab)
-                  : t(translations.management.payroll.paidTab)}
+                {t(translations.management.payroll.recalculateRewards)}
               </Button>
-            ))}
+            ) : null}
+            <div
+              aria-label={t(translations.management.payroll.status)}
+              className="flex w-full rounded-xl border border-border/70 bg-muted/30 p-1 sm:w-auto"
+              role="tablist"
+            >
+              {PAYROLL_STATUSES.map((item) => (
+                <Button
+                  aria-selected={status === item}
+                  className="flex-1 rounded-lg sm:flex-none"
+                  key={item}
+                  onClick={() => handleStatusChange(item)}
+                  role="tab"
+                  variant={status === item ? 'default' : 'ghost'}
+                >
+                  {item === 'PENDING' ? (
+                    <Clock3 aria-hidden="true" />
+                  ) : (
+                    <History aria-hidden="true" />
+                  )}
+                  {item === 'PENDING'
+                    ? t(translations.management.payroll.pendingTab)
+                    : t(translations.management.payroll.paidTab)}
+                </Button>
+              ))}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-0 sm:p-0">
@@ -1019,7 +1193,7 @@ export default function PayrollPage() {
             </Empty>
           ) : (
             <>
-              <div className="p-4 pb-0 sm:p-6 sm:pb-0">
+              <div className="min-w-0 p-4 pb-0 sm:p-6 sm:pb-0">
                 <PayrollTable
                   dateFormatter={dateFormatter}
                   language={language}
@@ -1082,7 +1256,7 @@ export default function PayrollPage() {
         }}
         open={selectedRecipient !== null}
       >
-        <SheetContent className="overflow-hidden p-4 data-[side=right]:!w-full sm:!max-w-4xl sm:p-6">
+        <SheetContent className="h-full min-h-0 overflow-hidden p-4 pt-14 data-[side=right]:!w-full sm:!max-w-4xl sm:p-6 sm:pt-6">
           {detailQuery.isLoading ? (
             <>
               <SheetHeader className="p-0">
@@ -1120,6 +1294,44 @@ export default function PayrollPage() {
           )}
         </SheetContent>
       </Sheet>
+
+      <AlertDialog
+        onOpenChange={(open) => {
+          if (!open && !recalculateMutation.isPending)
+            setIsRecalculateDialogOpen(false);
+        }}
+        open={isRecalculateDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t(translations.management.payroll.recalculateRewardsConfirm)}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t(
+                translations.management.payroll
+                  .recalculateRewardsDescription,
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={recalculateMutation.isPending}>
+              {t(translations.management.payroll.cancel)}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={recalculateMutation.isPending}
+              onClick={handleSubmitRecalculate}
+            >
+              {recalculateMutation.isPending ? (
+                <LoaderCircle aria-hidden="true" className="animate-spin" />
+              ) : (
+                <RefreshCw aria-hidden="true" />
+              )}
+              {t(translations.management.payroll.recalculateRewards)}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         onOpenChange={(open) => {
@@ -1176,13 +1388,18 @@ function PageIntro({
   readonly t: ReturnType<typeof useTranslation>['t'];
 }) {
   return (
-    <div>
-      <h2 className="text-2xl font-extrabold tracking-tight">
-        {t(translations.management.payroll.title)}
-      </h2>
-      <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-        {t(translations.management.payroll.pageDescription)}
-      </p>
+    <div className="flex items-start gap-3 sm:gap-4">
+      <span className="mt-1 flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary sm:size-11">
+        <CircleDollarSign aria-hidden="true" />
+      </span>
+      <div className="min-w-0">
+        <h2 className="text-2xl font-extrabold tracking-tight">
+          {t(translations.management.payroll.title)}
+        </h2>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+          {t(translations.management.payroll.pageDescription)}
+        </p>
+      </div>
     </div>
   );
 }
@@ -1197,14 +1414,14 @@ function StatCard({
   readonly value: string;
 }) {
   return (
-    <Card>
-      <CardContent className="flex items-center gap-3 p-4">
+    <Card className="min-w-0 border-border/70 shadow-sm shadow-black/5">
+      <CardContent className="flex min-w-0 items-center gap-3 p-4 sm:p-5">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
           {icon}
         </span>
         <div className="min-w-0">
           <p className="text-xs text-muted-foreground">{label}</p>
-          <p className="mt-1 truncate text-lg font-extrabold tabular-nums" title={value}>
+          <p className="mt-1 text-lg font-extrabold break-words tabular-nums" title={value}>
             {value}
           </p>
         </div>

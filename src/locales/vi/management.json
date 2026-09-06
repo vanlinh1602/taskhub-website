@@ -119,7 +119,14 @@
     "retry": "Thử lại",
     "taskPageSummary": "Trang {{current}} / {{total}} · {{count}} task",
     "paymentFailed": "Không thể ghi nhận trả lương",
-    "paidDateRange": "Khoảng ngày thanh toán"
+    "paidDateRange": "Khoảng ngày thanh toán",
+    "recalculateRewards": "Cập nhật lại thưởng",
+    "recalculateRewardsConfirm": "Xác nhận cập nhật thưởng",
+    "recalculateRewardsDescription": "Hệ thống sẽ tính lại thưởng theo cấu hình công đoạn hiện tại và chỉ thay đổi các task đã hoàn thành nhưng chưa thanh toán. Task đã thanh toán sẽ không bị ảnh hưởng.",
+    "recalculateRewardsFailed": "Không thể cập nhật lại thưởng",
+    "recalculateRewardsNoop": "Không có task Pending nào cần cập nhật thưởng",
+    "recalculateRewardsSuccess": "Đã cập nhật thưởng cho {{count}} task",
+    "recalculateRewardsSuccessDescription": "Đã kiểm tra {{processed}} task chưa thanh toán và cập nhật {{updated}} task cho {{recipients}} thành viên. Tổng thưởng dự kiến: {{total}} VND."
   },
   "placeholder": {
     "description": "Khu vực quản lý này sẽ được triển khai ở giai đoạn tiếp theo.",

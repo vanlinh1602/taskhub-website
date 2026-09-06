@@ -1,4 +1,8 @@
-export { invalidatePayrollQueries, usePayPayrollRecipientMutation } from './mutations';
+export {
+  invalidatePayrollQueries,
+  usePayPayrollRecipientMutation,
+  useRecalculatePayrollRewardsMutation,
+} from './mutations';
 export {
   usePayrollBankQrQuery,
   usePayrollRecipientQuery,

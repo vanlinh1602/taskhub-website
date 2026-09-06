@@ -8,6 +8,7 @@ export interface Stage {
   readonly currency: string;
   readonly displayOrder: number;
   readonly isActive: boolean;
+  readonly isRewardEligible: boolean;
   readonly createdAt: string;
   readonly updatedAt: string;
 }
@@ -26,6 +27,7 @@ export interface StageFormValues {
   readonly defaultPrice: string;
   readonly durationHours: string;
   readonly displayOrder: string;
+  readonly isRewardEligible: boolean;
 }
 
 export interface StagePayload {
@@ -34,4 +36,5 @@ export interface StagePayload {
   readonly defaultPrice: string;
   readonly durationHours: number;
   readonly displayOrder: number;
+  readonly isRewardEligible: boolean;
 }

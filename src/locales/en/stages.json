@@ -41,5 +41,9 @@
   "actions": "Actions",
   "currency": "Currency",
   "hoursShort": "hours",
-  "notSet": "Not set"
+  "notSet": "Not set",
+  "rewardDisabled": "Reward excluded",
+  "rewardEligible": "Reward eligible",
+  "rewardEligibleDescription": "Only VND tasks in this stage can receive a reward.",
+  "rewardEnabled": "Reward enabled"
 }

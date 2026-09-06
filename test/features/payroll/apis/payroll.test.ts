@@ -6,6 +6,7 @@ import {
   getPayrollRecipient,
   getPayrollRecipients,
   payPayrollRecipient,
+  recalculatePayrollRewards,
 } from '@/features/payroll/apis';
 import { backendService } from '@/services';
 
@@ -111,6 +112,26 @@ describe('payroll APIs', () => {
 
     expect(post).toHaveBeenCalledWith(
       '/api/story-workflow/workspace%2Fid/payroll/recipients/member%2Fid/pay',
+    );
+  });
+
+  it('recalculates unpaid payroll rewards for the whole workspace', async () => {
+    const result = {
+      processedTaskCount: 12,
+      updatedTaskCount: 7,
+      recipientCount: 2,
+      rewardTotal: 7000,
+    };
+    const post = vi
+      .spyOn(backendService, 'post')
+      .mockResolvedValue({ kind: 'ok', data: result } as never);
+
+    await expect(recalculatePayrollRewards('workspace/id')).resolves.toBe(
+      result,
+    );
+
+    expect(post).toHaveBeenCalledWith(
+      '/api/story-workflow/workspace%2Fid/payroll/recalculate-rewards',
     );
   });
 });

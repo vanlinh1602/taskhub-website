@@ -41,5 +41,9 @@
   "actions": "Thao tác",
   "currency": "Tiền tệ",
   "hoursShort": "giờ",
-  "notSet": "Chưa có"
+  "notSet": "Chưa có",
+  "rewardDisabled": "Không tính thưởng",
+  "rewardEligible": "Được tính thưởng",
+  "rewardEligibleDescription": "Chỉ task VND ở công đoạn này mới được tính thưởng.",
+  "rewardEnabled": "Có thưởng"
 }

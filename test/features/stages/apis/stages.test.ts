@@ -34,6 +34,7 @@ describe('stage APIs', () => {
       defaultPrice: '125000.00',
       displayOrder: 1,
       durationHours: 24,
+      isRewardEligible: true,
       name: 'Biên tập',
     };
 

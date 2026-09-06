@@ -119,7 +119,14 @@
     "retry": "Try again",
     "taskPageSummary": "Page {{current}} of {{total}} · {{count}} tasks",
     "paymentFailed": "Unable to record payment",
-    "paidDateRange": "Payment date range"
+    "paidDateRange": "Payment date range",
+    "recalculateRewards": "Recalculate rewards",
+    "recalculateRewardsConfirm": "Confirm reward recalculation",
+    "recalculateRewardsDescription": "Rewards will be recalculated using the current stage configuration. Only completed, unpaid tasks will change; paid tasks are not affected.",
+    "recalculateRewardsFailed": "Unable to recalculate rewards",
+    "recalculateRewardsNoop": "There are no pending tasks to update",
+    "recalculateRewardsSuccess": "Rewards updated for {{count}} tasks",
+    "recalculateRewardsSuccessDescription": "Checked {{processed}} unpaid tasks and updated {{updated}} tasks for {{recipients}} members. Expected rewards total: {{total}} VND."
   },
   "placeholder": {
     "description": "This management area will be available in a later phase.",

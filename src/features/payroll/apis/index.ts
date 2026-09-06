@@ -4,4 +4,5 @@ export {
   getPayrollRecipient,
   getPayrollRecipients,
   payPayrollRecipient,
+  recalculatePayrollRewards,
 } from './payroll';

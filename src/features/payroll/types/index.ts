@@ -5,6 +5,7 @@ export type {
   PayrollRecipient,
   PayrollRecipientDetail,
   PayrollRecipientList,
+  PayrollRewardRecalculationResult,
   PayrollStatus,
   PayrollSummary,
   PayrollTask,

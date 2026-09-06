@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-query';
 
 import { membersQueryKeys } from '@/features/members/hooks';
+import { payrollQueryKeys } from '@/features/payroll/hooks';
 import { tasksQueryKeys } from '@/features/tasks/hooks';
 
 import { createStage, updateStage, updateStageStatus } from '../apis';
@@ -26,6 +27,8 @@ export async function invalidateStageRelatedQueries(
     queryClient.invalidateQueries({
       queryKey: tasksQueryKeys.filters(workspaceId),
     }),
+    queryClient.invalidateQueries({ queryKey: payrollQueryKeys.listRoot() }),
+    queryClient.invalidateQueries({ queryKey: payrollQueryKeys.detailRoot() }),
   ]);
 }
 

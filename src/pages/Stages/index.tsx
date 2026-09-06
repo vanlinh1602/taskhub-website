@@ -29,6 +29,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -79,6 +80,7 @@ const EMPTY_FORM: StageFormValues = {
   defaultPrice: '0',
   durationHours: '24',
   displayOrder: '0',
+  isRewardEligible: true,
 };
 
 function isForbiddenError(error: unknown): boolean {
@@ -125,6 +127,24 @@ function StageStatus({
   );
 }
 
+function StageRewardStatus({
+  eligible,
+  t,
+}: {
+  readonly eligible: boolean;
+  readonly t: ReturnType<typeof useTranslation>['t'];
+}) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${eligible ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300' : 'bg-muted text-muted-foreground'}`}
+    >
+      {eligible
+        ? t(translations.stages.rewardEnabled)
+        : t(translations.stages.rewardDisabled)}
+    </span>
+  );
+}
+
 function StageForm({
   editingStage,
   isPending,
@@ -150,6 +170,7 @@ function StageForm({
             defaultPrice: editingStage.defaultPrice,
             durationHours: String(editingStage.defaultDurationHours),
             displayOrder: String(editingStage.displayOrder),
+            isRewardEligible: editingStage.isRewardEligible !== false,
           }
         : EMPTY_FORM,
     );
@@ -191,6 +212,7 @@ function StageForm({
       description: values.description.trim() || undefined,
       displayOrder,
       durationHours,
+      isRewardEligible: values.isRewardEligible,
       name,
     });
   }
@@ -265,6 +287,27 @@ function StageForm({
           value={values.displayOrder}
         />
       </div>
+      <label className="group flex cursor-pointer items-start gap-3 rounded-xl border border-border/70 bg-muted/20 p-3">
+        <Checkbox
+          aria-describedby="stage-reward-description"
+          checked={values.isRewardEligible}
+          id="stage-reward-eligible"
+          onCheckedChange={(checked) =>
+            setValue('isRewardEligible', checked === true)
+          }
+        />
+        <span className="grid gap-1">
+          <span className="text-sm font-semibold">
+            {t(translations.stages.rewardEligible)}
+          </span>
+          <span
+            className="text-xs leading-5 text-muted-foreground"
+            id="stage-reward-description"
+          >
+            {t(translations.stages.rewardEligibleDescription)}
+          </span>
+        </span>
+      </label>
       {validationError ? (
         <p className="text-sm text-destructive" role="alert">
           {validationError}
@@ -321,6 +364,9 @@ function StageRow({
       <TableCell className="font-medium whitespace-nowrap">
         {formatStagePrice(stage.defaultPrice, stage.currency, locale)} ·{' '}
         {stage.currency}
+      </TableCell>
+      <TableCell>
+        <StageRewardStatus eligible={stage.isRewardEligible !== false} t={t} />
       </TableCell>
       <TableCell>
         <StageStatus active={stage.isActive} t={t} />
@@ -398,6 +444,15 @@ function StageCard({
             {stage.currency}
           </p>
         </div>
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-border/60 px-3 py-2">
+        <span className="text-xs font-medium text-muted-foreground">
+          {t(translations.stages.rewardEligible)}
+        </span>
+        <StageRewardStatus
+          eligible={stage.isRewardEligible !== false}
+          t={t}
+        />
       </div>
       <div className="mt-4 flex justify-end gap-1 border-t border-border/60 pt-3">
         <Button
@@ -633,6 +688,7 @@ export default function StagesPage() {
                       <TableHead>
                         {t(translations.stages.defaultPrice)}
                       </TableHead>
+                      <TableHead>{t(translations.stages.rewardEligible)}</TableHead>
                       <TableHead>{t(translations.stages.status)}</TableHead>
                       <TableHead className="text-right">
                         {t(translations.stages.actions)}

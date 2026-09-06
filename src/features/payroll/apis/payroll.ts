@@ -6,6 +6,7 @@ import type {
   PayrollPaymentResult,
   PayrollRecipientDetail,
   PayrollRecipientList,
+  PayrollRewardRecalculationResult,
 } from '../types';
 
 export function createPayrollQuery(query: PayrollListQuery): string {
@@ -71,6 +72,16 @@ export async function payPayrollRecipient(
       workspaceId,
       `/recipients/${encodeURIComponent(discordUserId)}/pay`,
     ),
+  );
+  if (response.kind === 'ok') return response.data;
+  throw new Error(formatError(response));
+}
+
+export async function recalculatePayrollRewards(
+  workspaceId: string,
+): Promise<PayrollRewardRecalculationResult> {
+  const response = await backendService.post<PayrollRewardRecalculationResult>(
+    createPayrollPath(workspaceId, '/recalculate-rewards'),
   );
   if (response.kind === 'ok') return response.data;
   throw new Error(formatError(response));
