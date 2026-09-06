@@ -162,7 +162,8 @@ export default function TaskActionDialogs({
       ...(nextAssignee !== previousAssignee
         ? { assigneeDiscordUserId: nextAssignee }
         : {}),
-      ...(taskStatusDirty && nextAssignee === previousAssignee
+      ...(taskStatusDirty &&
+      (nextAssignee === previousAssignee || taskStatus === 'READY')
         ? { status: taskStatus }
         : {}),
     };
