@@ -1,4 +1,6 @@
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { Moon, Sun } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router';
@@ -6,6 +8,8 @@ import { toast } from 'sonner';
 import { useShallow } from 'zustand/shallow';
 
 import { LoadingScreen } from '@/components/loading-screen';
+import { Button } from '@/components/ui/button';
+import { getNextTheme } from '@/features/layouts/utils/theme';
 import { useUserStore } from '@/features/user/hooks';
 import { translations } from '@/locales/translations';
 import { auth } from '@/services/firebase';
@@ -56,6 +60,7 @@ function GoogleIcon() {
 
 export default function LoginPage() {
   const { t } = useTranslation();
+  const { resolvedTheme, setTheme } = useTheme();
   const { isLoading, user } = useUserStore(
     useShallow((state) => ({
       isLoading: state.handling,
@@ -65,6 +70,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const isDarkTheme = resolvedTheme === 'dark';
   useEffect(() => {
     if (user) {
       const next = searchParams.get('next');
@@ -93,7 +99,30 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="app-canvas min-h-dvh p-3 text-foreground sm:p-5 lg:p-7">
+    <main className="app-canvas relative min-h-dvh p-3 text-foreground sm:p-5 lg:p-7">
+      <Button
+        aria-label={t(
+          isDarkTheme
+            ? translations.layouts.switchToLight
+            : translations.layouts.switchToDark,
+        )}
+        className="absolute top-5 right-5 z-20 rounded-xl border border-border/70 bg-card/75 shadow-control backdrop-blur sm:top-7 sm:right-7"
+        onClick={() => setTheme(getNextTheme(resolvedTheme))}
+        size="icon"
+        title={t(
+          isDarkTheme
+            ? translations.layouts.switchToLight
+            : translations.layouts.switchToDark,
+        )}
+        type="button"
+        variant="outline"
+      >
+        {isDarkTheme ? (
+          <Sun aria-hidden="true" />
+        ) : (
+          <Moon aria-hidden="true" />
+        )}
+      </Button>
       <div className="mx-auto grid min-h-[calc(100dvh-1.5rem)] max-w-7xl overflow-hidden rounded-4xl border border-border/70 bg-card/75 shadow-soft backdrop-blur-xl sm:min-h-[calc(100dvh-2.5rem)] lg:min-h-[calc(100dvh-3.5rem)] lg:grid-cols-[1.15fr_0.85fr]">
         <section
           className={`${styles.brandPanel} relative order-2 overflow-hidden px-5 py-7 sm:px-10 sm:py-10 lg:order-0 lg:px-14 lg:py-12`}

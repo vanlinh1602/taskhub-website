@@ -44,6 +44,11 @@ describe('workspace settings APIs', () => {
     await updateWorkspaceRole('guild/id', 'manager', 'role/id');
     await updateWorkspaceFolder('guild/id', 'storyWorkflow', 'folder/id');
     await updateWorkspaceChannel('guild/id', 'extensionRequest', 'channel/id');
+    await updateWorkspaceChannel(
+      'guild/id',
+      'storyPublicationNotification',
+      'publication-channel/id',
+    );
 
     expect(put).toHaveBeenNthCalledWith(
       1,
@@ -59,6 +64,11 @@ describe('workspace settings APIs', () => {
       3,
       '/api/workspace/guild%2Fid/channels/TASK_DEADLINE_EXTENSION_REQUEST',
       { discordChannelId: 'channel/id' },
+    );
+    expect(put).toHaveBeenNthCalledWith(
+      4,
+      '/api/workspace/guild%2Fid/channels/STORY_PUBLICATION_NOTIFICATION',
+      { discordChannelId: 'publication-channel/id' },
     );
   });
 

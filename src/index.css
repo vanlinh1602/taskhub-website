@@ -13,80 +13,100 @@
     'Noto Color Emoji';
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  --background: oklch(0.975 0.012 175);
-  --foreground: oklch(0.245 0.035 180);
-  --card: oklch(0.995 0.006 175 / 88%);
-  --card-foreground: oklch(0.245 0.035 180);
-  --primary: oklch(0.55 0.11 180);
-  --primary-foreground: oklch(0.99 0.005 175);
-  --secondary: oklch(0.93 0.03 175);
-  --secondary-foreground: oklch(0.32 0.05 180);
-  --muted: oklch(0.95 0.016 175);
-  --muted-foreground: oklch(0.48 0.03 180);
-  --accent: oklch(0.92 0.04 175);
-  --accent-foreground: oklch(0.32 0.055 180);
-  --border: oklch(0.89 0.02 175);
-  --ring: oklch(0.55 0.11 180);
-  --canvas-glow-primary: oklch(0.9 0.06 175 / 52%);
-  --canvas-glow-accent: oklch(0.93 0.035 145 / 40%);
-  --soft-shadow: 0 22px 56px -34px oklch(0.28 0.04 180 / 28%);
-  --control-shadow: 0 12px 26px -16px oklch(0.36 0.09 180 / 36%);
-  --popover: oklch(0.995 0.006 175 / 96%);
-  --popover-foreground: oklch(0.245 0.035 180);
-  --destructive: oklch(0.577 0.245 27.325);
-  --input: oklch(0.87 0.025 175);
-  --chart-1: oklch(0.54 0.1 180);
-  --chart-2: oklch(0.66 0.09 165);
-  --chart-3: oklch(0.62 0.08 195);
-  --chart-4: oklch(0.68 0.08 145);
-  --chart-5: oklch(0.58 0.09 200);
+  --palette-lavender: #9fa1ff;
+  --palette-lavender-soft: #b5baff;
+  --palette-sky: #aee2ff;
+  --palette-mint: #d9f9df;
+  --background: #f8f9ff;
+  --foreground: #242642;
+  --card: #ffffff;
+  --card-foreground: #242642;
+  --primary: var(--palette-lavender);
+  --primary-foreground: #242642;
+  --secondary: color-mix(in oklch, var(--palette-lavender-soft) 42%, white);
+  --secondary-foreground: #484b84;
+  --muted: color-mix(in oklch, var(--palette-sky) 24%, white);
+  --muted-foreground: #697092;
+  --accent: color-mix(in oklch, var(--palette-mint) 72%, white);
+  --accent-foreground: #3f6650;
+  --border: #dfe2f3;
+  --ring: #777be3;
+  --canvas-glow-primary: color-mix(in oklch, var(--palette-lavender-soft) 56%, transparent);
+  --canvas-glow-accent: color-mix(in oklch, var(--palette-sky) 48%, transparent);
+  --soft-shadow: 0 22px 56px -34px rgb(61 64 117 / 24%);
+  --control-shadow: 0 12px 26px -16px rgb(68 70 137 / 34%);
+  --popover: rgb(255 255 255 / 96%);
+  --popover-foreground: #242642;
+  --destructive: #c65b78;
+  --input: #d8dcef;
+  --chart-1: var(--palette-lavender);
+  --chart-2: var(--palette-sky);
+  --chart-3: var(--palette-lavender-soft);
+  --chart-4: var(--palette-mint);
+  --chart-5: #777be3;
+  --hero-start: #6267cc;
+  --hero-end: #6eabcF;
+  --positive: #477d5c;
+  --positive-surface: color-mix(in oklch, var(--palette-mint) 60%, white);
+  --negative: #b85d75;
+  --negative-surface: #f9e8ee;
+  --notice: #47728d;
+  --notice-surface: color-mix(in oklch, var(--palette-sky) 52%, white);
   --radius: 0.875rem;
-  --sidebar: oklch(0.992 0.008 175 / 92%);
-  --sidebar-foreground: oklch(0.245 0.035 180);
-  --sidebar-primary: oklch(0.55 0.11 180);
-  --sidebar-primary-foreground: oklch(0.99 0.005 175);
-  --sidebar-accent: oklch(0.92 0.04 175);
-  --sidebar-accent-foreground: oklch(0.32 0.055 180);
-  --sidebar-border: oklch(0.89 0.02 175);
-  --sidebar-ring: oklch(0.55 0.11 180);
+  --sidebar: rgb(247 248 255 / 94%);
+  --sidebar-foreground: #242642;
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: color-mix(in oklch, var(--palette-lavender-soft) 34%, white);
+  --sidebar-accent-foreground: #484b84;
+  --sidebar-border: #dfe2f3;
+  --sidebar-ring: var(--ring);
 }
 
 .dark {
-  --background: oklch(0.21 0.025 180);
-  --foreground: oklch(0.95 0.012 175);
-  --card: oklch(0.26 0.028 180 / 92%);
-  --card-foreground: oklch(0.95 0.012 175);
-  --primary: oklch(0.76 0.1 175);
-  --primary-foreground: oklch(0.2 0.03 180);
-  --secondary: oklch(0.3 0.03 180);
-  --secondary-foreground: oklch(0.92 0.018 175);
-  --muted: oklch(0.285 0.028 180);
-  --muted-foreground: oklch(0.72 0.025 175);
-  --accent: oklch(0.34 0.05 175);
-  --accent-foreground: oklch(0.94 0.018 175);
-  --border: oklch(0.54 0.03 180 / 42%);
-  --ring: oklch(0.76 0.1 175);
-  --canvas-glow-primary: oklch(0.45 0.08 175 / 22%);
-  --canvas-glow-accent: oklch(0.42 0.06 145 / 16%);
-  --soft-shadow: 0 22px 56px -34px oklch(0.08 0.02 180 / 72%);
-  --control-shadow: 0 12px 26px -16px oklch(0.08 0.02 180 / 78%);
-  --popover: oklch(0.26 0.028 180 / 96%);
-  --popover-foreground: oklch(0.95 0.012 175);
-  --destructive: oklch(0.704 0.191 22.216);
-  --input: oklch(0.56 0.04 175 / 45%);
-  --chart-1: oklch(0.76 0.09 175);
-  --chart-2: oklch(0.8 0.08 160);
-  --chart-3: oklch(0.72 0.08 195);
-  --chart-4: oklch(0.74 0.08 145);
-  --chart-5: oklch(0.68 0.09 200);
-  --sidebar: oklch(0.245 0.028 180 / 94%);
-  --sidebar-foreground: oklch(0.95 0.012 175);
-  --sidebar-primary: oklch(0.76 0.1 175);
-  --sidebar-primary-foreground: oklch(0.2 0.03 180);
-  --sidebar-accent: oklch(0.34 0.05 175);
-  --sidebar-accent-foreground: oklch(0.94 0.018 175);
-  --sidebar-border: oklch(0.54 0.03 180 / 42%);
-  --sidebar-ring: oklch(0.76 0.1 175);
+  --background: #17182e;
+  --foreground: #f3f3ff;
+  --card: #222441;
+  --card-foreground: #f3f3ff;
+  --primary: var(--palette-lavender-soft);
+  --primary-foreground: #242642;
+  --secondary: color-mix(in oklch, var(--palette-lavender) 24%, var(--background));
+  --secondary-foreground: #eff0ff;
+  --muted: #282b48;
+  --muted-foreground: #b7bad8;
+  --accent: color-mix(in oklch, var(--palette-mint) 24%, var(--background));
+  --accent-foreground: var(--palette-mint);
+  --border: color-mix(in oklch, var(--palette-lavender-soft) 28%, var(--background));
+  --ring: var(--palette-lavender-soft);
+  --canvas-glow-primary: color-mix(in oklch, var(--palette-lavender) 32%, transparent);
+  --canvas-glow-accent: color-mix(in oklch, var(--palette-sky) 26%, transparent);
+  --soft-shadow: 0 22px 56px -34px rgb(5 6 20 / 72%);
+  --control-shadow: 0 12px 26px -16px rgb(5 6 20 / 78%);
+  --popover: #242642;
+  --popover-foreground: #f3f3ff;
+  --destructive: #ffadbd;
+  --input: color-mix(in oklch, var(--palette-lavender-soft) 26%, var(--background));
+  --chart-1: var(--palette-lavender-soft);
+  --chart-2: var(--palette-sky);
+  --chart-3: var(--palette-lavender);
+  --chart-4: var(--palette-mint);
+  --chart-5: #8589ed;
+  --hero-start: #7479dd;
+  --hero-end: #5f99c5;
+  --positive: var(--palette-mint);
+  --positive-surface: color-mix(in oklch, var(--palette-mint) 22%, var(--card));
+  --negative: #ffb1c0;
+  --negative-surface: color-mix(in oklch, #d66b8d 26%, var(--card));
+  --notice: var(--palette-sky);
+  --notice-surface: color-mix(in oklch, var(--palette-sky) 22%, var(--card));
+  --sidebar: #1d1f38;
+  --sidebar-foreground: #f3f3ff;
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: #2a2d4d;
+  --sidebar-accent-foreground: #eff0ff;
+  --sidebar-border: color-mix(in oklch, var(--palette-lavender-soft) 28%, var(--background));
+  --sidebar-ring: var(--ring);
 }
 
 @theme inline {
@@ -191,26 +211,30 @@ a:focus-visible {
 @media (max-width: 460px) { .topbar .icon-button { display: none; }.brand { font-size: 18px; }.balance-card img { height: 130px; margin: 23px -23px -15px -20px; width: 130px; }.balance-card h2 { font-size: 27px; }.metric-card { padding: 14px; }.metric-card strong { font-size: 17px; }.app-main { padding-left: 15px; padding-right: 15px; }.chart-card,.spending-card,.soft-surface.rounded-3xl { padding: 18px; }.goal-feature { gap: 4px; padding: 18px; }.goal-feature h2 { font-size: 18px; }.goal-feature img { height: 78px; width: 78px; }.transaction { grid-template-columns: 35px 1fr auto; gap: 8px; }.transaction-icon { height: 34px; width: 34px; }.transaction-amount { font-size: 11px; }.transaction-amount small { display: none; } }
 
 .profile-button span {
-  background: #2f9e8f;
+  background: var(--primary);
 }
 
 .sidebar-tip {
-  background: linear-gradient(145deg, #e6f7f3, #f3fbf8);
-  border-color: #c5e8df;
+  background: linear-gradient(
+    145deg,
+    color-mix(in oklch, var(--accent) 82%, var(--card)),
+    color-mix(in oklch, var(--palette-sky) 22%, var(--card))
+  );
+  border-color: color-mix(in oklch, var(--palette-mint) 58%, var(--border));
 }
 
 .sidebar-tip span {
-  color: #3d7a6f;
+  color: var(--accent-foreground);
 }
 
 .dashboard-heading h1 span {
-  color: #e6a817;
+  color: var(--primary);
 }
 
 .balance-card,
 .investment-hero {
-  background: linear-gradient(125deg, #2a8f82, #5bb8a8);
-  box-shadow: 0 20px 40px -24px #1f6b62;
+  background: linear-gradient(125deg, var(--hero-start), var(--hero-end));
+  box-shadow: 0 20px 40px -24px color-mix(in oklch, var(--hero-start) 72%, var(--foreground));
 }
 
 .pill,
@@ -218,76 +242,112 @@ a:focus-visible {
 .transaction-icon,
 .asset-icon,
 .transfer-row > span {
-  background: #e5f6f2;
+  background: var(--positive-surface);
   color: var(--primary);
 }
 
 .pill {
-  color: #2a6f65;
+  color: var(--positive);
 }
 
 .metric-green::before,
 .green-dot {
-  background: #2f9e8f;
+  background: var(--positive);
 }
 
 .metric-yellow::before {
-  background: #5bb8a8;
+  background: var(--palette-sky);
 }
 
 .metric-purple::before {
-  background: #5a9e9a;
+  background: var(--palette-lavender-soft);
 }
 
 .spending-ring,
 .chart-ring {
-  background: conic-gradient(#5bb8a8 0 46%, #2f9e8f 46% 73%, #5a9e9a 73% 100%);
+  background: conic-gradient(
+    var(--palette-sky) 0 46%,
+    var(--primary) 46% 73%,
+    var(--positive) 73% 100%
+  );
 }
 
 .goal-icon {
-  background: #e8f7f3;
-  color: #2a8f82;
+  background: var(--positive-surface);
+  color: var(--primary);
 }
 
 .debt-alert {
-  background: linear-gradient(140deg, #eef9f6, #dff3ee);
-  border-color: #bde5db;
+  background: linear-gradient(140deg, var(--notice-surface), var(--positive-surface));
+  border-color: color-mix(in oklch, var(--palette-sky) 50%, var(--border));
 }
 
 .debt-alert p {
-  color: #3f736a;
+  color: var(--notice);
 }
 
 .debt-alert a {
-  color: #2a6f65;
+  color: var(--notice);
 }
 
 .budget-orb {
-  background: conic-gradient(#5bb8a8 0 73%, #e8f4f1 73%);
+  background: conic-gradient(var(--primary) 0 73%, var(--muted) 73%);
 }
 
 .investment-hero .positive {
-  color: #e6fff8 !important;
+  color: var(--palette-mint) !important;
 }
 
 .donut {
-  background: conic-gradient(#6ec4b4 0 57%, #3ea090 57%);
+  background: conic-gradient(var(--palette-sky) 0 57%, var(--palette-mint) 57%);
 }
 
 .donut::before {
-  background: #2a8f82;
+  background: var(--hero-start);
 }
 
 .goal-feature,
 .account-total,
 .category-summary {
-  background: linear-gradient(110deg, #e6f7f3, #f4fbf8);
-  border-color: #c5e8df;
+  background: linear-gradient(
+    110deg,
+    color-mix(in oklch, var(--palette-mint) 62%, var(--card)),
+    color-mix(in oklch, var(--palette-sky) 24%, var(--card))
+  );
+  border-color: color-mix(in oklch, var(--palette-mint) 58%, var(--border));
 }
 
 .account-total,
 .category-summary {
-  border-color: #c5e8df;
+  border-color: color-mix(in oklch, var(--palette-mint) 58%, var(--border));
+}
+
+.pill-coral,
+.kind-expense,
+.kind-debtPayment {
+  background: var(--negative-surface);
+  color: var(--negative);
+}
+
+.metric-coral::before,
+.coral-dot {
+  background: var(--negative);
+}
+
+.positive {
+  color: var(--positive) !important;
+}
+
+.negative {
+  color: var(--negative);
+}
+
+.text-warning {
+  color: var(--notice);
+}
+
+.drawer-backdrop {
+  background: color-mix(in oklch, var(--foreground) 42%, transparent);
 }
 
 @layer base {

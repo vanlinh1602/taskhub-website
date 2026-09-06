@@ -36,6 +36,12 @@ export type ChapterManagerTaskStatus = TaskManagerTaskStatus;
 
 export type ChapterPaymentStatus = PaymentStatus;
 
+export type ChapterPublicationNotificationStatus =
+  | 'NOT_REQUESTED'
+  | 'SENT'
+  | 'NOT_CONFIGURED'
+  | 'FAILED';
+
 export interface Chapter {
   readonly id: string;
   readonly chapterName: string;
@@ -93,6 +99,12 @@ export interface ChapterDetail {
   readonly tasks: readonly ChapterTask[];
 }
 
+export interface ChapterPublicationResult {
+  readonly publicationStatus: 'PUBLISHED' | 'UNPUBLISHED';
+  readonly publicationUrl: string | null;
+  readonly notificationStatus: ChapterPublicationNotificationStatus;
+}
+
 export interface CreateChapterInput {
   readonly folderId: string;
   readonly priority?: ChapterPriority;
@@ -102,6 +114,13 @@ export interface UpdateChapterConfigurationInput {
   readonly difficulty?: ChapterDifficulty;
   readonly hasAdultContent?: boolean;
   readonly priority?: ChapterPriority;
+}
+
+export interface UpdateChapterPublicationInput {
+  readonly publicationStatus: 'PUBLISHED' | 'UNPUBLISHED';
+  readonly notify?: boolean;
+  readonly publicationUrl?: string;
+  readonly note?: string;
 }
 
 export type UpdateChapterTaskInput = UpdateTaskInput;

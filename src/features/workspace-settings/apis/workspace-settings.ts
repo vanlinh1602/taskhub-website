@@ -21,6 +21,7 @@ const folderRouteTypes: Record<WorkspaceFolderKey, string> = {
 const channelRouteTypes: Record<WorkspaceChannelKey, string> = {
   extensionRequest: 'TASK_DEADLINE_EXTENSION_REQUEST',
   storyNotification: 'STORY_NOTIFICATION',
+  storyPublicationNotification: 'STORY_PUBLICATION_NOTIFICATION',
   storyWorkflow: 'STORY_WORKFLOW',
 };
 

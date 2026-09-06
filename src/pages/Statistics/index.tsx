@@ -14,12 +14,13 @@ import {
   FileSpreadsheet,
   RotateCcw,
   ShieldOff,
+  Upload,
   UserRound,
 } from 'lucide-react';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -63,6 +64,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useWorkspacesQuery } from '@/features/admin/hooks';
+import ChapterPublicationDialog from '@/features/chapters/components/ChapterPublicationDialog';
+import { useUpdateChapterPublicationMutation } from '@/features/chapters/hooks';
 import { StatisticsDateRangePicker } from '@/features/statistics/components';
 import {
   useExportStatisticsMutation,
@@ -71,6 +74,7 @@ import {
   useStatisticsSummaryQuery,
 } from '@/features/statistics/hooks';
 import type {
+  StatisticsChapterRow,
   StatisticsDateBasis,
   StatisticsFilters,
   StatisticsPaymentStatus,
@@ -234,18 +238,21 @@ function StatusMark({ done, label }: { readonly done: boolean; readonly label: s
   );
 }
 
-const STORY_COLUMN_WIDTH = '14rem';
+const STORY_COLUMN_WIDTH = '11rem';
 const CHAPTER_COLUMN_WIDTH = '12rem';
 const METRIC_COLUMN_WIDTH = '9rem';
+const PUBLICATION_COLUMN_WIDTH = '13rem';
 
 function StatisticsTable({
   language,
   onSelect,
+  onPublish,
   result,
   t,
 }: {
   readonly language: string;
   readonly onSelect: (selected: SelectedTaskReference) => void;
+  readonly onPublish: (chapter: StatisticsChapterRow) => void;
   readonly result: NonNullable<ReturnType<typeof useStatisticsQuery>['data']>;
   readonly t: ReturnType<typeof useTranslation>['t'];
 }) {
@@ -255,6 +262,7 @@ function StatisticsTable({
         <colgroup>
           <col style={{ width: STORY_COLUMN_WIDTH }} />
           <col style={{ width: CHAPTER_COLUMN_WIDTH }} />
+          <col style={{ width: PUBLICATION_COLUMN_WIDTH }} />
           {result.columns.flatMap((column) => [
             <col key={`${column.id}-amount`} style={{ width: METRIC_COLUMN_WIDTH }} />,
             <col key={`${column.id}-completed`} style={{ width: METRIC_COLUMN_WIDTH }} />,
@@ -263,11 +271,14 @@ function StatisticsTable({
         </colgroup>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            <TableHead className="sticky left-0 z-30 border-r border-b border-border/70 bg-muted/95 text-foreground" rowSpan={2} style={{ width: STORY_COLUMN_WIDTH }}>
+            <TableHead className="sticky left-0 z-30 border-r border-b border-border/70 bg-muted/95 text-center text-foreground" rowSpan={2} style={{ width: STORY_COLUMN_WIDTH }}>
               {t(translations.statistics.storyColumn)}
             </TableHead>
-            <TableHead className="sticky z-30 border-r border-b border-border/70 bg-muted/95 text-foreground" rowSpan={2} style={{ left: STORY_COLUMN_WIDTH, width: CHAPTER_COLUMN_WIDTH }}>
+            <TableHead className="sticky z-30 border-r border-b border-border/70 bg-muted/95 text-center text-foreground" rowSpan={2} style={{ left: STORY_COLUMN_WIDTH, width: CHAPTER_COLUMN_WIDTH }}>
               {t(translations.statistics.chapterColumn)}
+            </TableHead>
+            <TableHead className="border-r border-b border-border/70 bg-muted/95 text-center text-foreground" rowSpan={2} style={{ width: PUBLICATION_COLUMN_WIDTH }}>
+              {t(translations.statistics.publicationColumn)}
             </TableHead>
             {result.columns.map((column) => (
               <TableHead className="border-r border-b border-border/70 bg-muted/70 px-3 text-center font-semibold whitespace-normal text-foreground" colSpan={3} key={column.id}>
@@ -304,7 +315,42 @@ function StatisticsTable({
                   </TableCell>
                 ) : null}
                 <TableCell className={`sticky z-20 border-r border-border/70 bg-card font-medium ${rowBoundaryClass}`} style={{ left: STORY_COLUMN_WIDTH, width: CHAPTER_COLUMN_WIDTH }}>
-                  <span className="block truncate" title={row.chapterName}>{row.chapterName}</span>
+                  <Link
+                    className="block truncate text-primary underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                    title={row.chapterName}
+                    to={getChapterDetailPath(row.storyId, row.chapterId)}
+                  >
+                    {row.chapterName}
+                  </Link>
+                </TableCell>
+                <TableCell className={`border-r border-border/70 bg-card ${rowBoundaryClass}`} style={{ width: PUBLICATION_COLUMN_WIDTH }}>
+                  {row.publicationStatus === 'PUBLISHED' ? (
+                    <div className="flex items-center justify-between gap-2 px-2 py-1">
+                      <StatusMark done label={t(translations.management.stories.published)} />
+                      {row.publicationUrl ? (
+                        <a
+                          aria-label={t(translations.statistics.openPublication)}
+                          className="rounded-md p-1 text-primary hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                          href={row.publicationUrl}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          <ExternalLink aria-hidden="true" className="size-3.5" />
+                        </a>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <Button
+                      aria-label={`${t(translations.statistics.quickPublish)}: ${row.chapterName}`}
+                      className="w-full"
+                      onClick={() => onPublish(row)}
+                      size="sm"
+                      variant="outline"
+                    >
+                      <Upload aria-hidden="true" />
+                      {t(translations.statistics.quickPublish)}
+                    </Button>
+                  )}
                 </TableCell>
                 {result.columns.flatMap((column) => {
                   const cell = row.stages[column.id];
@@ -352,10 +398,18 @@ export default function StatisticsPage() {
     readonly target: TaskActionTarget;
   } | null>(null);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+  const [publishingChapter, setPublishingChapter] =
+    useState<StatisticsChapterRow | null>(null);
+  const [publicationNotificationError, setPublicationNotificationError] =
+    useState<string | null>(null);
   const filtersQuery = useStatisticsFiltersQuery(activeWorkspaceId);
   const statisticsQuery = useStatisticsQuery(activeWorkspaceId, filters);
   const summaryQuery = useStatisticsSummaryQuery(activeWorkspaceId, filters, isSummaryOpen);
   const exportMutation = useExportStatisticsMutation(activeWorkspaceId);
+  const publicationMutation = useUpdateChapterPublicationMutation(
+    activeWorkspaceId || '',
+    publishingChapter?.storyId || '',
+  );
   const selectedTask = useMemo<SelectedTask | null>(() => {
     if (!selectedTaskReference || !statisticsQuery.data) return null;
     const row = statisticsQuery.data.items.find(
@@ -453,6 +507,55 @@ export default function StatisticsPage() {
       mode,
       target: toTaskActionTarget(selectedTask.cell, selectedTask.stage),
     });
+  }
+
+  function openPublicationDialog(chapter: StatisticsChapterRow): void {
+    setPublicationNotificationError(null);
+    setPublishingChapter(chapter);
+  }
+
+  function submitPublication(input: {
+    readonly notify?: boolean;
+    readonly publicationUrl?: string;
+  }): void {
+    if (!publishingChapter || !activeWorkspaceId) return;
+    setPublicationNotificationError(null);
+    publicationMutation.mutate(
+      {
+        chapterId: publishingChapter.chapterId,
+        publicationStatus: 'PUBLISHED',
+        ...input,
+      },
+      {
+        onSuccess: (result) => {
+          if (
+            result.notificationStatus === 'SENT' ||
+            result.notificationStatus === 'NOT_REQUESTED'
+          ) {
+            setPublishingChapter(null);
+            setPublicationNotificationError(null);
+            toast.success(
+              result.notificationStatus === 'SENT'
+                ? t(translations.statistics.publicationNotificationSent)
+                : t(translations.statistics.publicationSuccess),
+            );
+            return;
+          }
+          const message = t(
+            result.notificationStatus === 'NOT_CONFIGURED'
+              ? translations.statistics.publicationNotificationNotConfigured
+              : translations.statistics.publicationNotificationFailed,
+          );
+          setPublicationNotificationError(message);
+          toast.error(message);
+        },
+        onError: (mutationError: Error) => {
+          const message = formatError(mutationError);
+          setPublicationNotificationError(message);
+          toast.error(message);
+        },
+      },
+    );
   }
 
   if (!activeWorkspaceId) {
@@ -570,7 +673,7 @@ export default function StatisticsPage() {
           </Empty>
         ) : statisticsQuery.isLoading ? <StatisticsTableSkeleton label={t(translations.statistics.loading)} /> : statisticsQuery.data?.items.length === 0 ? (
           <Empty className="min-h-72 border-0 bg-muted/20"><EmptyHeader><EmptyMedia variant="icon"><Circle /></EmptyMedia><EmptyTitle>{t(translations.statistics.empty)}</EmptyTitle><EmptyDescription>{t(translations.statistics.emptyDescription)}</EmptyDescription></EmptyHeader></Empty>
-         ) : canShowTable && statisticsQuery.data ? <StatisticsTable language={language} onSelect={setSelectedTaskReference} result={statisticsQuery.data} t={t} /> : null}
+         ) : canShowTable && statisticsQuery.data ? <StatisticsTable language={language} onPublish={openPublicationDialog} onSelect={setSelectedTaskReference} result={statisticsQuery.data} t={t} /> : null}
         {statisticsQuery.data && statisticsQuery.data.total > 0 ? <div className="flex flex-col gap-3 border-t border-border/60 px-4 py-4 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-6"><span className="text-muted-foreground">{t(translations.statistics.pageSummary, { count: statisticsQuery.data.total, current: statisticsQuery.data.page + 1, total: statisticsQuery.data.pageCount })}</span><div className="flex gap-2"><Button disabled={statisticsQuery.isFetching || filters.page <= 0} onClick={() => updateFilter('page', Math.max(0, filters.page - 1))} size="sm" variant="outline"><ChevronLeft aria-hidden="true" />{t(translations.statistics.previousPage)}</Button><Button disabled={statisticsQuery.isFetching || filters.page + 1 >= statisticsQuery.data.pageCount} onClick={() => updateFilter('page', filters.page + 1)} size="sm">{t(translations.statistics.nextPage)}<ChevronRight aria-hidden="true" /></Button></div></div> : null}
       </Card>
 
@@ -610,12 +713,33 @@ export default function StatisticsPage() {
         query={summaryQuery}
         t={t}
       />
+
+      <ChapterPublicationDialog
+        chapter={
+          publishingChapter
+            ? { ...publishingChapter, id: publishingChapter.chapterId }
+            : null
+        }
+        errorMessage={publicationNotificationError}
+        isPending={publicationMutation.isPending}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPublishingChapter(null);
+            setPublicationNotificationError(null);
+          }
+        }}
+        onSubmit={submitPublication}
+      />
     </section>
   );
 }
 
 function PageIntro({ t }: { readonly t: ReturnType<typeof useTranslation>['t'] }) {
   return <div><h2 className="text-2xl font-extrabold tracking-tight">{t(translations.statistics.title)}</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{t(translations.statistics.description)}</p></div>;
+}
+
+function getChapterDetailPath(storyId: string, chapterId: string): string {
+  return `/stories/${encodeURIComponent(storyId)}/chapter/${encodeURIComponent(chapterId)}`;
 }
 
 function TaskDetail({
@@ -755,9 +879,9 @@ function StatisticsSummaryContent({
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="sticky top-0 z-10 w-[34%] border-r border-border/60 bg-muted/95 text-center">{t(translations.statistics.summaryWorkflow)}</TableHead>
-              <TableHead className="sticky top-0 z-10 w-[28%] border-r border-border/60 bg-muted/95">{t(translations.statistics.summaryStage)}</TableHead>
-              <TableHead className="sticky top-0 z-10 w-[16%] border-r border-border/60 bg-muted/95 text-right">{t(translations.statistics.summaryTaskCount)}</TableHead>
-              <TableHead className="sticky top-0 z-10 w-[22%] bg-muted/95 text-right">{t(translations.statistics.summaryTotalAmount)}</TableHead>
+              <TableHead className="sticky top-0 z-10 w-[28%] border-r border-border/60 bg-muted/95 text-center">{t(translations.statistics.summaryStage)}</TableHead>
+              <TableHead className="sticky top-0 z-10 w-[16%] border-r border-border/60 bg-muted/95 text-center">{t(translations.statistics.summaryTaskCount)}</TableHead>
+              <TableHead className="sticky top-0 z-10 w-[22%] bg-muted/95 text-center">{t(translations.statistics.summaryTotalAmount)}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

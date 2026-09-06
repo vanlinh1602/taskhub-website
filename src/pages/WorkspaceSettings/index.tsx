@@ -525,6 +525,7 @@ export default function WorkspaceSettingsPage() {
       data.folders.bankQr.googleDriveFolderId,
       data.channels.storyWorkflow.discordChannelId,
       data.channels.storyNotification.discordChannelId,
+      data.channels.storyPublicationNotification.discordChannelId,
       data.channels.extensionRequest.discordChannelId,
     ].filter(Boolean).length;
   }, [settingsQuery.data]);
@@ -625,7 +626,7 @@ export default function WorkspaceSettingsPage() {
               </span>
               <ConfiguredBadge
                 configured={configuredCount > 0}
-                label={`${configuredCount}/7 ${t(translations.workspaceSettings.configured).toLocaleLowerCase()}`}
+                label={`${configuredCount}/8 ${t(translations.workspaceSettings.configured).toLocaleLowerCase()}`}
               />
             </div>
             <h2 className="mt-3 truncate text-3xl font-extrabold tracking-tight sm:text-4xl">
@@ -759,6 +760,20 @@ export default function WorkspaceSettingsPage() {
               channel="storyNotification"
               channelId={channelValue(settings.channels.storyNotification)}
               label={t(translations.workspaceSettings.channelStoryNotification)}
+              onUpdate={updateChannel}
+              options={textChannels}
+              pending={updateChannelMutation.isPending}
+              t={t}
+            />
+            <ChannelSection
+              channel="storyPublicationNotification"
+              channelId={channelValue(
+                settings.channels.storyPublicationNotification,
+              )}
+              label={t(
+                translations.workspaceSettings
+                  .channelStoryPublicationNotification,
+              )}
               onUpdate={updateChannel}
               options={textChannels}
               pending={updateChannelMutation.isPending}

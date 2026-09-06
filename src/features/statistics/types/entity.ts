@@ -53,6 +53,8 @@ export interface StatisticsChapterRow {
   readonly storyTitle: string;
   readonly chapterId: string;
   readonly chapterName: string;
+  readonly publicationStatus: 'PUBLISHED' | 'UNPUBLISHED';
+  readonly publicationUrl: string | null;
   readonly stages: Readonly<Record<string, StatisticsTaskCell | null>>;
 }
 

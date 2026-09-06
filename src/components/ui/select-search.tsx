@@ -416,7 +416,7 @@ export default function SearchSelect({
         <span
           className={cn(
             'truncate text-left text-sm',
-            value?.muted === true ? 'text-[#9aa0a6]' : 'text-foreground',
+            value?.muted === true ? 'text-muted-foreground' : 'text-foreground',
           )}
         >
           {value ? (
@@ -520,7 +520,7 @@ export default function SearchSelect({
                     'relative flex w-full cursor-default select-none items-center justify-between rounded-sm py-1.5 pl-2 pr-2 text-sm outline-none',
                     highlight === idx && 'bg-accent',
                     isMuted
-                      ? 'text-[#9aa0a6]'
+                      ? 'text-muted-foreground'
                       : highlight === idx
                         ? 'text-accent-foreground'
                         : 'text-foreground',
@@ -638,7 +638,7 @@ export default function SearchSelect({
                           'relative flex w-full cursor-default select-none items-center justify-between rounded-sm py-1.5 pl-2 pr-2 text-sm outline-none',
                           highlight === idx && 'bg-accent',
                           isMuted
-                            ? 'text-[#9aa0a6]'
+                            ? 'text-muted-foreground'
                             : highlight === idx
                               ? 'text-accent-foreground'
                               : 'text-foreground',

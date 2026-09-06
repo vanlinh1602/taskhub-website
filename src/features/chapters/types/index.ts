@@ -9,6 +9,8 @@ export type {
   ChapterPage,
   ChapterPaymentStatus,
   ChapterPriority,
+  ChapterPublicationNotificationStatus,
+  ChapterPublicationResult,
   ChapterTask,
   ChapterTaskStatus,
   ChapterWorkflowFilter,
@@ -17,5 +19,6 @@ export type {
   CreateChapterInput,
   DeductChapterTaskInput,
   UpdateChapterConfigurationInput,
+  UpdateChapterPublicationInput,
   UpdateChapterTaskInput,
 } from './entity';

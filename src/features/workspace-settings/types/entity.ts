@@ -5,6 +5,7 @@ export type WorkspaceFolderKey = 'storyWorkflow' | 'bankQr';
 export type WorkspaceChannelKey =
   | 'storyWorkflow'
   | 'storyNotification'
+  | 'storyPublicationNotification'
   | 'extensionRequest';
 
 export interface WorkspaceSettingRole {
@@ -41,6 +42,7 @@ export interface WorkspaceSettings {
   readonly channels: {
     readonly storyWorkflow: WorkspaceSettingChannel;
     readonly storyNotification: WorkspaceSettingChannel;
+    readonly storyPublicationNotification: WorkspaceSettingChannel;
     readonly extensionRequest: WorkspaceSettingChannel;
   };
 }

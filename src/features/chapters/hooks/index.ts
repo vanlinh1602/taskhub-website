@@ -3,6 +3,7 @@ export {
   invalidateChapterConfigurationQueries,
   invalidateChapterDeleteQueries,
   invalidateChapterListQueries,
+  invalidateChapterPublicationQueries,
   invalidateChapterTaskQueries,
   type UpdateChapterConfigurationMutationInput,
   type UpdateChapterPublicationMutationInput,

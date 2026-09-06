@@ -55,6 +55,7 @@ import {
 } from '@/components/ui/table';
 import { ChapterActionsMenu } from '@/features/chapters/components/chapter-actions-menu';
 import { ChapterDeleteDialog } from '@/features/chapters/components/chapter-delete-dialog';
+import ChapterPublicationDialog from '@/features/chapters/components/ChapterPublicationDialog';
 import {
   useChaptersQuery,
   useCreateChapterMutation,
@@ -102,6 +103,11 @@ export default function StoryDetailPage(): ReactNode {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingChapter, setEditingChapter] = useState<Chapter | null>(null);
   const [deletingChapter, setDeletingChapter] = useState<Chapter | null>(null);
+  const [publishingChapter, setPublishingChapter] = useState<Chapter | null>(
+    null,
+  );
+  const [publicationNotificationError, setPublicationNotificationError] =
+    useState<string | null>(null);
   const storyQuery = useStoryQuery(workspaceId, storyId);
   const chaptersQuery = useChaptersQuery(
     workspaceId,
@@ -146,16 +152,65 @@ export default function StoryDetailPage(): ReactNode {
   }
 
   function togglePublication(chapter: Chapter): void {
+    if (chapter.publicationStatus === 'UNPUBLISHED') {
+      setPublicationNotificationError(null);
+      setPublishingChapter(chapter);
+      return;
+    }
     publicationMutation.mutate(
       {
         chapterId: chapter.id,
-        publicationStatus:
-          chapter.publicationStatus === 'PUBLISHED'
-            ? 'UNPUBLISHED'
-            : 'PUBLISHED',
+        publicationStatus: 'UNPUBLISHED',
+        notify: false,
       },
       {
+        onSuccess: () =>
+          toast.success(t(translations.management.stories.unpublished)),
         onError: (error: Error) => toast.error(formatError(error)),
+      },
+    );
+  }
+
+  function submitPublication(
+    input: { readonly notify?: boolean; readonly publicationUrl?: string },
+  ): void {
+    if (!publishingChapter) return;
+    setPublicationNotificationError(null);
+    publicationMutation.mutate(
+      {
+        chapterId: publishingChapter.id,
+        publicationStatus: 'PUBLISHED',
+        ...input,
+      },
+      {
+        onSuccess: (result) => {
+          if (
+            result.notificationStatus === 'SENT' ||
+            result.notificationStatus === 'NOT_REQUESTED'
+          ) {
+            setPublishingChapter(null);
+            setPublicationNotificationError(null);
+            toast.success(
+              result.notificationStatus === 'SENT'
+                ? t(translations.management.stories.publicationNotificationSent)
+                : t(translations.management.stories.publicationSuccess),
+            );
+            return;
+          }
+          const message = t(
+            result.notificationStatus === 'NOT_CONFIGURED'
+              ? translations.management.stories
+                  .publicationNotificationNotConfigured
+              : translations.management.stories.publicationNotificationFailed,
+          );
+          setPublicationNotificationError(message);
+          toast.error(message);
+        },
+        onError: (error: Error) => {
+          const message = formatError(error);
+          setPublicationNotificationError(message);
+          toast.error(message);
+        },
       },
     );
   }
@@ -496,6 +551,18 @@ export default function StoryDetailPage(): ReactNode {
         isPending={deleteMutation.isPending}
         onConfirm={submitDelete}
         onOpenChange={(open) => !open && setDeletingChapter(null)}
+      />
+      <ChapterPublicationDialog
+        chapter={publishingChapter}
+        errorMessage={publicationNotificationError}
+        isPending={publicationMutation.isPending}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPublishingChapter(null);
+            setPublicationNotificationError(null);
+          }
+        }}
+        onSubmit={submitPublication}
       />
     </section>
   );

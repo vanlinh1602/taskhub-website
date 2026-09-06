@@ -4,9 +4,11 @@ import formatError from '@/utils/formatError';
 import type {
   ChapterDetail,
   ChapterPage,
+  ChapterPublicationResult,
   ChapterWorkflowFilter,
   CreateChapterInput,
   UpdateChapterConfigurationInput,
+  UpdateChapterPublicationInput,
 } from '../types';
 
 export {
@@ -72,13 +74,14 @@ export async function updateChapterPublication(
   workspaceId: string,
   storyId: string,
   chapterId: string,
-  publicationStatus: 'PUBLISHED' | 'UNPUBLISHED',
-): Promise<void> {
-  const response = await backendService.patch(
+  input: UpdateChapterPublicationInput,
+): Promise<ChapterPublicationResult> {
+  const response = await backendService.patch<ChapterPublicationResult>(
     `/api/story-workflow/${encodeURIComponent(workspaceId)}/stories/${encodeURIComponent(storyId)}/chapters/${encodeURIComponent(chapterId)}/publication`,
-    { publicationStatus },
+    input,
   );
-  if (response.kind !== 'ok') throw new Error(formatError(response));
+  if (response.kind === 'ok') return response.data;
+  throw new Error(formatError(response));
 }
 
 export async function updateChapterConfiguration(

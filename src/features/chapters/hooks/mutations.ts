@@ -14,9 +14,12 @@ import {
   updateChapterPublication,
 } from '@/features/chapters/apis';
 import type {
+  ChapterPublicationResult,
   CreateChapterInput,
   UpdateChapterConfigurationInput,
+  UpdateChapterPublicationInput,
 } from '@/features/chapters/types';
+import { statisticsQueryKeys } from '@/features/statistics/hooks';
 import { invalidateTaskMutationQueries } from '@/features/tasks/hooks/mutations';
 
 import { chaptersQueryKeys } from './queryKeys';
@@ -26,9 +29,9 @@ interface UpdateChapterConfigurationMutationInput {
   readonly input: UpdateChapterConfigurationInput;
 }
 
-interface UpdateChapterPublicationMutationInput {
+interface UpdateChapterPublicationMutationInput
+  extends UpdateChapterPublicationInput {
   readonly chapterId: string;
-  readonly publicationStatus: 'PUBLISHED' | 'UNPUBLISHED';
 }
 
 export async function invalidateChapterListQueries(
@@ -86,6 +89,29 @@ export async function invalidateChapterDeleteQueries(
     }),
     queryClient.invalidateQueries({
       queryKey: adminQueryKeys.dashboardRoot(),
+    }),
+  ]);
+}
+
+export async function invalidateChapterPublicationQueries(
+  queryClient: QueryClient,
+  workspaceId: string,
+  storyId: string,
+  chapterId: string,
+): Promise<void> {
+  await Promise.all([
+    invalidateChapterListQueries(queryClient, workspaceId, storyId),
+    queryClient.invalidateQueries({
+      queryKey: chaptersQueryKeys.detail(workspaceId, storyId, chapterId),
+    }),
+    queryClient.invalidateQueries({
+      queryKey: chaptersQueryKeys.detailRoot(),
+    }),
+    queryClient.invalidateQueries({
+      queryKey: adminQueryKeys.dashboardRoot(),
+    }),
+    queryClient.invalidateQueries({
+      queryKey: statisticsQueryKeys.listRoot(),
     }),
   ]);
 }
@@ -156,7 +182,7 @@ export function useUpdateChapterPublicationMutation(
   workspaceId: string,
   storyId: string,
 ): UseMutationResult<
-  void,
+  ChapterPublicationResult,
   Error,
   UpdateChapterPublicationMutationInput,
   unknown
@@ -166,24 +192,21 @@ export function useUpdateChapterPublicationMutation(
   return useMutation({
     mutationFn: ({
       chapterId,
-      publicationStatus,
+      ...input
     }: UpdateChapterPublicationMutationInput) =>
       updateChapterPublication(
         workspaceId,
         storyId,
         chapterId,
-        publicationStatus,
+        input,
       ),
     onSuccess: async (_result, { chapterId }) => {
-      await Promise.all([
-        invalidateChapterListQueries(queryClient, workspaceId, storyId),
-        queryClient.invalidateQueries({
-          queryKey: chaptersQueryKeys.detail(workspaceId, storyId, chapterId),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: adminQueryKeys.dashboardRoot(),
-        }),
-      ]);
+      await invalidateChapterPublicationQueries(
+        queryClient,
+        workspaceId,
+        storyId,
+        chapterId,
+      );
     },
   });
 }

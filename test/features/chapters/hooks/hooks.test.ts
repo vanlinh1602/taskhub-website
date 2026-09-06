@@ -6,6 +6,7 @@ import {
   createChaptersQueryOptions,
   invalidateChapterConfigurationQueries,
   invalidateChapterDeleteQueries,
+  invalidateChapterPublicationQueries,
   invalidateChapterTaskQueries,
 } from '@/features/chapters/hooks';
 
@@ -118,6 +119,24 @@ describe('chapters hooks', () => {
     });
     expect(invalidateQueries).toHaveBeenCalledWith({
       queryKey: ['admin', 'dashboard'],
+    });
+  });
+
+  it('invalidates statistics after a chapter publication changes', async () => {
+    const queryClient = new QueryClient();
+    const invalidateQueries = vi
+      .spyOn(queryClient, 'invalidateQueries')
+      .mockResolvedValue(true);
+
+    await invalidateChapterPublicationQueries(
+      queryClient,
+      'workspace-1',
+      'story-1',
+      'chapter-1',
+    );
+
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['statistics', 'list'],
     });
   });
 });

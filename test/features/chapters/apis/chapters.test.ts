@@ -60,20 +60,30 @@ describe('chapter APIs', () => {
   });
 
   it('patches chapter publication status with the encoded chapter scope', async () => {
+    const result = {
+      notificationStatus: 'NOT_REQUESTED',
+      publicationStatus: 'PUBLISHED',
+      publicationUrl: null,
+    };
     const patch = vi
       .spyOn(backendService, 'patch')
-      .mockResolvedValue({ kind: 'ok', data: null } as never);
+      .mockResolvedValue({ kind: 'ok', data: result } as never);
 
-    await updateChapterPublication(
-      'workspace id',
-      'story/id',
-      'chapter id',
-      'PUBLISHED',
-    );
+    await expect(
+      updateChapterPublication('workspace id', 'story/id', 'chapter id', {
+        notify: true,
+        publicationStatus: 'PUBLISHED',
+        publicationUrl: 'https://example.com/chapter-12',
+      }),
+    ).resolves.toBe(result);
 
     expect(patch).toHaveBeenCalledWith(
       '/api/story-workflow/workspace%20id/stories/story%2Fid/chapters/chapter%20id/publication',
-      { publicationStatus: 'PUBLISHED' },
+      {
+        notify: true,
+        publicationStatus: 'PUBLISHED',
+        publicationUrl: 'https://example.com/chapter-12',
+      },
     );
   });
 
