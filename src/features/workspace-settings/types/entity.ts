@@ -1,4 +1,4 @@
-export type WorkspaceRoleKey = 'manager' | 'admin';
+export type WorkspaceRoleKey = 'manager' | 'admin' | 'chapterNotification';
 
 export type WorkspaceFolderKey = 'storyWorkflow' | 'bankQr';
 
@@ -34,6 +34,7 @@ export interface WorkspaceSettings {
   readonly roles: {
     readonly manager: WorkspaceSettingRole;
     readonly admin: WorkspaceSettingRole;
+    readonly chapterNotification: WorkspaceSettingRole;
   };
   readonly folders: {
     readonly storyWorkflow: WorkspaceSettingFolder;

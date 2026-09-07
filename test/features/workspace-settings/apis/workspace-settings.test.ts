@@ -42,6 +42,11 @@ describe('workspace settings APIs', () => {
       .mockResolvedValue({ kind: 'ok', data: null } as never);
 
     await updateWorkspaceRole('guild/id', 'manager', 'role/id');
+    await updateWorkspaceRole(
+      'guild/id',
+      'chapterNotification',
+      'chapter-role/id',
+    );
     await updateWorkspaceFolder('guild/id', 'storyWorkflow', 'folder/id');
     await updateWorkspaceChannel('guild/id', 'extensionRequest', 'channel/id');
     await updateWorkspaceChannel(
@@ -57,16 +62,21 @@ describe('workspace settings APIs', () => {
     );
     expect(put).toHaveBeenNthCalledWith(
       2,
+      '/api/workspace/guild%2Fid/roles/chapter-notification',
+      { discordRoleId: 'chapter-role/id' },
+    );
+    expect(put).toHaveBeenNthCalledWith(
+      3,
       '/api/workspace/guild%2Fid/folders/story-workflow',
       { googleDriveFolderId: 'folder/id' },
     );
     expect(put).toHaveBeenNthCalledWith(
-      3,
+      4,
       '/api/workspace/guild%2Fid/channels/TASK_DEADLINE_EXTENSION_REQUEST',
       { discordChannelId: 'channel/id' },
     );
     expect(put).toHaveBeenNthCalledWith(
-      4,
+      5,
       '/api/workspace/guild%2Fid/channels/STORY_PUBLICATION_NOTIFICATION',
       { discordChannelId: 'publication-channel/id' },
     );
@@ -85,6 +95,7 @@ describe('workspace settings APIs', () => {
       timezone: 'Asia/Ho_Chi_Minh',
     });
     await deleteWorkspaceRole('guild/id', 'admin');
+    await deleteWorkspaceRole('guild/id', 'chapterNotification');
 
     expect(patch).toHaveBeenCalledWith(
       '/api/workspace/guild%2Fid/settings',
@@ -92,6 +103,10 @@ describe('workspace settings APIs', () => {
     );
     expect(remove).toHaveBeenCalledWith(
       '/api/workspace/guild%2Fid/roles/admin',
+    );
+    expect(remove).toHaveBeenNthCalledWith(
+      2,
+      '/api/workspace/guild%2Fid/roles/chapter-notification',
     );
   });
 });

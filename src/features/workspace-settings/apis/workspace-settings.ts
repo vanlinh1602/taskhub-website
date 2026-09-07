@@ -18,6 +18,12 @@ const folderRouteTypes: Record<WorkspaceFolderKey, string> = {
   storyWorkflow: 'story-workflow',
 };
 
+const roleRouteTypes: Record<WorkspaceRoleKey, string> = {
+  admin: 'admin',
+  chapterNotification: 'chapter-notification',
+  manager: 'manager',
+};
+
 const channelRouteTypes: Record<WorkspaceChannelKey, string> = {
   extensionRequest: 'TASK_DEADLINE_EXTENSION_REQUEST',
   storyNotification: 'STORY_NOTIFICATION',
@@ -75,7 +81,7 @@ export async function updateWorkspaceRole(
   discordRoleId: string,
 ): Promise<void> {
   const response = await backendService.put<null>(
-    `${workspacePath(workspaceId)}/roles/${encodeURIComponent(role)}`,
+    `${workspacePath(workspaceId)}/roles/${encodeURIComponent(roleRouteTypes[role])}`,
     { discordRoleId },
   );
   if (response.kind === 'ok') return;
@@ -87,7 +93,7 @@ export async function deleteWorkspaceRole(
   role: WorkspaceRoleKey,
 ): Promise<void> {
   const response = await backendService.delete<null>(
-    `${workspacePath(workspaceId)}/roles/${encodeURIComponent(role)}`,
+    `${workspacePath(workspaceId)}/roles/${encodeURIComponent(roleRouteTypes[role])}`,
   );
   if (response.kind === 'ok') return;
   return throwApiError(response);

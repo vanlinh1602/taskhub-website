@@ -487,7 +487,7 @@ function ConfigurationSummary({
   readonly isActive: boolean;
   readonly t: ReturnType<typeof useTranslation>['t'];
 }) {
-  const progress = Math.round((configuredCount / 8) * 100);
+  const progress = Math.round((configuredCount / 9) * 100);
 
   return (
     <div className="relative overflow-hidden rounded-[1.75rem] border border-border/70 bg-card shadow-[var(--soft-shadow)]">
@@ -502,8 +502,8 @@ function ConfigurationSummary({
               {t(translations.workspaceSettings.serverStatus)}
             </span>
             <ConfiguredBadge
-              configured={configuredCount === 8}
-              label={`${configuredCount}/8 ${t(translations.workspaceSettings.configured).toLocaleLowerCase()}`}
+              configured={configuredCount === 9}
+              label={`${configuredCount}/9 ${t(translations.workspaceSettings.configured).toLocaleLowerCase()}`}
             />
           </div>
           <h2 className="mt-4 truncate text-3xl font-extrabold tracking-tight sm:text-4xl">
@@ -542,7 +542,7 @@ function ConfigurationSummary({
               <p className="mt-2 text-4xl font-extrabold tracking-tight">
                 {configuredCount}
                 <span className="text-lg font-semibold text-muted-foreground">
-                  /8
+                  /9
                 </span>
               </p>
             </div>
@@ -677,6 +677,7 @@ export default function WorkspaceSettingsPage() {
     return [
       data.roles.manager.discordRoleId,
       data.roles.admin.discordRoleId,
+      data.roles.chapterNotification.discordRoleId,
       data.folders.storyWorkflow.googleDriveFolderId,
       data.folders.bankQr.googleDriveFolderId,
       data.channels.storyWorkflow.discordChannelId,
@@ -774,6 +775,7 @@ export default function WorkspaceSettingsPage() {
   const roleCount = [
     settings.roles.manager.discordRoleId,
     settings.roles.admin.discordRoleId,
+    settings.roles.chapterNotification.discordRoleId,
   ].filter(Boolean).length;
   const folderCount = [
     settings.folders.storyWorkflow.googleDriveFolderId,
@@ -849,6 +851,20 @@ export default function WorkspaceSettingsPage() {
                   role="admin"
                   roleId={settings.roles.admin.discordRoleId}
                   roleLabel={t(translations.workspaceSettings.admin)}
+                  roleOptions={roles}
+                  t={t}
+                />
+                <RoleSection
+                  onRemove={setRoleToRemove}
+                  onUpdate={updateRole}
+                  pending={
+                    updateRoleMutation.isPending || deleteRoleMutation.isPending
+                  }
+                  role="chapterNotification"
+                  roleId={settings.roles.chapterNotification.discordRoleId}
+                  roleLabel={t(
+                    translations.workspaceSettings.chapterNotification,
+                  )}
                   roleOptions={roles}
                   t={t}
                 />
@@ -955,8 +971,8 @@ export default function WorkspaceSettingsPage() {
               {
                 icon: <MessageSquare aria-hidden="true" className="size-4" />,
                 label: t(translations.workspaceSettings.discordIntegration),
-                progress: ((roleCount + channelCount) / 6) * 100,
-                value: `${roleCount + channelCount}/6`,
+                progress: ((roleCount + channelCount) / 7) * 100,
+                value: `${roleCount + channelCount}/7`,
               },
               {
                 icon: <FolderOpen aria-hidden="true" className="size-4" />,
