@@ -5,6 +5,16 @@ export interface PayrollTotals {
   readonly total: number;
 }
 
+export interface PayrollRewardBreakdown {
+  readonly stageDefinitionId: string;
+  readonly stageCode: string;
+  readonly stageName: string;
+  readonly eligibleTaskCount: number;
+  readonly rewardRate: number | null;
+  readonly rewardTotal: number;
+  readonly nextThreshold: number | null;
+}
+
 export interface PayrollSummary {
   readonly taskCount: number;
   readonly baseTotals: readonly PayrollTotals[];
@@ -12,6 +22,7 @@ export interface PayrollSummary {
   readonly rewardRate: number | null;
   readonly nextThreshold: number | null;
   readonly rewardTotal: number;
+  readonly rewardBreakdowns: readonly PayrollRewardBreakdown[];
   readonly grandTotals: readonly PayrollTotals[];
   readonly latestPaidAt: string | null;
 }
@@ -78,8 +89,9 @@ export interface PayrollPaymentResult {
   readonly taskCount: number;
   readonly baseTotals: readonly PayrollTotals[];
   readonly rewardEligibleTaskCount: number;
-  readonly rewardRate: number;
+  readonly rewardRate: number | null;
   readonly rewardTotal: number;
+  readonly rewardBreakdowns: readonly PayrollRewardBreakdown[];
   readonly grandTotals: readonly PayrollTotals[];
 }
 

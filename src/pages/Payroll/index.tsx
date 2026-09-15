@@ -72,6 +72,7 @@ import {
 } from '@/features/payroll/hooks';
 import type {
   PayrollRecipient,
+  PayrollRewardBreakdown,
   PayrollStatus,
   PayrollSummary,
   PayrollTask,
@@ -593,6 +594,48 @@ function SummaryMetric({
   );
 }
 
+function PayrollRewardBreakdownList({
+  breakdowns,
+  language,
+}: {
+  readonly breakdowns: readonly PayrollRewardBreakdown[];
+  readonly language: string;
+}) {
+  const visibleBreakdowns = breakdowns.filter(
+    (breakdown) =>
+      breakdown.eligibleTaskCount > 0 || breakdown.rewardTotal > 0,
+  );
+  if (!visibleBreakdowns.length) return null;
+  return (
+    <div className="space-y-1 rounded-xl bg-primary/5 px-3 py-2 text-xs leading-5 text-muted-foreground">
+      {visibleBreakdowns.map((breakdown) => (
+        <p className="flex items-start justify-between gap-3" key={breakdown.stageDefinitionId}>
+          <span className="min-w-0 truncate font-medium text-foreground" title={breakdown.stageName}>
+            {breakdown.stageName}
+          </span>
+          <span className="shrink-0 text-right">
+            {breakdown.rewardRate !== null
+              ? `${breakdown.eligibleTaskCount} × ${formatMoney(
+                  String(breakdown.rewardRate),
+                  'VND',
+                  language,
+                )} = ${formatMoney(
+                  String(breakdown.rewardTotal),
+                  'VND',
+                  language,
+                )}`
+              : formatMoney(
+                  String(breakdown.rewardTotal),
+                  'VND',
+                  language,
+                )}
+          </span>
+        </p>
+      ))}
+    </div>
+  );
+}
+
 function PayrollDetailPanel({
   bankQrUrl,
   dateFormatter,
@@ -660,6 +703,11 @@ function PayrollDetailPanel({
 
   if (!detail) return null;
   const { recipient } = detail;
+  const rewardBreakdowns = recipient.rewardBreakdowns ?? [];
+  const visibleRewardBreakdowns = rewardBreakdowns.filter(
+    (breakdown) =>
+      breakdown.eligibleTaskCount > 0 || breakdown.rewardTotal > 0,
+  );
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <SheetHeader className="border-b border-border/60 p-0 pb-5">
@@ -714,7 +762,13 @@ function PayrollDetailPanel({
           />
         </div>
 
-        {recipient.rewardRate !== null && recipient.nextThreshold !== null ? (
+        {visibleRewardBreakdowns.length ? (
+          <PayrollRewardBreakdownList
+            breakdowns={rewardBreakdowns}
+            language={language}
+          />
+        ) : recipient.rewardRate !== null &&
+          recipient.nextThreshold !== null ? (
           <p className="rounded-xl bg-primary/5 px-3 py-2 text-xs leading-5 text-muted-foreground">
             {recipient.rewardRate > 0
               ? `${formatMoney(String(recipient.rewardRate), 'VND', language)} / task`
