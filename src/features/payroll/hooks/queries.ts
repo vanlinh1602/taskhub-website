@@ -2,10 +2,15 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
 import {
   getPayrollBankQr,
+  getPayrollBatch,
+  getPayrollBatches,
   getPayrollRecipient,
   getPayrollRecipients,
 } from '@/features/payroll/apis';
 import type {
+  PayrollBatchDetail,
+  PayrollBatchDetailQuery,
+  PayrollBatchSummary,
   PayrollListQuery,
   PayrollRecipientDetail,
   PayrollRecipientList,
@@ -14,6 +19,31 @@ import type {
 import { payrollQueryKeys } from './queryKeys';
 
 const PAYROLL_STALE_TIME = 30000;
+
+export function usePayrollBatchesQuery(
+  workspaceId: string,
+): UseQueryResult<readonly PayrollBatchSummary[], Error> {
+  return useQuery({
+    enabled: workspaceId.length > 0,
+    queryFn: () => getPayrollBatches(workspaceId),
+    queryKey: payrollQueryKeys.batches(workspaceId),
+    staleTime: PAYROLL_STALE_TIME,
+  });
+}
+
+export function usePayrollBatchQuery(
+  workspaceId: string,
+  batchId: string,
+  query: PayrollBatchDetailQuery,
+  enabled = true,
+): UseQueryResult<PayrollBatchDetail, Error> {
+  return useQuery({
+    enabled: enabled && workspaceId.length > 0 && batchId.length > 0,
+    queryFn: () => getPayrollBatch(workspaceId, batchId, query),
+    queryKey: payrollQueryKeys.batchDetail(workspaceId, batchId, query),
+    staleTime: PAYROLL_STALE_TIME,
+  });
+}
 
 export function usePayrollRecipientsQuery(
   workspaceId: string,

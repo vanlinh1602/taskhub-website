@@ -101,3 +101,60 @@ export interface PayrollRewardRecalculationResult {
   readonly recipientCount: number;
   readonly rewardTotal: number;
 }
+
+export type PayrollBatchStatus =
+  | 'OPEN'
+  | 'PARTIALLY_PAID'
+  | 'PAID'
+  | 'CANCELLED';
+
+export interface PayrollBatchSummary {
+  readonly id: string;
+  readonly cutoffAt: string;
+  readonly createdAt: string;
+  readonly createdByDiscordUserId: string;
+  readonly status: PayrollBatchStatus;
+  readonly taskCount: number;
+  readonly recipientCount: number;
+  readonly paidRecipientCount: number;
+  readonly baseTotals: readonly PayrollTotals[];
+  readonly rewardTotal: number;
+  readonly grandTotals: readonly PayrollTotals[];
+  readonly paidAt: string | null;
+  readonly cancelledAt: string | null;
+}
+
+export interface PayrollBatchRecipient {
+  readonly discordUserId: string;
+  readonly displayName: string;
+  readonly username: string | null;
+  readonly avatarUrl: string | null;
+  readonly taskCount: number;
+  readonly baseTotals: readonly PayrollTotals[];
+  readonly rewardTotal: number;
+  readonly grandTotals: readonly PayrollTotals[];
+  readonly status: 'PENDING' | 'PAID';
+  readonly paidAt: string | null;
+}
+
+export interface PayrollBatchTask extends PayrollTask {
+  readonly recipientDiscordUserId: string;
+}
+
+export interface PayrollBatchDetail extends PayrollBatchSummary {
+  readonly recipients: readonly PayrollBatchRecipient[];
+  readonly tasks: readonly PayrollBatchTask[];
+  readonly page: number;
+  readonly pageCount: number;
+  readonly total: number;
+}
+
+export interface PayrollBatchDetailQuery {
+  readonly recipientDiscordUserId?: string;
+  readonly page: number;
+  readonly pageSize: number;
+}
+
+export interface PayrollBatchPaymentResult extends PayrollPaymentResult {
+  readonly batchId: string;
+}

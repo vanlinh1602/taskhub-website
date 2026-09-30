@@ -3,11 +3,19 @@ import formatError from '@/utils/formatError';
 
 import type {
   PayrollListQuery,
-  PayrollPaymentResult,
   PayrollRecipientDetail,
   PayrollRecipientList,
   PayrollRewardRecalculationResult,
 } from '../types';
+
+export {
+  cancelPayrollBatch,
+  createPayrollBatch,
+  getPayrollBatch,
+  getPayrollBatches,
+  payPayrollBatchRecipient,
+  updatePayrollBatchTaskPrice,
+} from './payroll-batches';
 
 export function createPayrollQuery(query: PayrollListQuery): string {
   const params = new URLSearchParams({
@@ -57,20 +65,6 @@ export async function getPayrollBankQr(
     createPayrollPath(
       workspaceId,
       `/recipients/${encodeURIComponent(discordUserId)}/bank-qr`,
-    ),
-  );
-  if (response.kind === 'ok') return response.data;
-  throw new Error(formatError(response));
-}
-
-export async function payPayrollRecipient(
-  workspaceId: string,
-  discordUserId: string,
-): Promise<PayrollPaymentResult> {
-  const response = await backendService.post<PayrollPaymentResult>(
-    createPayrollPath(
-      workspaceId,
-      `/recipients/${encodeURIComponent(discordUserId)}/pay`,
     ),
   );
   if (response.kind === 'ok') return response.data;

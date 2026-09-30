@@ -9,9 +9,16 @@ import { adminQueryKeys } from '@/features/admin/hooks';
 import { chaptersQueryKeys } from '@/features/chapters/hooks';
 import { tasksQueryKeys } from '@/features/tasks/hooks';
 
-import { payPayrollRecipient, recalculatePayrollRewards } from '../apis';
+import {
+  cancelPayrollBatch,
+  createPayrollBatch,
+  payPayrollBatchRecipient,
+  recalculatePayrollRewards,
+  updatePayrollBatchTaskPrice,
+} from '../apis';
 import type {
-  PayrollPaymentResult,
+  PayrollBatchPaymentResult,
+  PayrollBatchSummary,
   PayrollRewardRecalculationResult,
 } from '../types';
 import { payrollQueryKeys } from './queryKeys';
@@ -22,22 +29,60 @@ export async function invalidatePayrollQueries(
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: payrollQueryKeys.listRoot() }),
     queryClient.invalidateQueries({ queryKey: payrollQueryKeys.detailRoot() }),
+    queryClient.invalidateQueries({ queryKey: payrollQueryKeys.batchesRoot() }),
+    queryClient.invalidateQueries({ queryKey: payrollQueryKeys.batchDetailRoot() }),
     queryClient.invalidateQueries({ queryKey: adminQueryKeys.dashboardRoot() }),
     queryClient.invalidateQueries({ queryKey: tasksQueryKeys.listRoot() }),
     queryClient.invalidateQueries({ queryKey: chaptersQueryKeys.detailRoot() }),
   ]);
 }
 
-export function usePayPayrollRecipientMutation(
+export function useCreatePayrollBatchMutation(
   workspaceId: string,
-): UseMutationResult<PayrollPaymentResult, Error, string, unknown> {
+): UseMutationResult<PayrollBatchSummary, Error, string, unknown> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (cutoffAt: string) => createPayrollBatch(workspaceId, cutoffAt),
+    onSuccess: async () => invalidatePayrollQueries(queryClient),
+  });
+}
+
+export function usePayPayrollBatchRecipientMutation(
+  workspaceId: string,
+  batchId: string,
+): UseMutationResult<PayrollBatchPaymentResult, Error, string, unknown> {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (discordUserId: string) =>
-      payPayrollRecipient(workspaceId, discordUserId),
-    onSuccess: async () => {
-      await invalidatePayrollQueries(queryClient);
-    },
+      payPayrollBatchRecipient(workspaceId, batchId, discordUserId),
+    onSuccess: async () => invalidatePayrollQueries(queryClient),
+  });
+}
+
+export function useCancelPayrollBatchMutation(
+  workspaceId: string,
+): UseMutationResult<PayrollBatchSummary, Error, string, unknown> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (batchId: string) => cancelPayrollBatch(workspaceId, batchId),
+    onSuccess: async () => invalidatePayrollQueries(queryClient),
+  });
+}
+
+export function useUpdatePayrollBatchTaskPriceMutation(
+  workspaceId: string,
+  batchId: string,
+): UseMutationResult<
+  { readonly taskId: string; readonly agreedPrice: string },
+  Error,
+  { readonly taskId: string; readonly agreedPrice: string },
+  unknown
+> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ taskId, agreedPrice }) =>
+      updatePayrollBatchTaskPrice(workspaceId, batchId, taskId, agreedPrice),
+    onSuccess: async () => invalidatePayrollQueries(queryClient),
   });
 }
 

@@ -1,0 +1,46 @@
+{
+  "title": "Chọn bố cục cho payroll",
+  "question": "Bố cục nào giúp bạn xử lý các đợt lương đang chờ thuận tiện nhất? Hãy chọn cấu trúc bạn muốn dùng làm hướng chính.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Hàng đợi khoản chờ",
+      "kicker": "THE ROLL",
+      "lineage": "Bàn vận hành chốt và chi trả theo đợt",
+      "thesis": "Mỗi lần mở payroll đều cho thấy tổng còn chờ và bước tiếp theo để chốt đợt.",
+      "palette": ["#f8f9ff", "#6166d1", "#d9f9df", "#aee2ff", "#242642"],
+      "materials": ["sổ tác vụ mở", "các điểm nhấn theo token Taskory Hub"],
+      "viewport": "A compact page heading and pending summary lead into the cutoff action, then the waiting batch queue; member breakdown and task details remain one clear step deeper.",
+      "risk": "The member breakdown must stay easy to reach without competing with the batch queue.",
+      "comp": ".impeccable/mocks/decision/payroll-ready-first.png"
+    },
+    {
+      "id": "period-tracker",
+      "label": "Sổ theo đợt",
+      "lineage": "Sổ kỳ lương có mục lục và trang chi tiết",
+      "thesis": "Mỗi đợt lương là một đơn vị riêng để rà soát, chi trả và tra cứu lịch sử.",
+      "palette": ["#f8f9ff", "#6166d1", "#d9f9df", "#aee2ff", "#242642"],
+      "materials": ["sổ kỳ lương", "các điểm nhấn theo token Taskory Hub"],
+      "viewport": "A period rail separates waiting and paid runs; each selected run opens into a scan-friendly member summary with paginated task details available from the same workspace.",
+      "risk": "A period-first page can add a selection step before payment when only one run needs attention.",
+      "comp": ".impeccable/mocks/decision/payroll-period-ledger.png"
+    },
+    {
+      "id": "member-ledger",
+      "label": "Sổ theo thành viên",
+      "lineage": "Bảng đối soát khoản phải trả theo người nhận",
+      "thesis": "Các thành viên và số tiền của họ là điểm quét chính; đợt lương giữ vai trò gom nhóm.",
+      "palette": ["#f8f9ff", "#6166d1", "#d9f9df", "#aee2ff", "#242642"],
+      "materials": ["sổ đối soát thành viên", "các điểm nhấn theo token Taskory Hub"],
+      "viewport": "A clear pending and paid switch leads into a member ledger with task count, amount, status, and a direct detail action; period controls sit above the ledger.",
+      "risk": "Batch status and batch-level actions become less prominent beside member rows.",
+      "comp": ".impeccable/mocks/decision/payroll-member-ledger.png"
+    }
+  ],
+  "reroll": true,
+  "buildPath": {
+    "value": "comp",
+    "toggle": true
+  },
+  "steer": true
+}

@@ -1,7 +1,6 @@
 import { format } from 'date-fns';
 import {
   Banknote,
-  Check,
   ChevronLeft,
   ChevronRight,
   CircleDollarSign,
@@ -12,10 +11,9 @@ import {
   RefreshCw,
   ShieldOff,
   UserRound,
-  UsersRound,
   X,
 } from 'lucide-react';
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -64,7 +62,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  usePayPayrollRecipientMutation,
   usePayrollBankQrQuery,
   usePayrollRecipientQuery,
   usePayrollRecipientsQuery,
@@ -82,6 +79,8 @@ import { useWorkspaceStore } from '@/features/workspace/hooks';
 import { translations } from '@/locales/translations';
 import formatError from '@/utils/formatError';
 import { formatMoney } from '@/utils/money';
+
+import PayrollBatchesPanel from './PayrollBatchesPanel';
 
 const PAGE_SIZE = 25;
 const PAYROLL_STATUSES: readonly PayrollStatus[] = ['PENDING', 'PAID'];
@@ -648,7 +647,6 @@ function PayrollDetailPanel({
   isBankQrLoading,
   isPending,
   language,
-  onMarkPaid,
   onNextPage,
   onPreviousPage,
   t,
@@ -668,7 +666,6 @@ function PayrollDetailPanel({
   readonly isBankQrLoading: boolean;
   readonly isPending: boolean;
   readonly language: string;
-  readonly onMarkPaid: () => void;
   readonly onNextPage: () => void;
   readonly onPreviousPage: () => void;
   readonly t: ReturnType<typeof useTranslation>['t'];
@@ -874,16 +871,6 @@ function PayrollDetailPanel({
             </Button>
           </div>
         </div>
-        {status === 'PENDING' ? (
-          <Button disabled={isPending} onClick={onMarkPaid} className="w-full">
-            {isPending ? (
-              <LoaderCircle aria-hidden="true" className="animate-spin" />
-            ) : (
-              <Check aria-hidden="true" />
-            )}
-            {t(translations.management.payroll.markPaid)}
-          </Button>
-        ) : null}
       </div>
     </div>
   );
@@ -898,8 +885,6 @@ export default function PayrollPage() {
   const [selectedRecipient, setSelectedRecipient] = useState<string | null>(
     null,
   );
-  const [confirmRecipient, setConfirmRecipient] =
-    useState<PayrollRecipient | null>(null);
   const [isRecalculateDialogOpen, setIsRecalculateDialogOpen] =
     useState(false);
   const [bankQrUrl, setBankQrUrl] = useState<string | null>(null);
@@ -938,16 +923,10 @@ export default function PayrollPage() {
     selectedRecipient ?? '',
     Boolean(detailQuery.data?.bankQr.configured),
   );
-  const payMutation = usePayPayrollRecipientMutation(activeWorkspaceId);
   const recalculateMutation =
     useRecalculatePayrollRewardsMutation(activeWorkspaceId);
   const pendingSummary: PayrollSummary | undefined = pendingQuery.data?.summary;
   const recipients = activeQuery.data?.items ?? [];
-  const selectedRecipientValue: PayrollRecipient | undefined =
-    recipients.find((recipient) => recipient.discordUserId === selectedRecipient) ??
-    confirmRecipient ??
-    undefined;
-
   useEffect(() => {
     if (!bankQrQuery.data) {
       setBankQrUrl(null);
@@ -963,7 +942,6 @@ export default function PayrollPage() {
     setPage(0);
     setDetailPage(0);
     setSelectedRecipient(null);
-    setConfirmRecipient(null);
   }
 
   function handleSelectRecipient(recipient: PayrollRecipient): void {
@@ -976,43 +954,14 @@ export default function PayrollPage() {
     setPage(0);
     setDetailPage(0);
     setSelectedRecipient(null);
-    setConfirmRecipient(null);
   }
 
   useEffect(() => {
     setPage(0);
     setDetailPage(0);
     setSelectedRecipient(null);
-    setConfirmRecipient(null);
     setPaidDateRange(undefined);
   }, [activeWorkspaceId]);
-
-  function handleRequestPayment(): void {
-    if (selectedRecipientValue && selectedRecipientValue.latestPaidAt === null)
-      setConfirmRecipient(selectedRecipientValue);
-  }
-
-  function handleSubmitPayment(): void {
-    if (!confirmRecipient) return;
-    const memberName = confirmRecipient.displayName;
-    payMutation.mutate(confirmRecipient.discordUserId, {
-      onSuccess: (result) => {
-        setConfirmRecipient(null);
-        setSelectedRecipient(null);
-        toast.success(t(translations.management.payroll.paymentSuccess), {
-          description: t(
-            translations.management.payroll.paymentSuccessDescription,
-            { count: result.taskCount, member: memberName },
-          ),
-        });
-      },
-      onError: (error) => {
-        toast.error(t(translations.management.payroll.paymentFailed), {
-          description: formatError(error),
-        });
-      },
-    });
-  }
 
   function handleSubmitRecalculate(): void {
     recalculateMutation.mutate(undefined, {
@@ -1079,84 +1028,105 @@ export default function PayrollPage() {
 
   return (
     <section className="mx-auto w-full max-w-[1600px] space-y-5">
-      <PageIntro t={t} />
-
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        <StatCard
-          icon={<FileText aria-hidden="true" />}
-          label={t(translations.management.payroll.pendingTasks)}
-          value={String(pendingSummary?.taskCount ?? '—')}
-        />
-        <StatCard
-          icon={<UsersRound aria-hidden="true" />}
-          label={t(translations.management.payroll.pendingMembers)}
-          value={String(pendingQuery.data?.total ?? '—')}
-        />
-        <StatCard
-          icon={<Banknote aria-hidden="true" />}
-          label={t(translations.management.payroll.pendingTotal)}
-          value={formatTotals(pendingSummary?.grandTotals ?? [], language)}
-        />
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <PageIntro t={t} />
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
+          <div
+            aria-label={t(translations.management.payroll.status)}
+            className="flex w-full rounded-xl border border-border/70 bg-muted/30 p-1 sm:w-auto"
+            role="group"
+          >
+            {PAYROLL_STATUSES.map((item) => (
+              <Button
+                aria-pressed={status === item}
+                className="flex-1 rounded-lg sm:flex-none"
+                key={item}
+                onClick={() => handleStatusChange(item)}
+                variant={status === item ? 'default' : 'ghost'}
+              >
+                {item === 'PENDING' ? (
+                  <Clock3 aria-hidden="true" />
+                ) : (
+                  <History aria-hidden="true" />
+                )}
+                {item === 'PENDING'
+                  ? t(translations.management.payroll.pendingTab)
+                  : t(translations.management.payroll.paidTab)}
+              </Button>
+            ))}
+          </div>
+          {status === 'PENDING' ? (
+            <Button
+              className="w-full sm:w-auto"
+              disabled={recalculateMutation.isPending}
+              onClick={() => setIsRecalculateDialogOpen(true)}
+              size="sm"
+              variant="ghost"
+            >
+              {recalculateMutation.isPending ? (
+                <LoaderCircle aria-hidden="true" className="animate-spin" />
+              ) : (
+                <RefreshCw aria-hidden="true" />
+              )}
+              {t(translations.management.payroll.recalculateRewards)}
+            </Button>
+          ) : null}
+        </div>
       </div>
 
+      {status === 'PENDING' ? (
+        <div className="flex flex-col gap-5 rounded-2xl border border-border/70 bg-card px-5 py-4 shadow-sm shadow-black/5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-muted-foreground">
+              {t(translations.management.payroll.pendingTotal)}
+            </p>
+            <p className="mt-1 text-2xl font-bold tracking-tight break-words tabular-nums">
+              {formatTotals(pendingSummary?.grandTotals ?? [], language)}
+            </p>
+          </div>
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-3 border-t border-border/60 pt-4 sm:flex sm:items-center sm:gap-0 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-6">
+            <div className="sm:px-6">
+              <dt className="text-xs text-muted-foreground">
+                {t(translations.management.payroll.pendingTasks)}
+              </dt>
+              <dd className="mt-1 text-lg font-semibold tabular-nums">
+                {pendingSummary?.taskCount ?? '—'}
+              </dd>
+            </div>
+            <div className="sm:border-l sm:border-border/60 sm:px-6">
+              <dt className="text-xs text-muted-foreground">
+                {t(translations.management.payroll.pendingMembers)}
+              </dt>
+              <dd className="mt-1 text-lg font-semibold tabular-nums">
+                {pendingQuery.data?.total ?? '—'}
+              </dd>
+            </div>
+          </dl>
+        </div>
+      ) : null}
+
+      <PayrollBatchesPanel
+        mode={status === 'PENDING' ? 'pending' : 'history'}
+        workspaceId={activeWorkspaceId}
+      />
+
       <Card className="overflow-hidden rounded-2xl border-border/70 shadow-sm shadow-black/5">
-        <CardHeader className="gap-5 border-b border-border/60 bg-card sm:flex sm:flex-row sm:items-end sm:justify-between">
+        <CardHeader className="gap-4 border-b border-border/60 sm:flex sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
             <CardTitle className="text-lg">
-              {getStatusLabel(status, t)}
+              {status === 'PENDING'
+                ? t(translations.management.payroll.memberPayrollTitle)
+                : t(translations.management.payroll.legacyHistoryTitle)}
             </CardTitle>
             <CardDescription>
-              {t(translations.management.payroll.pageDescription)}
+              {status === 'PENDING'
+                ? t(translations.management.payroll.memberPayrollDescription)
+                : t(translations.management.payroll.legacyHistoryDescription)}
             </CardDescription>
           </div>
-          <div className="flex w-full min-w-0 flex-col gap-3 sm:w-auto sm:items-end">
-            {status === 'PENDING' ? (
-              <Button
-                className="w-full sm:w-auto"
-                disabled={recalculateMutation.isPending}
-                onClick={() => setIsRecalculateDialogOpen(true)}
-                size="sm"
-                variant="outline"
-              >
-                {recalculateMutation.isPending ? (
-                  <LoaderCircle aria-hidden="true" className="animate-spin" />
-                ) : (
-                  <RefreshCw aria-hidden="true" />
-                )}
-                {t(translations.management.payroll.recalculateRewards)}
-              </Button>
-            ) : null}
-            <div
-              aria-label={t(translations.management.payroll.status)}
-              className="flex w-full rounded-xl border border-border/70 bg-muted/30 p-1 sm:w-auto"
-              role="tablist"
-            >
-              {PAYROLL_STATUSES.map((item) => (
-                <Button
-                  aria-selected={status === item}
-                  className="flex-1 rounded-lg sm:flex-none"
-                  key={item}
-                  onClick={() => handleStatusChange(item)}
-                  role="tab"
-                  variant={status === item ? 'default' : 'ghost'}
-                >
-                  {item === 'PENDING' ? (
-                    <Clock3 aria-hidden="true" />
-                  ) : (
-                    <History aria-hidden="true" />
-                  )}
-                  {item === 'PENDING'
-                    ? t(translations.management.payroll.pendingTab)
-                    : t(translations.management.payroll.paidTab)}
-                </Button>
-              ))}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0 sm:p-0">
           {status === 'PAID' ? (
-            <div className="flex flex-col gap-3 border-b border-border/60 bg-muted/15 p-4 sm:flex-row sm:items-end sm:p-6">
-              <div className="min-w-0 space-y-1.5 sm:w-80">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <div className="min-w-0 space-y-1.5 sm:w-72">
                 <Label className="text-xs font-semibold text-foreground/75">
                   {t(translations.management.payroll.paidDateRange)}
                 </Label>
@@ -1179,6 +1149,8 @@ export default function PayrollPage() {
               ) : null}
             </div>
           ) : null}
+        </CardHeader>
+        <CardContent className="p-0 sm:p-0">
           {showError ? (
             <Empty className="min-h-72 border-0 bg-destructive/5">
               <EmptyHeader>
@@ -1296,7 +1268,7 @@ export default function PayrollPage() {
         }}
         open={selectedRecipient !== null}
       >
-        <SheetContent className="h-full min-h-0 overflow-hidden p-4 pt-14 data-[side=right]:!w-full sm:!max-w-4xl sm:p-6 sm:pt-6">
+        <SheetContent className="h-full min-h-0 overflow-hidden p-4 pt-14 data-[side=right]:!w-full sm:!max-w-6xl sm:p-6 sm:pt-6">
           {detailQuery.isLoading ? (
             <>
               <SheetHeader className="p-0">
@@ -1321,9 +1293,8 @@ export default function PayrollPage() {
               detailPageCount={detailQuery.data?.pageCount ?? 1}
               isBankQrError={bankQrQuery.isError}
               isBankQrLoading={bankQrQuery.isLoading}
-              isPending={payMutation.isPending}
+              isPending={detailQuery.isFetching}
               language={language}
-              onMarkPaid={handleRequestPayment}
               onNextPage={() => setDetailPage((current) => current + 1)}
               onPreviousPage={() =>
                 setDetailPage((current) => Math.max(0, current - 1))
@@ -1373,51 +1344,6 @@ export default function PayrollPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog
-        onOpenChange={(open) => {
-          if (!open && !payMutation.isPending) setConfirmRecipient(null);
-        }}
-        open={confirmRecipient !== null}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t(translations.management.payroll.confirmTitle)}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {confirmRecipient
-                ? t(translations.management.payroll.confirmDescription, {
-                    count: confirmRecipient.taskCount,
-                    member: confirmRecipient.displayName,
-                  })
-                : null}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="rounded-xl bg-muted/40 px-3 py-3 text-sm">
-            <p className="font-semibold">
-              {confirmRecipient
-                ? formatTotals(confirmRecipient.grandTotals, language)
-                : '—'}
-            </p>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={payMutation.isPending}>
-              {t(translations.management.payroll.cancel)}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              disabled={payMutation.isPending}
-              onClick={handleSubmitPayment}
-            >
-              {payMutation.isPending ? (
-                <LoaderCircle aria-hidden="true" className="animate-spin" />
-              ) : (
-                <Check aria-hidden="true" />
-              )}
-              {t(translations.management.payroll.confirmAction)}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </section>
   );
 }
@@ -1441,31 +1367,5 @@ function PageIntro({
         </p>
       </div>
     </div>
-  );
-}
-
-function StatCard({
-  icon,
-  label,
-  value,
-}: {
-  readonly icon: ReactNode;
-  readonly label: string;
-  readonly value: string;
-}) {
-  return (
-    <Card className="min-w-0 border-border/70 shadow-sm shadow-black/5">
-      <CardContent className="flex min-w-0 items-center gap-3 p-4 sm:p-5">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          {icon}
-        </span>
-        <div className="min-w-0">
-          <p className="text-xs text-muted-foreground">{label}</p>
-          <p className="mt-1 text-lg font-extrabold break-words tabular-nums" title={value}>
-            {value}
-          </p>
-        </div>
-      </CardContent>
-    </Card>
   );
 }

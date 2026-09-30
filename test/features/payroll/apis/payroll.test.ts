@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  createPayrollBatch,
   createPayrollQuery,
   getPayrollBankQr,
+  getPayrollBatch,
+  getPayrollBatches,
   getPayrollRecipient,
   getPayrollRecipients,
-  payPayrollRecipient,
+  payPayrollBatchRecipient,
   recalculatePayrollRewards,
 } from '@/features/payroll/apis';
 import { backendService } from '@/services';
@@ -100,18 +103,62 @@ describe('payroll APIs', () => {
     ).toBe('status=PENDING&page=0&pageSize=25');
   });
 
-  it('marks all pending payroll tasks for a recipient as paid', async () => {
-    const payment = { taskCount: 10 };
+  it('creates a payroll batch and normalizes its numeric ID', async () => {
+    const batch = { id: 42, taskCount: 10 };
+    const post = vi
+      .spyOn(backendService, 'post')
+      .mockResolvedValue({ kind: 'ok', data: batch } as never);
+
+    await expect(
+      createPayrollBatch('workspace/id', '2026-08-31T17:00:00.000Z'),
+    ).resolves.toEqual({ id: '42', taskCount: 10 });
+
+    expect(post).toHaveBeenCalledWith(
+      '/api/story-workflow/workspace%2Fid/payroll/batches',
+      { cutoffAt: '2026-08-31T17:00:00.000Z' },
+    );
+  });
+
+  it('normalizes numeric batch IDs returned by the API', async () => {
+    const get = vi.spyOn(backendService, 'get').mockResolvedValue(
+      { kind: 'ok', data: [{ id: 42 }] } as never,
+    );
+
+    await expect(getPayrollBatches('workspace/id')).resolves.toEqual([
+      { id: '42' },
+    ]);
+
+    expect(get).toHaveBeenCalledWith(
+      '/api/story-workflow/workspace%2Fid/payroll/batches',
+    );
+  });
+
+  it('loads batch task pages and pays the selected batch recipient', async () => {
+    const detail = { id: 42, tasks: [], recipients: [] };
+    const get = vi
+      .spyOn(backendService, 'get')
+      .mockResolvedValue({ kind: 'ok', data: detail } as never);
+    const payment = { batchId: 'batch-1', taskCount: 10 };
     const post = vi
       .spyOn(backendService, 'post')
       .mockResolvedValue({ kind: 'ok', data: payment } as never);
 
     await expect(
-      payPayrollRecipient('workspace/id', 'member/id'),
+      getPayrollBatch('workspace/id', 'batch/1', {
+        recipientDiscordUserId: 'member/id',
+        page: 2,
+        pageSize: 25,
+      }),
+    ).resolves.toEqual({ ...detail, id: '42' });
+    await expect(
+      payPayrollBatchRecipient('workspace/id', 'batch/1', 'member/id'),
     ).resolves.toBe(payment);
 
+    expect(get).toHaveBeenCalledWith(
+      '/api/story-workflow/workspace%2Fid/payroll/batches/batch%2F1?page=2&pageSize=25&recipientDiscordUserId=member%2Fid',
+    );
     expect(post).toHaveBeenCalledWith(
-      '/api/story-workflow/workspace%2Fid/payroll/recipients/member%2Fid/pay',
+      '/api/story-workflow/workspace%2Fid/payroll/batches/batch%2F1/recipients/member%2Fid/pay',
     );
   });
 

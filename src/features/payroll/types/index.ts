@@ -1,5 +1,12 @@
 export type {
   PayrollBankQr,
+  PayrollBatchDetail,
+  PayrollBatchDetailQuery,
+  PayrollBatchPaymentResult,
+  PayrollBatchRecipient,
+  PayrollBatchStatus,
+  PayrollBatchSummary,
+  PayrollBatchTask,
   PayrollListQuery,
   PayrollPaymentResult,
   PayrollRecipient,

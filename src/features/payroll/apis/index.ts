@@ -1,8 +1,13 @@
 export {
+  cancelPayrollBatch,
+  createPayrollBatch,
   createPayrollQuery,
   getPayrollBankQr,
+  getPayrollBatch,
+  getPayrollBatches,
   getPayrollRecipient,
   getPayrollRecipients,
-  payPayrollRecipient,
+  payPayrollBatchRecipient,
   recalculatePayrollRewards,
+  updatePayrollBatchTaskPrice,
 } from './payroll';
