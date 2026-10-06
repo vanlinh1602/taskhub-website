@@ -5,8 +5,13 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 
-import { updateMemberTaskClaim } from '@/features/members/apis';
-import type { Member } from '@/features/members/types';
+import {
+  activateMember,
+  removeMember,
+  retryMemberRevocation,
+  updateMemberTaskClaim,
+} from '@/features/members/apis';
+import type { Member, MemberRemovalResult } from '@/features/members/types';
 
 import { membersQueryKeys } from './queryKeys';
 
@@ -40,6 +45,51 @@ export function useUpdateMemberTaskClaimMutation(
     onSuccess: async () => {
       await invalidateMembersQueries(queryClient, workspaceId);
     },
+  });
+}
+
+interface WorkspaceMemberMutationInput {
+  readonly discordUserId: string;
+}
+
+export function useRemoveMemberMutation(
+  workspaceId: string,
+): UseMutationResult<
+  MemberRemovalResult,
+  Error,
+  WorkspaceMemberMutationInput,
+  unknown
+> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ discordUserId }) => removeMember(workspaceId, discordUserId),
+    onSuccess: async () => invalidateMembersQueries(queryClient, workspaceId),
+  });
+}
+
+export function useRetryMemberRevocationMutation(
+  workspaceId: string,
+): UseMutationResult<
+  MemberRemovalResult,
+  Error,
+  WorkspaceMemberMutationInput,
+  unknown
+> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ discordUserId }) =>
+      retryMemberRevocation(workspaceId, discordUserId),
+    onSuccess: async () => invalidateMembersQueries(queryClient, workspaceId),
+  });
+}
+
+export function useActivateMemberMutation(
+  workspaceId: string,
+): UseMutationResult<Member, Error, WorkspaceMemberMutationInput, unknown> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ discordUserId }) => activateMember(workspaceId, discordUserId),
+    onSuccess: async () => invalidateMembersQueries(queryClient, workspaceId),
   });
 }
 

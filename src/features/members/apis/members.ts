@@ -2,7 +2,7 @@ import { backendService } from '@/services';
 import type { ApiProblems } from '@/types/api';
 import formatError from '@/utils/formatError';
 
-import type { Member } from '../types';
+import type { Member, MemberRemovalResult } from '../types';
 
 export class MembersForbiddenError extends Error {
   constructor() {
@@ -32,6 +32,39 @@ export async function updateMemberTaskClaim(
   const response = await backendService.patch<Member>(
     `/api/users/${encodeURIComponent(workspaceId)}/members/${encodeURIComponent(discordUserId)}/task-claim`,
     { enabled },
+  );
+  if (response.kind === 'ok') return response.data;
+  throwMemberApiError(response);
+}
+
+export async function removeMember(
+  workspaceId: string,
+  discordUserId: string,
+): Promise<MemberRemovalResult> {
+  const response = await backendService.delete<MemberRemovalResult>(
+    `/api/users/${encodeURIComponent(workspaceId)}/members/${encodeURIComponent(discordUserId)}`,
+  );
+  if (response.kind === 'ok') return response.data;
+  throwMemberApiError(response);
+}
+
+export async function retryMemberRevocation(
+  workspaceId: string,
+  discordUserId: string,
+): Promise<MemberRemovalResult> {
+  const response = await backendService.post<MemberRemovalResult>(
+    `/api/users/${encodeURIComponent(workspaceId)}/members/${encodeURIComponent(discordUserId)}/revocation/retry`,
+  );
+  if (response.kind === 'ok') return response.data;
+  throwMemberApiError(response);
+}
+
+export async function activateMember(
+  workspaceId: string,
+  discordUserId: string,
+): Promise<Member> {
+  const response = await backendService.post<Member>(
+    `/api/users/${encodeURIComponent(workspaceId)}/members/${encodeURIComponent(discordUserId)}/reactivate`,
   );
   if (response.kind === 'ok') return response.data;
   throwMemberApiError(response);

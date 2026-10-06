@@ -4,11 +4,13 @@ import {
   CreditCard,
   Layers3,
   Mail,
+  RefreshCw,
   Search,
   ShieldCheck,
   ShieldOff,
   UserRound,
   UsersRound,
+  UserX,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -68,10 +70,13 @@ import {
   MembersForbiddenError,
 } from '@/features/members/apis';
 import {
+  useActivateMemberMutation,
   useMembersQuery,
+  useRemoveMemberMutation,
+  useRetryMemberRevocationMutation,
   useUpdateMemberTaskClaimMutation,
 } from '@/features/members/hooks';
-import type { Member, MemberStatus } from '@/features/members/types';
+import type { Member, MemberRemovalResult, MemberStatus } from '@/features/members/types';
 import { filterMembers } from '@/features/members/utils';
 import { useWorkspaceStore } from '@/features/workspace/hooks';
 import { translations } from '@/locales/translations';
@@ -81,6 +86,10 @@ type StatusFilter = MemberStatus | 'ALL';
 
 interface PendingTaskClaimAction {
   readonly enabled: boolean;
+  readonly member: Member;
+}
+
+interface PendingMemberRemoval {
   readonly member: Member;
 }
 
@@ -193,12 +202,14 @@ function MemberRow({
   dateFormatter,
   emptyLabel,
   onView,
+  onRemove,
   t,
 }: {
   readonly member: Member;
   readonly dateFormatter: Intl.DateTimeFormat;
   readonly emptyLabel: string;
   readonly onView: (member: Member) => void;
+  readonly onRemove: (member: Member) => void;
   readonly t: ReturnType<typeof useTranslation>['t'];
 }) {
   return (
@@ -223,7 +234,14 @@ function MemberRow({
         <StageList emptyLabel={emptyLabel} member={member} />
       </TableCell>
       <TableCell className="px-4 py-4 align-top">
-        <StatusPill status={member.status} t={t} />
+        <div className="space-y-1.5">
+          <StatusPill status={member.status} t={t} />
+          {member.revocationStatus === 'PENDING' ? (
+            <p className="text-xs text-destructive">
+              {t(translations.members.revocationStatus)}
+            </p>
+          ) : null}
+        </div>
       </TableCell>
       <TableCell className="px-4 py-4 align-top">
         <div className="flex items-center gap-2 text-sm">
@@ -239,9 +257,22 @@ function MemberRow({
         {formatMemberDate(member.joinedAt, dateFormatter)}
       </TableCell>
       <TableCell className="px-4 py-4 text-right align-top">
-        <Button onClick={() => onView(member)} size="sm" variant="outline">
-          {t(translations.members.viewDetails)}
-        </Button>
+        <div className="flex justify-end gap-2">
+          <Button onClick={() => onView(member)} size="sm" variant="outline">
+            {t(translations.members.viewDetails)}
+          </Button>
+          {member.status !== 'LEFT' ? (
+            <Button
+              aria-label={`${t(translations.members.removeMember)}: ${member.displayName}`}
+              onClick={() => onRemove(member)}
+              size="sm"
+              variant="destructive"
+            >
+              <UserX aria-hidden="true" />
+              {t(translations.members.removeMember)}
+            </Button>
+          ) : null}
+        </div>
       </TableCell>
     </TableRow>
   );
@@ -252,12 +283,14 @@ function MemberCard({
   dateFormatter,
   emptyLabel,
   onView,
+  onRemove,
   t,
 }: {
   readonly member: Member;
   readonly dateFormatter: Intl.DateTimeFormat;
   readonly emptyLabel: string;
   readonly onView: (member: Member) => void;
+  readonly onRemove: (member: Member) => void;
   readonly t: ReturnType<typeof useTranslation>['t'];
 }) {
   return (
@@ -304,9 +337,26 @@ function MemberCard({
         </div>
       </dl>
 
-      <Button className="mt-4 w-full" onClick={() => onView(member)} variant="outline">
-        {t(translations.members.viewDetails)}
-      </Button>
+      {member.revocationStatus === 'PENDING' ? (
+        <p className="mt-3 text-xs text-destructive">
+          {t(translations.members.revocationStatus)}
+        </p>
+      ) : null}
+      <div className="mt-4 flex gap-2">
+        <Button className="flex-1" onClick={() => onView(member)} variant="outline">
+          {t(translations.members.viewDetails)}
+        </Button>
+        {member.status !== 'LEFT' ? (
+          <Button
+            aria-label={`${t(translations.members.removeMember)}: ${member.displayName}`}
+            onClick={() => onRemove(member)}
+            variant="destructive"
+          >
+            <UserX aria-hidden="true" />
+            <span className="sr-only">{t(translations.members.removeMember)}</span>
+          </Button>
+        ) : null}
+      </div>
     </article>
   );
 }
@@ -323,14 +373,22 @@ function LoadingMembers({ label }: { readonly label: string }) {
 
 function MemberDetails({
   member,
+  workspaceId,
   dateFormatter,
   onTaskClaim,
+  onRetryRevocation,
+  onActivate,
+  memberActionPending,
   taskClaimPending,
   t,
 }: {
   readonly member: Member;
+  readonly workspaceId: string;
   readonly dateFormatter: Intl.DateTimeFormat;
   readonly onTaskClaim: (member: Member, enabled: boolean) => void;
+  readonly onRetryRevocation: (member: Member) => void;
+  readonly onActivate: (member: Member) => void;
+  readonly memberActionPending: boolean;
   readonly taskClaimPending: boolean;
   readonly t: ReturnType<typeof useTranslation>['t'];
 }) {
@@ -363,6 +421,67 @@ function MemberDetails({
               <dd className="text-right font-mono text-xs break-all">{member.discordUserId}</dd>
             </div>
           </dl>
+        </section>
+
+        <section className="space-y-3">
+          <h3 className="text-sm font-semibold">{t(translations.members.revocation)}</h3>
+          <div className="space-y-3 rounded-xl border border-border/70 bg-muted/20 p-4">
+            <p className="text-xs text-muted-foreground">
+              {t(translations.members.revocationScope, { workspaceId })}
+            </p>
+            {member.revocationStatus === 'PENDING' ? (
+              <div className="space-y-2" role="status">
+                <p className="text-sm leading-5 text-destructive">
+                  {t(translations.members.cleanupPending)}
+                </p>
+                <p className="text-xs leading-5 text-muted-foreground">
+                  {t(translations.members.revocationCounts, {
+                    roles: member.pendingDiscordRoleCount ?? 0,
+                    drive: member.pendingDriveGrantCount ?? 0,
+                  })}
+                </p>
+                {member.revocationError ? (
+                  <p className="text-xs break-words text-muted-foreground">
+                    {t(translations.members.revocationError, {
+                      error: member.revocationError,
+                    })}
+                  </p>
+                ) : null}
+              </div>
+            ) : member.revocationStatus === 'COMPLETE' ? (
+              <p className="text-sm leading-5 text-muted-foreground">
+                {t(translations.members.cleanupComplete)}
+              </p>
+            ) : null}
+            {member.status === 'LEFT' ? (
+              <div className="flex flex-col gap-2 sm:flex-row">
+                {member.revocationStatus === 'PENDING' ? (
+                  <Button
+                    disabled={memberActionPending}
+                    onClick={() => onRetryRevocation(member)}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <RefreshCw aria-hidden="true" />
+                    {t(translations.members.retryRevocation)}
+                  </Button>
+                ) : null}
+                <Button
+                  disabled={memberActionPending}
+                  onClick={() => onActivate(member)}
+                  size="sm"
+                >
+                  <ShieldCheck aria-hidden="true" />
+                  {t(translations.members.activateMember)}
+                </Button>
+              </div>
+            ) : null}
+            {member.status === 'LEFT' ? (
+              <p className="text-xs leading-5 text-muted-foreground">
+                {t(translations.members.activateMemberDescription)}
+              </p>
+            ) : null}
+          </div>
         </section>
 
         <section className="space-y-3">
@@ -451,8 +570,16 @@ export default function MembersPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingTaskClaimAction | null>(null);
+  const [pendingRemoval, setPendingRemoval] = useState<PendingMemberRemoval | null>(null);
   const membersQuery = useMembersQuery(workspaceId);
   const taskClaimMutation = useUpdateMemberTaskClaimMutation(workspaceId);
+  const removeMemberMutation = useRemoveMemberMutation(workspaceId);
+  const retryRevocationMutation = useRetryMemberRevocationMutation(workspaceId);
+  const activateMemberMutation = useActivateMemberMutation(workspaceId);
+  const memberActionPending =
+    removeMemberMutation.isPending ||
+    retryRevocationMutation.isPending ||
+    activateMemberMutation.isPending;
   const dateFormatter = useMemo(
     () => new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium' }),
     [i18n.language],
@@ -464,6 +591,34 @@ export default function MembersPage() {
 
   function requestTaskClaimChange(member: Member, enabled: boolean): void {
     setPendingAction({ enabled, member });
+  }
+
+  function requestMemberRemoval(member: Member): void {
+    setPendingRemoval({ member });
+  }
+
+  function showRevocationResult(result: MemberRemovalResult): void {
+    setSelectedMember((current) =>
+      current?.discordUserId === result.member.discordUserId
+        ? result.member
+        : current,
+    );
+    setPendingRemoval(null);
+    if (result.member.revocationStatus === 'PENDING') {
+      toast.warning(
+        t(translations.members.memberRemovedPending, {
+          unassigned: result.unassignedTaskCount,
+          locked: result.payrollLockedTaskCount,
+        }),
+      );
+      return;
+    }
+    toast.success(
+      t(translations.members.memberRemoved, {
+        unassigned: result.unassignedTaskCount,
+        locked: result.payrollLockedTaskCount,
+      }),
+    );
   }
 
   return (
@@ -582,7 +737,7 @@ export default function MembersPage() {
                       <TableHead>{t(translations.members.taskClaim)}</TableHead>
                       <TableHead>{t(translations.members.bankQr)}</TableHead>
                       <TableHead>{t(translations.members.joinedAt)}</TableHead>
-                      <TableHead className="text-right">{t(translations.members.viewDetails)}</TableHead>
+                      <TableHead className="text-right">{t(translations.members.actions)}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -593,6 +748,7 @@ export default function MembersPage() {
                         key={member.discordUserId}
                         member={member}
                         onView={setSelectedMember}
+                        onRemove={requestMemberRemoval}
                         t={t}
                       />
                     ))}
@@ -607,6 +763,7 @@ export default function MembersPage() {
                     key={member.discordUserId}
                     member={member}
                     onView={setSelectedMember}
+                    onRemove={requestMemberRemoval}
                     t={t}
                   />
                 ))}
@@ -627,7 +784,47 @@ export default function MembersPage() {
             <MemberDetails
               dateFormatter={dateFormatter}
               member={selectedMember}
+              workspaceId={workspaceId}
               onTaskClaim={requestTaskClaimChange}
+              onRetryRevocation={(member) =>
+                retryRevocationMutation.mutate(
+                  { discordUserId: member.discordUserId },
+                  {
+                    onSuccess: (result) => {
+                      setSelectedMember(result.member);
+                      if (result.member.revocationStatus === 'PENDING') {
+                        toast.warning(t(translations.members.cleanupPending));
+                      } else {
+                        toast.success(t(translations.members.cleanupComplete));
+                      }
+                    },
+                    onError: (error: Error) =>
+                      toast.error(
+                        isForbiddenError(error)
+                          ? t(translations.members.forbidden)
+                          : formatError(error),
+                      ),
+                  },
+                )
+              }
+              onActivate={(member) =>
+                activateMemberMutation.mutate(
+                  { discordUserId: member.discordUserId },
+                  {
+                    onSuccess: (updatedMember) => {
+                      setSelectedMember(updatedMember);
+                      toast.success(t(translations.members.activated));
+                    },
+                    onError: (error: Error) =>
+                      toast.error(
+                        isForbiddenError(error)
+                          ? t(translations.members.forbidden)
+                          : formatError(error),
+                      ),
+                  },
+                )
+              }
+              memberActionPending={memberActionPending}
               taskClaimPending={taskClaimMutation.isPending}
               t={t}
             />
@@ -688,6 +885,51 @@ export default function MembersPage() {
               }}
             >
               {t(translations.members.confirmAction)}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        onOpenChange={(open) => {
+          if (!open && !removeMemberMutation.isPending) setPendingRemoval(null);
+        }}
+        open={pendingRemoval !== null}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t(translations.members.confirmRemove)}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t(translations.members.confirmRemoveDescription, {
+                name: pendingRemoval?.member.displayName ?? '',
+                workspaceId,
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removeMemberMutation.isPending}>
+              {t(translations.members.confirmCancel)}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={removeMemberMutation.isPending || pendingRemoval === null}
+              onClick={() => {
+                if (!pendingRemoval) return;
+                removeMemberMutation.mutate(
+                  { discordUserId: pendingRemoval.member.discordUserId },
+                  {
+                    onSuccess: showRevocationResult,
+                    onError: (error: Error) =>
+                      toast.error(
+                        isForbiddenError(error)
+                          ? t(translations.members.forbidden)
+                          : formatError(error),
+                      ),
+                  },
+                );
+              }}
+              variant="destructive"
+            >
+              {t(translations.members.removeMember)}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
