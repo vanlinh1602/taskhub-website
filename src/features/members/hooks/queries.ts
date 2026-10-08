@@ -17,6 +17,7 @@ interface MembersQueryConfiguration {
   readonly queryFn: () => Promise<Member[]>;
   readonly queryKey: ReturnType<typeof membersQueryKeys.list>;
   readonly staleTime: number;
+  readonly refetchOnWindowFocus: boolean;
 }
 
 export function createMembersQueryOptions(
@@ -27,7 +28,8 @@ export function createMembersQueryOptions(
     queryKey: membersQueryKeys.list(workspaceId),
     queryFn: () => getMembers(workspaceId),
     enabled: workspaceId.length > 0 && (options.enabled ?? true),
-    staleTime: 1000 * 60 * 60 * 24,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   };
 }
 

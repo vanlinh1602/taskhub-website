@@ -11,7 +11,8 @@ describe('members hooks', () => {
     expect(createMembersQueryOptions('workspace-1', { enabled: false })).toMatchObject({
       enabled: false,
       queryKey: ['members', 'list', 'workspace-1'],
-      staleTime: 86400000,
+      staleTime: 0,
+      refetchOnWindowFocus: true,
     });
   });
 
