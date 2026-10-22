@@ -6,7 +6,6 @@ export type {
   ChapterDetail,
   ChapterDifficulty,
   ChapterManagerTaskStatus,
-  ChapterPage,
   ChapterPaymentStatus,
   ChapterPriority,
   ChapterPublicationNotificationStatus,

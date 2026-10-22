@@ -57,13 +57,6 @@ export interface Chapter {
   readonly deleteState: ChapterDeleteState;
 }
 
-export interface ChapterPage {
-  readonly items: readonly Chapter[];
-  readonly page: number;
-  readonly pageCount: number;
-  readonly total: number;
-}
-
 export type ChapterAssignee = TaskAssignee;
 
 export interface ChapterWorkflowSummary {
@@ -111,6 +104,7 @@ export interface CreateChapterInput {
 }
 
 export interface UpdateChapterConfigurationInput {
+  readonly chapterName?: string;
   readonly difficulty?: ChapterDifficulty;
   readonly hasAdultContent?: boolean;
   readonly priority?: ChapterPriority;

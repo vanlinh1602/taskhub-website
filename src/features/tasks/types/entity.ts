@@ -63,6 +63,7 @@ export interface TaskListItem {
   readonly stageCode: string;
   readonly stageName: string;
   readonly status: TaskStatus;
+  readonly completedAt?: string | null;
   readonly dueAt: string | null;
   readonly assigneeDiscordUserId: string | null;
   readonly assigneeDisplayName: string | null;

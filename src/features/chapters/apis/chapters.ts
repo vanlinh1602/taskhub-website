@@ -2,8 +2,8 @@ import { backendService } from '@/services';
 import formatError from '@/utils/formatError';
 
 import type {
+  Chapter,
   ChapterDetail,
-  ChapterPage,
   ChapterPublicationResult,
   ChapterWorkflowFilter,
   CreateChapterInput,
@@ -32,15 +32,13 @@ export async function getChapters(
   workspaceId: string,
   storyId: string,
   options: {
-    readonly page?: number;
     readonly status?: ChapterWorkflowFilter;
   } = {},
-): Promise<ChapterPage> {
+): Promise<Chapter[]> {
   const query = new URLSearchParams({
-    page: String(options.page ?? 0),
     status: options.status ?? 'ALL',
   });
-  const response = await backendService.get<ChapterPage>(
+  const response = await backendService.get<Chapter[]>(
     `/api/story-workflow/${encodeURIComponent(workspaceId)}/stories/${encodeURIComponent(storyId)}/chapters?${query.toString()}`,
   );
   if (response.kind === 'ok') return response.data;

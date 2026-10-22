@@ -5,6 +5,7 @@ import {
   createStoriesQueryOptions,
   createStoryQueryOptions,
   invalidateStoryListQueries,
+  invalidateStoryRenameQueries,
 } from '@/features/stories/hooks';
 
 describe('stories hooks', () => {
@@ -37,5 +38,30 @@ describe('stories hooks', () => {
     expect(invalidateQueries).toHaveBeenCalledWith({
       queryKey: ['stories', 'list'],
     });
+  });
+
+  it('invalidates story and derived name queries after a rename', async () => {
+    const queryClient = new QueryClient();
+    const invalidateQueries = vi
+      .spyOn(queryClient, 'invalidateQueries')
+      .mockResolvedValue(true);
+
+    await invalidateStoryRenameQueries(queryClient, 'workspace-1', 'story-1');
+
+    for (const queryKey of [
+      ['stories', 'list'],
+      ['stories', 'detail', 'workspace-1', 'story-1'],
+      ['admin', 'dashboard'],
+      ['tasks', 'filters', 'workspace-1'],
+      ['tasks', 'list'],
+      ['statistics', 'filters', 'workspace-1'],
+      ['statistics', 'list'],
+      ['statistics', 'summary'],
+      ['payroll', 'list'],
+      ['payroll', 'detail'],
+      ['payroll', 'batch-detail'],
+    ]) {
+      expect(invalidateQueries).toHaveBeenCalledWith({ queryKey });
+    }
   });
 });

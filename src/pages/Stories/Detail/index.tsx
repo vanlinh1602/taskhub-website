@@ -1,9 +1,8 @@
 import {
   ArrowRight,
-  ChevronLeft,
-  ChevronRight,
   ExternalLink,
   FilePenLine,
+  PencilLine,
   Plus,
   Settings2,
 } from 'lucide-react';
@@ -74,7 +73,7 @@ import {
   type ChapterNameSortOrder,
   sortChaptersByName,
 } from '@/features/chapters/utils/sort-chapters-by-name';
-import { useStoryQuery } from '@/features/stories/hooks';
+import { useRenameStoryMutation, useStoryQuery } from '@/features/stories/hooks';
 import { useWorkspaceStore } from '@/features/workspace/hooks';
 import { translations } from '@/locales/translations';
 import formatError from '@/utils/formatError';
@@ -95,19 +94,18 @@ const workflows: readonly ChapterWorkflowFilter[] = [
 const publications = ['ALL', 'PUBLISHED', 'UNPUBLISHED'] as const;
 type PublicationFilter = (typeof publications)[number];
 const chapterNameSortOrders: readonly ChapterNameSortOrder[] = ['ASC', 'DESC'];
-const chapterPageSize = 25;
 
 export default function StoryDetailPage(): ReactNode {
   const { t } = useTranslation();
   const { storyId = '' } = useParams();
   const { activeWorkspaceId: workspaceId } = useWorkspaceStore();
-  const [page, setPage] = useState(0);
   const [workflow, setWorkflow] = useState<ChapterWorkflowFilter>('ALL');
   const [publication, setPublication] = useState<PublicationFilter>('ALL');
   const [priority, setPriority] = useState<ChapterPriority | 'ALL'>('ALL');
   const [chapterNameSortOrder, setChapterNameSortOrder] =
     useState<ChapterNameSortOrder>('ASC');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isRenameStoryOpen, setIsRenameStoryOpen] = useState(false);
   const [editingChapter, setEditingChapter] = useState<Chapter | null>(null);
   const [deletingChapter, setDeletingChapter] = useState<Chapter | null>(null);
   const [publishingChapter, setPublishingChapter] = useState<Chapter | null>(
@@ -116,14 +114,10 @@ export default function StoryDetailPage(): ReactNode {
   const [publicationNotificationError, setPublicationNotificationError] =
     useState<string | null>(null);
   const storyQuery = useStoryQuery(workspaceId, storyId);
-  const chaptersQuery = useChaptersQuery(
-    workspaceId,
-    storyId,
-    workflow,
-    page,
-  );
+  const renameStoryMutation = useRenameStoryMutation(workspaceId, storyId);
+  const chaptersQuery = useChaptersQuery(workspaceId, storyId, workflow);
   const chapters = useMemo(() => {
-    const filteredChapters = (chaptersQuery.data?.items ?? []).filter(
+    const filteredChapters = (chaptersQuery.data ?? []).filter(
       (chapter) =>
         (publication === 'ALL' || chapter.publicationStatus === publication) &&
         (priority === 'ALL' || chapter.priority === priority),
@@ -144,22 +138,18 @@ export default function StoryDetailPage(): ReactNode {
 
   function changeWorkflow(value: ChapterWorkflowFilter): void {
     setWorkflow(value);
-    setPage(0);
   }
 
   function changePublication(value: PublicationFilter): void {
     setPublication(value);
-    setPage(0);
   }
 
   function changePriority(value: ChapterPriority | 'ALL'): void {
     setPriority(value);
-    setPage(0);
   }
 
   function changeChapterNameSortOrder(value: ChapterNameSortOrder): void {
     setChapterNameSortOrder(value);
-    setPage(0);
   }
 
   function togglePublication(chapter: Chapter): void {
@@ -230,17 +220,7 @@ export default function StoryDetailPage(): ReactNode {
     if (!deletingChapter) return;
     deleteMutation.mutate(deletingChapter.id, {
       onSuccess: () => {
-        const currentPage = chaptersQuery.data?.page ?? page;
-        const remainingTotal = Math.max(
-          0,
-          (chaptersQuery.data?.total ?? 0) - 1,
-        );
-        const remainingPageCount = Math.max(
-          1,
-          Math.ceil(remainingTotal / chapterPageSize),
-        );
         setDeletingChapter(null);
-        setPage(Math.min(currentPage, remainingPageCount - 1));
         toast.success(t(translations.management.stories.chapterDeleteSuccess));
       },
       onError: (error: Error) => toast.error(formatError(error)),
@@ -265,14 +245,42 @@ export default function StoryDetailPage(): ReactNode {
     );
   }
 
+  function submitStoryRename(event: FormEvent<HTMLFormElement>): void {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const title = String(form.get('title') ?? '').trim();
+    if (!title) {
+      toast.error(t(translations.management.stories.storyNameRequired));
+      return;
+    }
+
+    renameStoryMutation.mutate(
+      { title },
+      {
+        onSuccess: () => {
+          setIsRenameStoryOpen(false);
+          toast.success(t(translations.management.stories.storyRenameSuccess));
+        },
+        onError: (error: Error) => toast.error(formatError(error)),
+      },
+    );
+  }
+
   function submitConfiguration(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     if (!editingChapter) return;
     const form = new FormData(event.currentTarget);
+    const chapterName = String(form.get('chapterName') ?? '').trim();
+    if (!chapterName) {
+      toast.error(t(translations.management.stories.chapterNameRequired));
+      return;
+    }
+    const chapterNameChanged = chapterName !== editingChapter.chapterName;
     configurationMutation.mutate(
       {
         chapterId: editingChapter.id,
         input: {
+          chapterName,
           difficulty: String(form.get('difficulty') ?? 'NORMAL') as ChapterDifficulty,
           hasAdultContent: form.get('hasAdultContent') === 'on',
           priority: String(form.get('priority') ?? 'NORMAL') as ChapterPriority,
@@ -281,7 +289,13 @@ export default function StoryDetailPage(): ReactNode {
       {
         onSuccess: () => {
           setEditingChapter(null);
-          toast.success(t(translations.management.stories.save));
+          toast.success(
+            t(
+              chapterNameChanged
+                ? translations.management.stories.chapterRenameSuccess
+                : translations.management.stories.save,
+            ),
+          );
         },
         onError: (error: Error) => toast.error(formatError(error)),
       },
@@ -297,9 +311,64 @@ export default function StoryDetailPage(): ReactNode {
           </p>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-extrabold tracking-tight sm:text-4xl">
-                {storyQuery.data.title}
-              </h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-2xl font-extrabold tracking-tight sm:text-4xl">
+                  {storyQuery.data.title}
+                </h2>
+                <Dialog
+                  open={isRenameStoryOpen}
+                  onOpenChange={setIsRenameStoryOpen}
+                >
+                  <DialogTrigger asChild>
+                    <Button
+                      aria-label={t(
+                        translations.management.stories.renameStory,
+                      )}
+                      size="icon"
+                      variant="ghost"
+                    >
+                      <PencilLine />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>
+                        {t(translations.management.stories.renameStory)}
+                      </DialogTitle>
+                    </DialogHeader>
+                    <form className="space-y-4" onSubmit={submitStoryRename}>
+                      <div className="space-y-2">
+                        <Label htmlFor="story-title">
+                          {t(translations.management.stories.name)}
+                        </Label>
+                        <Input
+                          autoComplete="off"
+                          defaultValue={storyQuery.data.title}
+                          id="story-title"
+                          maxLength={255}
+                          name="title"
+                          required
+                        />
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          onClick={() => setIsRenameStoryOpen(false)}
+                          type="button"
+                          variant="outline"
+                        >
+                          {t(translations.management.stories.cancel)}
+                        </Button>
+                        <Button
+                          disabled={renameStoryMutation.isPending}
+                          type="submit"
+                        >
+                          {t(translations.management.stories.save)}
+                        </Button>
+                      </div>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </div>
               {storyQuery.data.alternativeTitle ? (
                 <p className="mt-1 text-sm text-muted-foreground">
                   {storyQuery.data.alternativeTitle}
@@ -414,7 +483,7 @@ export default function StoryDetailPage(): ReactNode {
           {formatError(chaptersQuery.error)}
         </p>
       ) : null}
-      {chaptersQuery.data?.items.length === 0 ? (
+      {chaptersQuery.data?.length === 0 ? (
         <Empty className="border-border bg-muted/20 py-14">
           <EmptyHeader>
             <EmptyMedia variant="icon">
@@ -436,7 +505,7 @@ export default function StoryDetailPage(): ReactNode {
         </Empty>
       ) : null}
       {chaptersQuery.data &&
-      chaptersQuery.data.items.length > 0 &&
+      chaptersQuery.data.length > 0 &&
       chapters.length === 0 ? (
         <Empty className="border-border bg-muted/20 py-14">
           <EmptyHeader>
@@ -480,42 +549,6 @@ export default function StoryDetailPage(): ReactNode {
           </div>
         </>
       ) : null}
-      {chaptersQuery.data && chaptersQuery.data.pageCount > 1 ? (
-        <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-card px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">
-            {t(translations.management.stories.pageSummary, {
-              current: chaptersQuery.data.page + 1,
-              total: chaptersQuery.data.pageCount,
-              count: chaptersQuery.data.total,
-            })}
-          </p>
-          <div className="flex gap-2">
-            <Button
-              disabled={
-                chaptersQuery.data.page === 0 || chaptersQuery.isFetching
-              }
-              onClick={() => setPage((value) => value - 1)}
-              size="sm"
-              variant="outline"
-            >
-              <ChevronLeft />
-              {t(translations.management.stories.previousPage)}
-            </Button>
-            <Button
-              disabled={
-                chaptersQuery.data.page + 1 >= chaptersQuery.data.pageCount ||
-                chaptersQuery.isFetching
-              }
-              onClick={() => setPage((value) => value + 1)}
-              size="sm"
-              variant="outline"
-            >
-              {t(translations.management.stories.nextPage)}
-              <ChevronRight />
-            </Button>
-          </div>
-        </div>
-      ) : null}
       <Dialog
         open={editingChapter !== null}
         onOpenChange={(open) => !open && setEditingChapter(null)}
@@ -528,6 +561,18 @@ export default function StoryDetailPage(): ReactNode {
           </DialogHeader>
           {editingChapter ? (
             <form className="space-y-4" onSubmit={submitConfiguration}>
+              <div className="space-y-2">
+                <Label htmlFor="chapter-name">
+                  {t(translations.management.stories.chapterName)}
+                </Label>
+                <Input
+                  defaultValue={editingChapter.chapterName}
+                  id="chapter-name"
+                  maxLength={255}
+                  name="chapterName"
+                  required
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="chapter-difficulty">
                   {t(translations.management.stories.difficulty)}

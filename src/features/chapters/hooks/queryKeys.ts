@@ -6,8 +6,7 @@ export const chaptersQueryKeys = {
     workspaceId: string,
     storyId: string,
     workflow: string,
-    page: number,
-  ) => ['chapters', 'list', workspaceId, storyId, workflow, page] as const,
+  ) => ['chapters', 'list', workspaceId, storyId, workflow] as const,
   listRoot: (workspaceId: string, storyId: string) =>
     ['chapters', 'list', workspaceId, storyId] as const,
 };

@@ -5,8 +5,8 @@ import {
 
 import { getChapter, getChapters } from '@/features/chapters/apis';
 import type {
+  Chapter,
   ChapterDetail,
-  ChapterPage,
   ChapterWorkflowFilter,
 } from '@/features/chapters/types';
 
@@ -14,7 +14,7 @@ import { chaptersQueryKeys } from './queryKeys';
 
 interface ChaptersQueryOptions {
   readonly enabled: boolean;
-  readonly queryFn: () => Promise<ChapterPage>;
+  readonly queryFn: () => Promise<Chapter[]>;
   readonly queryKey: ReturnType<typeof chaptersQueryKeys.list>;
   readonly staleTime: number;
 }
@@ -30,11 +30,10 @@ export function createChaptersQueryOptions(
   workspaceId: string,
   storyId: string,
   workflow: ChapterWorkflowFilter,
-  page: number,
 ): ChaptersQueryOptions {
   return {
-    queryKey: chaptersQueryKeys.list(workspaceId, storyId, workflow, page),
-    queryFn: () => getChapters(workspaceId, storyId, { page, status: workflow }),
+    queryKey: chaptersQueryKeys.list(workspaceId, storyId, workflow),
+    queryFn: () => getChapters(workspaceId, storyId, { status: workflow }),
     enabled: Boolean(workspaceId && storyId),
     staleTime: 86400000,
   };
@@ -57,10 +56,9 @@ export function useChaptersQuery(
   workspaceId: string,
   storyId: string,
   workflow: ChapterWorkflowFilter,
-  page: number,
-): UseQueryResult<ChapterPage, Error> {
+): UseQueryResult<Chapter[], Error> {
   return useQuery(
-    createChaptersQueryOptions(workspaceId, storyId, workflow, page),
+    createChaptersQueryOptions(workspaceId, storyId, workflow),
   );
 }
 

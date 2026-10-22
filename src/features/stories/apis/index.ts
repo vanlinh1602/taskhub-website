@@ -1,1 +1,1 @@
-export { createStory, getStories, getStory } from './stories';
+export { createStory, getStories, getStory, renameStory } from './stories';

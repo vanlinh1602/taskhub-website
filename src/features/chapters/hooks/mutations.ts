@@ -19,8 +19,10 @@ import type {
   UpdateChapterConfigurationInput,
   UpdateChapterPublicationInput,
 } from '@/features/chapters/types';
+import { payrollQueryKeys } from '@/features/payroll/hooks';
 import { statisticsQueryKeys } from '@/features/statistics/hooks';
 import { invalidateTaskMutationQueries } from '@/features/tasks/hooks/mutations';
+import { tasksQueryKeys } from '@/features/tasks/hooks/queryKeys';
 
 import { chaptersQueryKeys } from './queryKeys';
 
@@ -56,6 +58,28 @@ export async function invalidateChapterConfigurationQueries(
     }),
     queryClient.invalidateQueries({
       queryKey: adminQueryKeys.dashboardRoot(),
+    }),
+  ]);
+}
+
+export async function invalidateChapterRenameQueries(
+  queryClient: QueryClient,
+  workspaceId: string,
+  storyId: string,
+): Promise<void> {
+  await Promise.all([
+    invalidateChapterConfigurationQueries(queryClient, workspaceId, storyId),
+    queryClient.invalidateQueries({ queryKey: tasksQueryKeys.listRoot() }),
+    queryClient.invalidateQueries({
+      queryKey: statisticsQueryKeys.listRoot(),
+    }),
+    queryClient.invalidateQueries({
+      queryKey: statisticsQueryKeys.summaryRoot(),
+    }),
+    queryClient.invalidateQueries({ queryKey: payrollQueryKeys.listRoot() }),
+    queryClient.invalidateQueries({ queryKey: payrollQueryKeys.detailRoot() }),
+    queryClient.invalidateQueries({
+      queryKey: payrollQueryKeys.batchDetailRoot(),
     }),
   ]);
 }
@@ -168,12 +192,12 @@ export function useUpdateChapterConfigurationMutation(
       input,
     }: UpdateChapterConfigurationMutationInput) =>
       updateChapterConfiguration(workspaceId, storyId, chapterId, input),
-    onSuccess: async () => {
-      await invalidateChapterConfigurationQueries(
-        queryClient,
-        workspaceId,
-        storyId,
-      );
+    onSuccess: async (_result, { input }) => {
+      if (input.chapterName !== undefined) {
+        await invalidateChapterRenameQueries(queryClient, workspaceId, storyId);
+        return;
+      }
+      await invalidateChapterConfigurationQueries(queryClient, workspaceId, storyId);
     },
   });
 }

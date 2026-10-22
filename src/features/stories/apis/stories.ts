@@ -1,7 +1,7 @@
 import { backendService } from '@/services';
 import formatError from '@/utils/formatError';
 
-import type { CreateStoryInput, Story } from '../types';
+import type { CreateStoryInput, RenameStoryInput, Story } from '../types';
 
 export async function getStories(
   workspaceId: string,
@@ -32,6 +32,19 @@ export async function createStory(
 ): Promise<Story> {
   const response = await backendService.post<Story>(
     `/api/story-workflow/${encodeURIComponent(workspaceId)}/stories`,
+    input,
+  );
+  if (response.kind === 'ok') return response.data;
+  throw new Error(formatError(response));
+}
+
+export async function renameStory(
+  workspaceId: string,
+  storyId: string,
+  input: RenameStoryInput,
+): Promise<Story> {
+  const response = await backendService.patch<Story>(
+    `/api/story-workflow/${encodeURIComponent(workspaceId)}/stories/${encodeURIComponent(storyId)}`,
     input,
   );
   if (response.kind === 'ok') return response.data;

@@ -109,18 +109,44 @@ function getStatusClassName(status: TaskStatus): string {
 }
 
 function TaskStatusBadge({
+  alignment = 'start',
+  completedAt,
+  dateFormatter,
   status,
   t,
 }: {
+  readonly alignment?: 'center' | 'end' | 'start';
+  readonly completedAt?: string | null;
+  readonly dateFormatter: Intl.DateTimeFormat;
   readonly status: TaskStatus;
   readonly t: ReturnType<typeof useTranslation>['t'];
 }) {
+  const completedDate =
+    status === 'COMPLETED' && completedAt ? new Date(completedAt) : null;
+  const isValidCompletedDate =
+    completedDate !== null && !Number.isNaN(completedDate.getTime());
+  const completedAtLabel = t(translations.management.tasks.completedAt);
+
   return (
-    <span
-      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getStatusClassName(status)}`}
+    <div
+      className={`flex flex-col gap-1 ${alignment === 'center' ? 'items-center text-center' : alignment === 'end' ? 'items-end text-right' : 'items-start text-left'}`}
     >
-      {t(translations.management.tasks[getTaskStatusLabelKey(status)])}
-    </span>
+      <span
+        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getStatusClassName(status)}`}
+      >
+        {t(translations.management.tasks[getTaskStatusLabelKey(status)])}
+      </span>
+      {isValidCompletedDate && completedDate ? (
+        <time
+          aria-label={`${completedAtLabel}: ${dateFormatter.format(completedDate)}`}
+          className="text-xs leading-4 whitespace-nowrap text-muted-foreground"
+          dateTime={completedDate.toISOString()}
+          title={`${completedAtLabel}: ${dateFormatter.format(completedDate)}`}
+        >
+          {dateFormatter.format(completedDate)}
+        </time>
+      ) : null}
+    </div>
   );
 }
 
@@ -203,6 +229,7 @@ function TaskAssignee({
 }
 
 function TaskTable({
+  completionDateFormatter,
   dateFormatter,
   onComplete,
   onDeduct,
@@ -210,6 +237,7 @@ function TaskTable({
   tasks,
   t,
 }: {
+  readonly completionDateFormatter: Intl.DateTimeFormat;
   readonly dateFormatter: Intl.DateTimeFormat;
   readonly onComplete: (task: TaskListItem) => void;
   readonly onDeduct: (task: TaskListItem) => void;
@@ -219,7 +247,7 @@ function TaskTable({
 }) {
   return (
     <div className="hidden lg:block">
-      <Table className="min-w-[65rem] table-fixed">
+      <Table className="min-w-[67rem] table-fixed">
         <TableHeader>
           <TableRow className="border-border/60 hover:bg-transparent">
             <TableHead className="h-9 w-20 px-3 py-2 text-xs font-medium tracking-wide uppercase">
@@ -237,7 +265,7 @@ function TaskTable({
             <TableHead className="h-9 w-40 px-3 py-2 text-xs font-medium tracking-wide uppercase">
               {t(translations.management.tasks.assignee)}
             </TableHead>
-            <TableHead className="h-9 w-28 px-3 py-2 text-xs font-medium tracking-wide uppercase">
+            <TableHead className="h-9 w-36 px-3 py-2 text-center text-xs font-medium tracking-wide uppercase">
               {t(translations.management.tasks.status)}
             </TableHead>
             <TableHead className="h-9 w-36 px-3 py-2 text-xs font-medium tracking-wide uppercase">
@@ -276,8 +304,14 @@ function TaskTable({
               <TableCell className="px-3 py-2.5">
                 <TaskAssignee task={task} t={t} />
               </TableCell>
-              <TableCell className="px-3 py-2.5">
-                <TaskStatusBadge status={task.status} t={t} />
+              <TableCell className="px-3 py-2.5 text-center">
+                <TaskStatusBadge
+                  alignment="center"
+                  completedAt={task.completedAt}
+                  dateFormatter={completionDateFormatter}
+                  status={task.status}
+                  t={t}
+                />
               </TableCell>
               <TableCell className="px-3 py-2.5">
                 <TaskDeadline dateFormatter={dateFormatter} task={task} t={t} />
@@ -301,6 +335,7 @@ function TaskTable({
 }
 
 function TaskCardList({
+  completionDateFormatter,
   dateFormatter,
   onComplete,
   onDeduct,
@@ -308,6 +343,7 @@ function TaskCardList({
   tasks,
   t,
 }: {
+  readonly completionDateFormatter: Intl.DateTimeFormat;
   readonly dateFormatter: Intl.DateTimeFormat;
   readonly onComplete: (task: TaskListItem) => void;
   readonly onDeduct: (task: TaskListItem) => void;
@@ -341,7 +377,13 @@ function TaskCardList({
                 {task.chapterName}
               </Link>
             </div>
-            <TaskStatusBadge status={task.status} t={t} />
+            <TaskStatusBadge
+              alignment="end"
+              completedAt={task.completedAt}
+              dateFormatter={completionDateFormatter}
+              status={task.status}
+              t={t}
+            />
           </div>
           <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
             <div>
@@ -439,6 +481,14 @@ export default function TasksPage() {
     () =>
       new Intl.DateTimeFormat(i18n.language, {
         dateStyle: 'medium',
+        timeStyle: 'short',
+      }),
+    [i18n.language],
+  );
+  const completionDateFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(i18n.language, {
+        dateStyle: 'short',
         timeStyle: 'short',
       }),
     [i18n.language],
@@ -775,6 +825,7 @@ export default function TasksPage() {
           ) : (
             <>
               <TaskTable
+                completionDateFormatter={completionDateFormatter}
                 dateFormatter={dateFormatter}
                 onComplete={(task) => openTaskAction('complete', task)}
                 onDeduct={(task) => openTaskAction('deduct', task)}
@@ -783,6 +834,7 @@ export default function TasksPage() {
                 t={t}
               />
               <TaskCardList
+                completionDateFormatter={completionDateFormatter}
                 dateFormatter={dateFormatter}
                 onComplete={(task) => openTaskAction('complete', task)}
                 onDeduct={(task) => openTaskAction('deduct', task)}

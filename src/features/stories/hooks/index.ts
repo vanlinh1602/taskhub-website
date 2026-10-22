@@ -1,6 +1,8 @@
 export {
   invalidateStoryListQueries,
+  invalidateStoryRenameQueries,
   useCreateStoryMutation,
+  useRenameStoryMutation,
 } from './mutations';
 export {
   createStoriesQueryOptions,

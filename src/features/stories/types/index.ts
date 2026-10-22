@@ -1,1 +1,1 @@
-export type { CreateStoryInput, Story } from './entity';
+export type { CreateStoryInput, RenameStoryInput, Story } from './entity';

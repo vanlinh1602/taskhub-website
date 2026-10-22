@@ -7,16 +7,17 @@ import {
   invalidateChapterConfigurationQueries,
   invalidateChapterDeleteQueries,
   invalidateChapterPublicationQueries,
+  invalidateChapterRenameQueries,
   invalidateChapterTaskQueries,
 } from '@/features/chapters/hooks';
 
 describe('chapters hooks', () => {
-  it('keeps workflow and page in the chapter list key', () => {
+  it('keys chapter list queries by workspace, story, and workflow only', () => {
     expect(
-      createChaptersQueryOptions('workspace-1', 'story-1', 'ACTIVE', 2),
+      createChaptersQueryOptions('workspace-1', 'story-1', 'ACTIVE'),
     ).toMatchObject({
       enabled: true,
-      queryKey: ['chapters', 'list', 'workspace-1', 'story-1', 'ACTIVE', 2],
+      queryKey: ['chapters', 'list', 'workspace-1', 'story-1', 'ACTIVE'],
       staleTime: 86400000,
     });
   });
@@ -57,6 +58,33 @@ describe('chapters hooks', () => {
     expect(invalidateQueries).toHaveBeenCalledWith({
       queryKey: ['admin', 'dashboard'],
     });
+  });
+
+  it('invalidates derived chapter-name queries after a chapter rename', async () => {
+    const queryClient = new QueryClient();
+    const invalidateQueries = vi
+      .spyOn(queryClient, 'invalidateQueries')
+      .mockResolvedValue(true);
+
+    await invalidateChapterRenameQueries(
+      queryClient,
+      'workspace-1',
+      'story-1',
+    );
+
+    for (const queryKey of [
+      ['chapters', 'list', 'workspace-1', 'story-1'],
+      ['chapters', 'detail'],
+      ['admin', 'dashboard'],
+      ['tasks', 'list'],
+      ['statistics', 'list'],
+      ['statistics', 'summary'],
+      ['payroll', 'list'],
+      ['payroll', 'detail'],
+      ['payroll', 'batch-detail'],
+    ]) {
+      expect(invalidateQueries).toHaveBeenCalledWith({ queryKey });
+    }
   });
 
   it('invalidates the exact detail, list, and dashboard after task changes', async () => {

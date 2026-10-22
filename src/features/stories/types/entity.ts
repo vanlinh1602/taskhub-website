@@ -12,3 +12,7 @@ export interface CreateStoryInput {
   readonly alternativeTitle?: string;
   readonly folderId?: string;
 }
+
+export interface RenameStoryInput {
+  readonly title: string;
+}

@@ -4,6 +4,7 @@ import {
   deductChapterTask,
   deleteChapter,
   getChapter,
+  getChapters,
   notifyChapterProgress,
   updateChapterConfiguration,
   updateChapterPublication,
@@ -13,6 +14,21 @@ import { backendService } from '@/services';
 
 describe('chapter APIs', () => {
   beforeEach(() => vi.restoreAllMocks());
+
+  it('loads every chapter for a story without adding a page query', async () => {
+    const chapters = [{ id: 'chapter-1', chapterName: 'Chapter 1' }];
+    const get = vi
+      .spyOn(backendService, 'get')
+      .mockResolvedValue({ kind: 'ok', data: chapters } as never);
+
+    await expect(
+      getChapters('workspace id', 'story/id', { status: 'ACTIVE' }),
+    ).resolves.toBe(chapters);
+
+    expect(get).toHaveBeenCalledWith(
+      '/api/story-workflow/workspace%20id/stories/story%2Fid/chapters?status=ACTIVE',
+    );
+  });
 
   it('loads chapter detail with the workspace, story, and chapter scope', async () => {
     const detail = { chapter: {}, chapterWorkflow: null, tasks: [] };
@@ -44,6 +60,24 @@ describe('chapter APIs', () => {
     expect(patch).toHaveBeenCalledWith(
       '/api/story-workflow/workspace%20id/stories/story%2Fid/chapters/chapter%20id',
       { difficulty: 'VERY_HARD', priority: 'HIGH', hasAdultContent: true },
+    );
+  });
+
+  it('patches chapter configuration with the new chapter name', async () => {
+    const patch = vi
+      .spyOn(backendService, 'patch')
+      .mockResolvedValue({ kind: 'ok', data: null } as never);
+
+    await updateChapterConfiguration(
+      'workspace id',
+      'story/id',
+      'chapter id',
+      { chapterName: 'Chapter Twelve' },
+    );
+
+    expect(patch).toHaveBeenCalledWith(
+      '/api/story-workflow/workspace%20id/stories/story%2Fid/chapters/chapter%20id',
+      { chapterName: 'Chapter Twelve' },
     );
   });
 
