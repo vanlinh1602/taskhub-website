@@ -17,7 +17,7 @@
   "confirmEnable": "Mở chặn nhận task",
   "confirmEnableDescription": "{{name}} sẽ có thể nhận task mới. Các task đang thực hiện không bị ảnh hưởng.",
   "confirmRemove": "Xóa thành viên khỏi workspace này?",
-  "confirmRemoveDescription": "Thu hồi vai trò Discord, quyền công đoạn và quyền Drive do Taskory cấp tại workspace {{workspaceId}}. {{name}} vẫn ở trong Discord; hồ sơ, lịch sử task/lương và quyền ở workspace khác được giữ. Task đang làm sẽ được bỏ phân công nếu không bị khóa bởi đợt lương.",
+  "confirmRemoveDescription": "Thu hồi quyền công đoạn và quyền Drive do Taskory cấp tại workspace {{workspaceId}}. {{name}} vẫn ở trong Discord; hồ sơ, lịch sử task/lương và quyền ở workspace khác được giữ. Task đang làm sẽ được bỏ phân công nếu không bị khóa bởi đợt lương.",
   "confirmCancel": "Hủy",
   "confirmAction": "Xác nhận",
   "description": "Theo dõi thành viên đã đăng ký, cấu hình hồ sơ và quyền nhận task.",
@@ -44,9 +44,11 @@
   "openTaskClaim": "Mở chặn nhận task",
   "qrDetails": "Cấu hình QR ngân hàng",
   "removeMember": "Xóa thành viên",
+  "retryAllResult": "Đã thu hồi xong {{success}}/{{total}} thành viên, còn {{failed}} thành viên chưa hoàn tất.",
+  "retryAllRevocations": "Thử lại tất cả ({{count}})",
   "retryRevocation": "Thử lại thu hồi quyền",
   "revocation": "Thu hồi quyền trong workspace",
-  "revocationCounts": "Còn {{roles}} vai trò Discord và {{drive}} quyền Drive cần thu hồi.",
+  "revocationCounts": "Còn {{drive}} quyền Drive cần thu hồi.",
   "revocationError": "Lỗi gần nhất: {{error}}",
   "revocationScope": "Phạm vi: workspace {{workspaceId}}",
   "revocationStatus": "Đang chờ thu hồi quyền",
@@ -63,5 +65,9 @@
   "taskClaim": "Quyền nhận task",
   "taskClaimUnchanged": "Thao tác này không ảnh hưởng các task đang thực hiện.",
   "updated": "Đã cập nhật quyền nhận task của thành viên.",
-  "viewDetails": "Xem thông tin"
+  "viewDetails": "Xem thông tin",
+  "filterAll": "Tất cả",
+  "needsAttention": "Cần xử lý",
+  "attentionBanner": "{{count}} thành viên còn quyền chưa thu hồi được.",
+  "moreActions": "Thêm thao tác"
 }

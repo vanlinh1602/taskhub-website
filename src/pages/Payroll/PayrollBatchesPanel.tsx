@@ -2,11 +2,14 @@ import {
   Banknote,
   CalendarClock,
   Check,
+  CheckCheck,
   ChevronLeft,
   ChevronRight,
   Eye,
   LoaderCircle,
+  QrCode,
   Save,
+  UserRound,
   X,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -31,6 +34,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -52,7 +62,9 @@ import { useWorkspacesQuery } from '@/features/admin/hooks';
 import {
   useCancelPayrollBatchMutation,
   useCreatePayrollBatchMutation,
+  usePayAllPayrollBatchRecipientsMutation,
   usePayPayrollBatchRecipientMutation,
+  usePayrollBankQrQuery,
   usePayrollBatchesQuery,
   usePayrollBatchQuery,
   useUpdatePayrollBatchTaskPriceMutation,
@@ -92,6 +104,9 @@ export default function PayrollBatchesPanel({
   const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(null);
   const [detailPage, setDetailPage] = useState(0);
   const [payRecipient, setPayRecipient] = useState<PayrollBatchRecipient | null>(null);
+  const [isPayAllOpen, setIsPayAllOpen] = useState(false);
+  const [qrRecipient, setQrRecipient] = useState<PayrollBatchRecipient | null>(null);
+  const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [cancelBatch, setCancelBatch] = useState<PayrollBatchSummary | null>(null);
   const [draftPrices, setDraftPrices] = useState<Record<string, string>>({});
   const dateTimeFormatter = useMemo(
@@ -108,14 +123,29 @@ export default function PayrollBatchesPanel({
   const batchQuery = usePayrollBatchQuery(
     workspaceId,
     selectedBatchId ?? '',
+    { page: 0, pageSize: 1 },
+    selectedBatchId !== null,
+  );
+  const taskQuery = usePayrollBatchQuery(
+    workspaceId,
+    selectedBatchId ?? '',
     {
       recipientDiscordUserId: selectedRecipientId ?? undefined,
       page: detailPage,
       pageSize: BATCH_PAGE_SIZE,
     },
-    selectedBatchId !== null,
+    selectedBatchId !== null && selectedRecipientId !== null,
+  );
+  const qrQuery = usePayrollBankQrQuery(
+    workspaceId,
+    qrRecipient?.discordUserId ?? '',
+    qrRecipient !== null,
   );
   const payMutation = usePayPayrollBatchRecipientMutation(
+    workspaceId,
+    selectedBatchId ?? '',
+  );
+  const payAllMutation = usePayAllPayrollBatchRecipientsMutation(
     workspaceId,
     selectedBatchId ?? '',
   );
@@ -132,6 +162,30 @@ export default function PayrollBatchesPanel({
     batchQuery.data?.recipients.find(
       (recipient) => recipient.discordUserId === selectedRecipientId,
     ) ?? null;
+  const pendingRecipients = useMemo(
+    () =>
+      (batchQuery.data?.recipients ?? []).filter(
+        (recipient) => recipient.status === 'PENDING',
+      ),
+    [batchQuery.data?.recipients],
+  );
+  const pendingTotals = useMemo(() => {
+    const byCurrency = new Map<string, number>();
+    for (const recipient of pendingRecipients)
+      for (const { currency, total } of recipient.grandTotals)
+        byCurrency.set(currency, (byCurrency.get(currency) ?? 0) + total);
+    return Array.from(byCurrency, ([currency, total]) => ({ currency, total }));
+  }, [pendingRecipients]);
+
+  useEffect(() => {
+    if (!qrQuery.data) {
+      setQrUrl(null);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(qrQuery.data);
+    setQrUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [qrQuery.data]);
 
   useEffect(() => {
     if (!cutoffTouched) setCutoffValue(getWorkspaceDateTimeLocal(new Date(), timezone));
@@ -143,6 +197,8 @@ export default function PayrollBatchesPanel({
     setDetailPage(0);
     setDraftPrices({});
     setPayRecipient(null);
+    setIsPayAllOpen(false);
+    setQrRecipient(null);
     setCancelBatch(null);
     setCutoffTouched(false);
   }, [mode, workspaceId]);
@@ -206,6 +262,38 @@ export default function PayrollBatchesPanel({
     });
   }
 
+  function handlePayAll(): void {
+    if (pendingRecipients.length === 0) return;
+    payAllMutation.mutate(
+      pendingRecipients.map((recipient) => recipient.discordUserId),
+      {
+        onSuccess: ({ paidDiscordUserIds, failures }) => {
+          setIsPayAllOpen(false);
+          if (failures.length === 0) {
+            toast.success(
+              t(translations.management.payroll.batchPayAllSuccess, {
+                count: paidDiscordUserIds.length,
+              }),
+            );
+            return;
+          }
+          toast.error(
+            t(translations.management.payroll.batchPayAllPartial, {
+              paid: paidDiscordUserIds.length,
+              failed: failures.length,
+            }),
+            { description: failures[0]?.message },
+          );
+        },
+        onError: (error) => {
+          toast.error(t(translations.management.payroll.paymentFailed), {
+            description: formatError(error),
+          });
+        },
+      },
+    );
+  }
+
   function handleCancelBatch(): void {
     if (!cancelBatch) return;
     cancelBatchMutation.mutate(cancelBatch.id, {
@@ -266,7 +354,7 @@ export default function PayrollBatchesPanel({
   return (
     <>
       <Card className="overflow-hidden rounded-2xl border-border/70 shadow-sm shadow-black/5">
-        <CardHeader className="gap-4 border-b border-border/60 bg-card p-4 sm:p-5 xl:flex xl:flex-row xl:items-end xl:justify-between">
+        <CardHeader className="gap-4 border-b border-border/60 bg-card p-4 sm:p-5">
           <div className="min-w-0">
             <CardTitle className="flex items-center gap-2 text-lg">
               <CalendarClock aria-hidden="true" className="size-5 text-primary" />
@@ -281,12 +369,13 @@ export default function PayrollBatchesPanel({
             </CardDescription>
           </div>
           {mode === 'pending' ? (
-            <div className="flex w-full flex-col gap-3 xl:w-auto xl:min-w-[26rem] xl:flex-row xl:items-end">
-              <div className="min-w-0 flex-1 space-y-1.5">
+            <div className="flex flex-col gap-3 rounded-xl border border-border/60 bg-muted/30 p-3 sm:flex-row sm:items-end sm:p-4">
+              <div className="min-w-0 flex-1 space-y-1.5 sm:max-w-xs">
                 <Label htmlFor="payroll-cutoff">
                   {t(translations.management.payroll.batchCutoff)}
                 </Label>
                 <Input
+                  className="bg-background"
                   id="payroll-cutoff"
                   max={workspaceNowValue}
                   onChange={(event) => {
@@ -296,14 +385,9 @@ export default function PayrollBatchesPanel({
                   type="datetime-local"
                   value={effectiveCutoffValue}
                 />
-                <p className="text-xs text-muted-foreground">
-                  {t(translations.management.payroll.batchTimezone, {
-                    timezone,
-                  })}
-                </p>
               </div>
               <Button
-                className="w-full shrink-0 xl:w-auto"
+                className="w-full shrink-0 sm:w-auto"
                 disabled={createBatchMutation.isPending}
                 onClick={handleCreateBatch}
               >
@@ -314,6 +398,11 @@ export default function PayrollBatchesPanel({
                 )}
                 {t(translations.management.payroll.closePayroll)}
               </Button>
+              <p className="text-xs leading-5 text-muted-foreground sm:flex-1 sm:pb-2 sm:text-right">
+                {t(translations.management.payroll.closePayrollHint)}
+                <br />
+                {t(translations.management.payroll.batchTimezone, { timezone })}
+              </p>
             </div>
           ) : null}
         </CardHeader>
@@ -334,125 +423,76 @@ export default function PayrollBatchesPanel({
                 : t(translations.management.payroll.noPaidBatches)}
             </div>
           ) : (
-            <>
-              <div className="hidden overflow-x-auto lg:block">
-                <Table className="min-w-[880px]">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t(translations.management.payroll.batchCutoff)}</TableHead>
-                      <TableHead className="text-right">
-                        {t(translations.management.payroll.taskCount)}
-                      </TableHead>
-                      <TableHead className="text-right">
-                        {t(translations.management.payroll.batchMembers)}
-                      </TableHead>
-                      <TableHead>{t(translations.management.payroll.status)}</TableHead>
-                      <TableHead className="text-right">
-                        {t(translations.management.payroll.grandTotal)}
-                      </TableHead>
-                      <TableHead className="text-right" />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {visibleBatches.map((batch) => (
-                      <TableRow key={batch.id}>
-                        <TableCell className="font-medium whitespace-nowrap">
+            <ul className="divide-y divide-border/60">
+              {visibleBatches.map((batch) => {
+                const progress =
+                  batch.recipientCount > 0
+                    ? Math.round(
+                        (batch.paidRecipientCount / batch.recipientCount) * 100,
+                      )
+                    : 0;
+                return (
+                  <li
+                    className="flex flex-col gap-4 px-4 py-4 transition-colors hover:bg-muted/20 sm:px-5 lg:flex-row lg:items-center"
+                    key={batch.id}
+                  >
+                    <div className="min-w-0 lg:w-64">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-semibold">
                           {dateTimeFormatter.format(new Date(batch.cutoffAt))}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {batch.taskCount}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {mode === 'history'
-                            ? `${batch.paidRecipientCount} / ${batch.recipientCount}`
-                            : batch.recipientCount}
-                        </TableCell>
-                        <TableCell>
-                          <span
-                            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusClassName(batch.status)}`}
-                          >
-                            {statusLabel(batch.status)}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right font-semibold whitespace-nowrap tabular-nums">
-                          {formatTotals(batch.grandTotals, i18n.language)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            onClick={() => {
-                              setSelectedBatchId(String(batch.id));
-                              setSelectedRecipientId(null);
-                              setDetailPage(0);
-                            }}
-                            size="sm"
-                            variant="outline"
-                          >
-                            <Eye aria-hidden="true" />
-                            {t(translations.management.payroll.viewDetails)}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              <ul className="divide-y divide-border/60 px-4 lg:hidden">
-                {visibleBatches.map((batch) => (
-                  <li className="py-4 first:pt-5 last:pb-5" key={batch.id}>
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <p className="font-semibold">
-                        {dateTimeFormatter.format(new Date(batch.cutoffAt))}
+                        </p>
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusClassName(batch.status)}`}
+                        >
+                          {statusLabel(batch.status)}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {batch.taskCount} task · {batch.recipientCount}{' '}
+                        {t(translations.management.payroll.batchMembers).toLowerCase()}
                       </p>
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusClassName(batch.status)}`}
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                        <span>
+                          {t(translations.management.payroll.batchPaidProgress, {
+                            paid: batch.paidRecipientCount,
+                            total: batch.recipientCount,
+                          })}
+                        </span>
+                        <span className="tabular-nums">{progress}%</span>
+                      </div>
+                      <div
+                        aria-hidden="true"
+                        className="h-2 overflow-hidden rounded-full bg-muted"
                       >
-                        {statusLabel(batch.status)}
-                      </span>
-                    </div>
-                    <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
-                      <div>
-                        <p className="text-xs text-muted-foreground">
-                          {t(translations.management.payroll.taskCount)}
-                        </p>
-                        <p className="mt-1 font-medium tabular-nums">
-                          {batch.taskCount}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">
-                          {t(translations.management.payroll.batchMembers)}
-                        </p>
-                        <p className="mt-1 font-medium tabular-nums">
-                          {mode === 'history'
-                            ? `${batch.paidRecipientCount} / ${batch.recipientCount}`
-                            : batch.recipientCount}
-                        </p>
-                      </div>
-                      <div className="col-span-2">
-                        <p className="text-xs text-muted-foreground">
-                          {t(translations.management.payroll.grandTotal)}
-                        </p>
-                        <p className="mt-1 font-semibold break-words tabular-nums">
-                          {formatTotals(batch.grandTotals, i18n.language)}
-                        </p>
+                        <div
+                          className="h-full rounded-full bg-primary transition-[width] duration-300"
+                          style={{ width: `${progress}%` }}
+                        />
                       </div>
                     </div>
-                    <Button
-                      className="mt-3 w-full"
-                      onClick={() => {
-                        setSelectedBatchId(String(batch.id));
-                        setSelectedRecipientId(null);
-                        setDetailPage(0);
-                      }}
-                      variant="outline"
-                    >
-                      <Eye aria-hidden="true" />
-                      {t(translations.management.payroll.viewDetails)}
-                    </Button>
+                    <div className="flex items-center justify-between gap-4 lg:w-auto lg:justify-end">
+                      <p className="text-base font-bold break-words tabular-nums">
+                        {formatTotals(batch.grandTotals, i18n.language)}
+                      </p>
+                      <Button
+                        onClick={() => {
+                          setSelectedBatchId(String(batch.id));
+                          setSelectedRecipientId(null);
+                          setDetailPage(0);
+                        }}
+                        size="sm"
+                        variant={mode === 'pending' ? 'default' : 'outline'}
+                      >
+                        <Eye aria-hidden="true" />
+                        {t(translations.management.payroll.viewDetails)}
+                      </Button>
+                    </div>
                   </li>
-                ))}
-              </ul>
-            </>
+                );
+              })}
+            </ul>
           )}
         </CardContent>
       </Card>
@@ -500,132 +540,213 @@ export default function PayrollBatchesPanel({
                       })}
                     </SheetDescription>
                   </div>
-                  {mode === 'pending' &&
-                  batchQuery.data.paidRecipientCount === 0 ? (
-                    <Button
-                      className="w-full sm:w-auto"
-                      disabled={cancelBatchMutation.isPending}
-                      onClick={() => setCancelBatch(batchQuery.data)}
-                      size="sm"
-                      variant="destructive"
-                    >
-                      {cancelBatchMutation.isPending ? (
-                        <LoaderCircle aria-hidden="true" className="animate-spin" />
-                      ) : (
-                        <X aria-hidden="true" />
-                      )}
-                      {t(translations.management.payroll.cancelBatch)}
-                    </Button>
+                  {mode === 'pending' ? (
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                      {batchQuery.data.paidRecipientCount === 0 ? (
+                        <Button
+                          disabled={
+                            cancelBatchMutation.isPending ||
+                            payAllMutation.isPending
+                          }
+                          onClick={() => setCancelBatch(batchQuery.data)}
+                          size="sm"
+                          variant="outline"
+                        >
+                          {cancelBatchMutation.isPending ? (
+                            <LoaderCircle aria-hidden="true" className="animate-spin" />
+                          ) : (
+                            <X aria-hidden="true" />
+                          )}
+                          {t(translations.management.payroll.cancelBatch)}
+                        </Button>
+                      ) : null}
+                      {pendingRecipients.length > 0 ? (
+                        <Button
+                          disabled={payAllMutation.isPending || payMutation.isPending}
+                          onClick={() => setIsPayAllOpen(true)}
+                        >
+                          {payAllMutation.isPending ? (
+                            <LoaderCircle aria-hidden="true" className="animate-spin" />
+                          ) : (
+                            <CheckCheck aria-hidden="true" />
+                          )}
+                          {t(translations.management.payroll.batchPayAll, {
+                            count: pendingRecipients.length,
+                          })}
+                        </Button>
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
-                <dl className="grid grid-cols-2 gap-4 border-t border-border/60 pt-3 text-sm sm:max-w-xl sm:gap-8">
-                  <div className="min-w-0">
+                <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <div className="min-w-0 rounded-xl bg-muted/40 p-3">
                     <dt className="text-xs text-muted-foreground">
                       {t(translations.management.payroll.taskCount)}
                     </dt>
-                    <dd className="mt-1 font-semibold tabular-nums">
+                    <dd className="mt-1 text-lg font-bold tabular-nums">
                       {batchQuery.data.taskCount}
                     </dd>
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 rounded-xl bg-muted/40 p-3">
+                    <dt className="text-xs text-muted-foreground">
+                      {t(translations.management.payroll.batchMembers)}
+                    </dt>
+                    <dd className="mt-1 text-lg font-bold tabular-nums">
+                      {t(translations.management.payroll.batchPaidProgress, {
+                        paid: batchQuery.data.paidRecipientCount,
+                        total: batchQuery.data.recipientCount,
+                      })}
+                    </dd>
+                  </div>
+                  <div className="min-w-0 rounded-xl bg-muted/40 p-3">
                     <dt className="text-xs text-muted-foreground">
                       {t(translations.management.payroll.grandTotal)}
                     </dt>
-                    <dd className="mt-1 font-semibold break-words tabular-nums">
+                    <dd className="mt-1 text-lg font-bold break-words tabular-nums">
                       {formatTotals(batchQuery.data.grandTotals, i18n.language)}
+                    </dd>
+                  </div>
+                  <div className="min-w-0 rounded-xl bg-primary/10 p-3">
+                    <dt className="text-xs text-muted-foreground">
+                      {t(translations.management.payroll.batchRemaining)}
+                    </dt>
+                    <dd className="mt-1 text-lg font-bold break-words tabular-nums">
+                      {formatTotals(pendingTotals, i18n.language)}
                     </dd>
                   </div>
                 </dl>
               </SheetHeader>
 
-              <div className="min-h-0 flex-1 overflow-y-auto pt-4 pr-1">
-                <div className="grid items-start gap-6 xl:grid-cols-[minmax(16rem,0.72fr)_minmax(0,1.7fr)]">
-                  <section className="min-w-0 space-y-3 xl:sticky xl:top-0 xl:max-h-[calc(100dvh-18rem)] xl:self-start xl:overflow-y-auto">
-                    <h3 className="text-sm font-semibold">
-                      {t(translations.management.payroll.batchMembers)}
-                    </h3>
-                    <div className="divide-y overflow-hidden rounded-xl border border-border/70">
-                      <button
-                        aria-pressed={selectedRecipientId === null}
-                        className={`grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-3 py-3 text-left text-sm transition-colors ${selectedRecipientId === null ? 'bg-muted/50 font-semibold' : 'hover:bg-muted/30'}`}
-                        onClick={() => {
-                          setSelectedRecipientId(null);
-                          setDetailPage(0);
-                        }}
-                        type="button"
-                      >
-                        <span>{t(translations.management.payroll.batchAllMembers)}</span>
-                        <span className="tabular-nums">{batchQuery.data.taskCount}</span>
-                      </button>
-                      {batchQuery.data.recipients.map((recipient) => (
-                        <div
-                          className={`grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-3 py-3 transition-colors sm:grid-cols-[minmax(0,1fr)_auto_auto] ${selectedRecipientId === recipient.discordUserId ? 'bg-muted/50' : ''}`}
-                          key={recipient.discordUserId}
-                        >
-                          <button
-                            aria-pressed={selectedRecipientId === recipient.discordUserId}
-                            className="min-w-0 text-left"
-                            onClick={() => {
-                              setSelectedRecipientId(recipient.discordUserId);
-                              setDetailPage(0);
-                            }}
-                            type="button"
-                          >
-                            <span className="block truncate text-sm font-semibold">
-                              {recipient.displayName}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {recipient.taskCount} · {statusLabel(recipient.status === 'PAID' ? 'PAID' : 'OPEN')}
-                            </span>
-                          </button>
-                          <span className="min-w-0 text-right text-sm font-semibold break-words tabular-nums">
-                            {formatTotals(recipient.grandTotals, i18n.language)}
+              <div className="min-h-0 flex-1 overflow-y-auto pt-4">
+                <h3 className="mb-3 text-sm font-semibold">
+                  {t(translations.management.payroll.batchMembers)}
+                </h3>
+                <ul className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border/70">
+                  {batchQuery.data.recipients.map((recipient) => (
+                    <li
+                      className="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center"
+                      key={recipient.discordUserId}
+                    >
+                      <div className="flex min-w-0 flex-1 items-center gap-3">
+                        {recipient.avatarUrl ? (
+                          <img
+                            alt=""
+                            className="size-10 shrink-0 rounded-xl object-cover"
+                            src={recipient.avatarUrl}
+                          />
+                        ) : (
+                          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                            <UserRound aria-hidden="true" className="size-5" />
                           </span>
-                          {mode === 'pending' && recipient.status === 'PENDING' ? (
-                            <Button
-                              className="col-span-2 w-full sm:col-span-1 sm:w-auto"
-                              disabled={payMutation.isPending}
-                              onClick={() => setPayRecipient(recipient)}
-                              size="sm"
-                            >
-                              {payMutation.isPending ? (
-                                <LoaderCircle aria-hidden="true" className="animate-spin" />
-                              ) : (
-                                <Banknote aria-hidden="true" />
-                              )}
-                              {t(translations.management.payroll.batchPayMember)}
-                            </Button>
-                          ) : recipient.status === 'PAID' ? (
-                            <span className="col-span-2 inline-flex items-center justify-center gap-1 text-xs font-medium text-emerald-700 sm:col-span-1 sm:justify-start dark:text-emerald-400">
-                              <Check aria-hidden="true" className="size-4" />
-                              {t(translations.management.payroll.paidStatus)}
-                            </span>
-                          ) : null}
+                        )}
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold">
+                            {recipient.displayName}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {recipient.taskCount} task
+                          </p>
                         </div>
-                      ))}
-                    </div>
-                  </section>
-
-                  <section className="min-w-0 space-y-3">
-                    <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                      <div className="min-w-0">
-                        <h3 className="text-sm font-semibold">
-                          {t(translations.management.payroll.taskDetails)}
-                        </h3>
-                        <p className="text-xs text-muted-foreground">
-                          {selectedRecipient?.displayName ??
-                            t(translations.management.payroll.batchAllMembers)}
-                        </p>
                       </div>
-                      <span className="shrink-0 text-xs text-muted-foreground sm:text-right">
-                        {t(translations.management.payroll.batchPageSummary, {
-                          current: batchQuery.data.page + 1,
-                          total: batchQuery.data.pageCount,
-                          count: batchQuery.data.total,
-                        })}
-                      </span>
-                    </div>
-                    {batchQuery.data.tasks.length === 0 ? (
+                      <div className="flex items-center justify-between gap-3 sm:justify-end">
+                        <p className="font-bold break-words tabular-nums sm:w-40 sm:text-right">
+                          {formatTotals(recipient.grandTotals, i18n.language)}
+                        </p>
+                        <span
+                          className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${recipient.status === 'PAID' ? 'bg-accent text-accent-foreground' : 'bg-primary/10 text-primary'}`}
+                        >
+                          {recipient.status === 'PAID' ? (
+                            <Check aria-hidden="true" className="size-3.5" />
+                          ) : null}
+                          {recipient.status === 'PAID'
+                            ? t(translations.management.payroll.paidStatus)
+                            : t(translations.management.payroll.pendingStatus)}
+                        </span>
+                      </div>
+                      <div className="flex gap-2 sm:justify-end">
+                        <Button
+                          className="flex-1 sm:flex-none"
+                          onClick={() => {
+                            setSelectedRecipientId(recipient.discordUserId);
+                            setDetailPage(0);
+                          }}
+                          size="sm"
+                          variant="outline"
+                        >
+                          <Eye aria-hidden="true" />
+                          {t(translations.management.payroll.viewDetails)}
+                        </Button>
+                        {mode === 'pending' && recipient.status === 'PENDING' ? (
+                          <Button
+                            className="flex-1 sm:flex-none"
+                            onClick={() => setQrRecipient(recipient)}
+                            size="sm"
+                            variant="outline"
+                          >
+                            <QrCode aria-hidden="true" />
+                            {t(translations.management.payroll.batchShowQr)}
+                          </Button>
+                        ) : null}
+                        {mode === 'pending' && recipient.status === 'PENDING' ? (
+                          <Button
+                            className="flex-1 sm:flex-none"
+                            disabled={payMutation.isPending || payAllMutation.isPending}
+                            onClick={() => setPayRecipient(recipient)}
+                            size="sm"
+                          >
+                            <Banknote aria-hidden="true" />
+                            {t(translations.management.payroll.batchPayMember)}
+                          </Button>
+                        ) : null}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      <Dialog
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedRecipientId(null);
+            setDetailPage(0);
+            setDraftPrices({});
+          }
+        }}
+        open={selectedRecipientId !== null}
+      >
+        <DialogContent className="flex max-h-[90dvh] flex-col gap-4 sm:max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedRecipient?.displayName ??
+                t(translations.management.payroll.taskDetails)}
+            </DialogTitle>
+            <DialogDescription>
+              {taskQuery.data
+                ? t(translations.management.payroll.batchPageSummary, {
+                    current: taskQuery.data.page + 1,
+                    total: taskQuery.data.pageCount,
+                    count: taskQuery.data.total,
+                  })
+                : t(translations.management.payroll.taskDetails)}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
+            {taskQuery.isError ? (
+              <p className="text-sm text-destructive">
+                {formatError(taskQuery.error)}
+              </p>
+            ) : !taskQuery.data ? (
+              <div className="flex min-h-32 items-center justify-center gap-2 text-sm text-muted-foreground">
+                <LoaderCircle aria-hidden="true" className="animate-spin" />
+                {t(translations.management.payroll.loading)}
+              </div>
+            ) : (
+              <>
+                    {taskQuery.data.tasks.length === 0 ? (
                       <p className="rounded-xl bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">
                         {t(translations.management.payroll.batchNoTasks)}
                       </p>
@@ -635,9 +756,6 @@ export default function PayrollBatchesPanel({
                         <Table className="min-w-[46rem]">
                           <TableHeader>
                             <TableRow>
-                              {!selectedRecipientId ? (
-                                <TableHead>{t(translations.management.payroll.member)}</TableHead>
-                              ) : null}
                               <TableHead>{t(translations.management.payroll.storyChapterStage)}</TableHead>
                               <TableHead className="whitespace-nowrap">
                                 {t(translations.management.payroll.completedAt)}
@@ -652,15 +770,8 @@ export default function PayrollBatchesPanel({
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {batchQuery.data.tasks.map((task) => (
+                            {taskQuery.data.tasks.map((task) => (
                               <TableRow key={task.id}>
-                                {!selectedRecipientId ? (
-                                  <TableCell className="whitespace-nowrap">
-                                    {batchQuery.data.recipients.find(
-                                      (recipient) => recipient.discordUserId === task.recipientDiscordUserId,
-                                    )?.displayName ?? task.recipientDiscordUserId}
-                                  </TableCell>
-                                ) : null}
                                 <TableCell className="min-w-56">
                                   <p className="font-medium break-words">{task.storyTitle}</p>
                                   <p className="text-xs text-muted-foreground">
@@ -674,18 +785,13 @@ export default function PayrollBatchesPanel({
                                 </TableCell>
                                 <TableCell className="min-w-44 text-right">
                                   {mode === 'pending' && task.paymentStatus !== 'PAID' ? (
-                                    <Input
+                                    <PriceInput
                                       aria-label={t(translations.management.payroll.baseSalary)}
                                       className="h-8 w-36 text-right tabular-nums"
-                                      min="0"
-                                      onChange={(event) =>
-                                        setDraftPrices((current) => ({
-                                          ...current,
-                                          [task.id]: event.target.value,
-                                        }))
+                                      language={i18n.language}
+                                      onChange={(value) =>
+                                        setDraftPrices((current) => ({ ...current, [task.id]: value }))
                                       }
-                                      step="0.01"
-                                      type="number"
                                       value={draftPrices[task.id] ?? task.agreedPrice}
                                     />
                                   ) : (
@@ -721,19 +827,12 @@ export default function PayrollBatchesPanel({
                       </div>
 
                       <ul className="space-y-3 lg:hidden">
-                        {batchQuery.data.tasks.map((task) => (
+                        {taskQuery.data.tasks.map((task) => (
                           <li
                             className="rounded-xl border border-border/70 bg-card p-3"
                             key={task.id}
                           >
                             <div className="flex flex-wrap items-start justify-between gap-2 text-xs text-muted-foreground">
-                              {!selectedRecipientId ? (
-                                <span className="min-w-0 font-semibold break-words text-foreground">
-                                  {batchQuery.data.recipients.find(
-                                    (recipient) => recipient.discordUserId === task.recipientDiscordUserId,
-                                  )?.displayName ?? task.recipientDiscordUserId}
-                                </span>
-                              ) : null}
                               <span className="text-right break-words">
                                 {task.completedAt
                                   ? dateTimeFormatter.format(new Date(task.completedAt))
@@ -752,18 +851,13 @@ export default function PayrollBatchesPanel({
                                   {t(translations.management.payroll.baseSalary)}
                                 </p>
                                 {mode === 'pending' && task.paymentStatus !== 'PAID' ? (
-                                  <Input
+                                  <PriceInput
                                     aria-label={t(translations.management.payroll.baseSalary)}
                                     className="mt-1 h-9 text-right tabular-nums"
-                                    min="0"
-                                    onChange={(event) =>
-                                      setDraftPrices((current) => ({
-                                        ...current,
-                                        [task.id]: event.target.value,
-                                      }))
+                                    language={i18n.language}
+                                    onChange={(value) =>
+                                      setDraftPrices((current) => ({ ...current, [task.id]: value }))
                                     }
-                                    step="0.01"
-                                    type="number"
                                     value={draftPrices[task.id] ?? task.agreedPrice}
                                   />
                                 ) : (
@@ -801,10 +895,10 @@ export default function PayrollBatchesPanel({
                       </ul>
                       </>
                     )}
-                    {batchQuery.data.pageCount > 1 ? (
+                    {taskQuery.data.pageCount > 1 ? (
                       <div className="flex items-center justify-between gap-3">
                       <Button
-                        disabled={batchQuery.isFetching || detailPage <= 0}
+                        disabled={taskQuery.isFetching || detailPage <= 0}
                         onClick={() => setDetailPage((page) => Math.max(0, page - 1))}
                         size="sm"
                         variant="outline"
@@ -813,7 +907,7 @@ export default function PayrollBatchesPanel({
                         {t(translations.management.payroll.previousPage)}
                       </Button>
                       <Button
-                        disabled={batchQuery.isFetching || detailPage + 1 >= batchQuery.data.pageCount}
+                        disabled={taskQuery.isFetching || detailPage + 1 >= taskQuery.data.pageCount}
                         onClick={() => setDetailPage((page) => page + 1)}
                         size="sm"
                       >
@@ -822,13 +916,11 @@ export default function PayrollBatchesPanel({
                       </Button>
                       </div>
                     ) : null}
-                  </section>
-                </div>
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog
         onOpenChange={(open) => {
@@ -866,6 +958,110 @@ export default function PayrollBatchesPanel({
                 <Check aria-hidden="true" />
               )}
               {t(translations.management.payroll.confirmAction)}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog
+        onOpenChange={(open) => {
+          if (!open) setQrRecipient(null);
+        }}
+        open={qrRecipient !== null}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              {t(translations.management.payroll.batchQrTitle)}
+            </DialogTitle>
+            <DialogDescription>{qrRecipient?.displayName}</DialogDescription>
+          </DialogHeader>
+          <div className="rounded-xl bg-primary/5 p-3 text-center">
+            <p className="text-xs text-muted-foreground">
+              {t(translations.management.payroll.batchQrAmount)}
+            </p>
+            <p className="mt-1 text-xl font-extrabold tabular-nums">
+              {qrRecipient
+                ? formatTotals(qrRecipient.grandTotals, i18n.language)
+                : null}
+            </p>
+          </div>
+          {qrQuery.isLoading ? (
+            <div className="flex min-h-56 items-center justify-center gap-2 text-sm text-muted-foreground">
+              <LoaderCircle aria-hidden="true" className="animate-spin" />
+              {t(translations.management.payroll.bankQrLoading)}
+            </div>
+          ) : qrQuery.isError ? (
+            <p className="rounded-xl bg-muted/40 px-3 py-6 text-center text-sm text-muted-foreground">
+              {t(translations.management.payroll.bankQrMissing)}
+            </p>
+          ) : qrUrl ? (
+            <div className="flex justify-center rounded-xl border border-border/70 bg-white p-3">
+              <img
+                alt={t(translations.management.payroll.bankQr)}
+                className="max-h-72 w-auto object-contain"
+                src={qrUrl}
+              />
+            </div>
+          ) : null}
+          {mode === 'pending' && qrRecipient ? (
+            <Button
+              onClick={() => {
+                setPayRecipient(qrRecipient);
+                setQrRecipient(null);
+              }}
+            >
+              <Banknote aria-hidden="true" />
+              {t(translations.management.payroll.batchPayMember)}
+            </Button>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        onOpenChange={(open) => {
+          if (!open && !payAllMutation.isPending) setIsPayAllOpen(false);
+        }}
+        open={isPayAllOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t(translations.management.payroll.batchPayAllConfirm)}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t(translations.management.payroll.batchPayAllDescription, {
+                count: pendingRecipients.length,
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="rounded-lg bg-muted/40 p-3">
+            <p className="text-xs text-muted-foreground">
+              {t(translations.management.payroll.batchPayAllTotal)}
+            </p>
+            <p className="mt-1 text-lg font-bold tabular-nums">
+              {formatTotals(pendingTotals, i18n.language)}
+            </p>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={payAllMutation.isPending}>
+              {t(translations.management.payroll.cancel)}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={payAllMutation.isPending}
+              onClick={(event) => {
+                event.preventDefault();
+                handlePayAll();
+              }}
+            >
+              {payAllMutation.isPending ? (
+                <LoaderCircle aria-hidden="true" className="animate-spin" />
+              ) : (
+                <CheckCheck aria-hidden="true" />
+              )}
+              {payAllMutation.isPending
+                ? t(translations.management.payroll.batchPayAllProcessing)
+                : t(translations.management.payroll.confirmAction)}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -919,6 +1115,33 @@ function formatTotals(
         `${formatNumber(total, language)} ${currency}`,
     )
     .join(' · ');
+}
+
+interface PriceInputProps {
+  readonly 'aria-label': string;
+  readonly className?: string;
+  readonly language: string;
+  readonly onChange: (value: string) => void;
+  readonly value: string;
+}
+
+function PriceInput({ language, onChange, value, ...props }: PriceInputProps) {
+  const digits = value.split('.')[0] ?? '';
+  const displayValue = digits
+    ? new Intl.NumberFormat(language).format(Number(digits))
+    : '';
+
+  return (
+    <Input
+      {...props}
+      inputMode="numeric"
+      onChange={(event) =>
+        onChange(event.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, ''))
+      }
+      type="text"
+      value={displayValue}
+    />
+  );
 }
 
 function formatNumber(value: string | number, language: string): string {

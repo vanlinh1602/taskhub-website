@@ -2,6 +2,7 @@ export {
   invalidatePayrollQueries,
   useCancelPayrollBatchMutation,
   useCreatePayrollBatchMutation,
+  usePayAllPayrollBatchRecipientsMutation,
   usePayPayrollBatchRecipientMutation,
   useRecalculatePayrollRewardsMutation,
   useUpdatePayrollBatchTaskPriceMutation,

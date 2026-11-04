@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { type FormEvent, type ReactNode, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router';
+import { Link, useLocation, useParams, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -94,16 +94,50 @@ const workflows: readonly ChapterWorkflowFilter[] = [
 const publications = ['ALL', 'PUBLISHED', 'UNPUBLISHED'] as const;
 type PublicationFilter = (typeof publications)[number];
 const chapterNameSortOrders: readonly ChapterNameSortOrder[] = ['ASC', 'DESC'];
+const priorityFilters: readonly (ChapterPriority | 'ALL')[] = [
+  'ALL',
+  ...priorities,
+];
+
+function readFilterParam<T extends string>(
+  searchParams: URLSearchParams,
+  key: string,
+  allowed: readonly T[],
+  fallback: T,
+): T {
+  const value = searchParams.get(key);
+  return allowed.find((item) => item === value) ?? fallback;
+}
 
 export default function StoryDetailPage(): ReactNode {
   const { t } = useTranslation();
   const { storyId = '' } = useParams();
   const { activeWorkspaceId: workspaceId } = useWorkspaceStore();
-  const [workflow, setWorkflow] = useState<ChapterWorkflowFilter>('ALL');
-  const [publication, setPublication] = useState<PublicationFilter>('ALL');
-  const [priority, setPriority] = useState<ChapterPriority | 'ALL'>('ALL');
-  const [chapterNameSortOrder, setChapterNameSortOrder] =
-    useState<ChapterNameSortOrder>('ASC');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const workflow = readFilterParam(
+    searchParams,
+    'workflow',
+    workflows,
+    'ALL',
+  );
+  const publication = readFilterParam(
+    searchParams,
+    'publication',
+    publications,
+    'ALL',
+  );
+  const priority = readFilterParam(
+    searchParams,
+    'priority',
+    priorityFilters,
+    'ALL',
+  );
+  const chapterNameSortOrder = readFilterParam(
+    searchParams,
+    'sort',
+    chapterNameSortOrders,
+    'ASC',
+  );
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isRenameStoryOpen, setIsRenameStoryOpen] = useState(false);
   const [editingChapter, setEditingChapter] = useState<Chapter | null>(null);
@@ -136,20 +170,36 @@ export default function StoryDetailPage(): ReactNode {
     storyId,
   );
 
+  function updateFilterParam(
+    key: string,
+    value: string,
+    defaultValue: string,
+  ): void {
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        if (value === defaultValue) next.delete(key);
+        else next.set(key, value);
+        return next;
+      },
+      { replace: true },
+    );
+  }
+
   function changeWorkflow(value: ChapterWorkflowFilter): void {
-    setWorkflow(value);
+    updateFilterParam('workflow', value, 'ALL');
   }
 
   function changePublication(value: PublicationFilter): void {
-    setPublication(value);
+    updateFilterParam('publication', value, 'ALL');
   }
 
   function changePriority(value: ChapterPriority | 'ALL'): void {
-    setPriority(value);
+    updateFilterParam('priority', value, 'ALL');
   }
 
   function changeChapterNameSortOrder(value: ChapterNameSortOrder): void {
-    setChapterNameSortOrder(value);
+    updateFilterParam('sort', value, 'ASC');
   }
 
   function togglePublication(chapter: Chapter): void {
@@ -770,6 +820,7 @@ function ChapterRow({
   storyId: string;
 }): ReactNode {
   const { t } = useTranslation();
+  const { search } = useLocation();
   const progress = progressOf(chapter);
   const published = chapter.publicationStatus === 'PUBLISHED';
   return (
@@ -777,7 +828,8 @@ function ChapterRow({
       <TableCell>
         <Link
           className="font-semibold text-primary underline-offset-4 hover:underline"
-          to={getChapterDetailPath(storyId, chapter.id)}
+          state={{ storySearch: search }}
+to={getChapterDetailPath(storyId, chapter.id)}
         >
           {chapter.chapterName}
         </Link>
@@ -829,7 +881,10 @@ function ChapterRow({
       <TableCell>
         <div className="flex justify-end gap-1">
           <Button asChild size="sm" variant="ghost">
-            <Link to={getChapterDetailPath(storyId, chapter.id)}>
+            <Link
+              state={{ storySearch: search }}
+              to={getChapterDetailPath(storyId, chapter.id)}
+            >
               <ArrowRight />
               {t(translations.management.stories.viewChapter)}
             </Link>
@@ -887,6 +942,7 @@ function ChapterCard({
   storyId: string;
 }): ReactNode {
   const { t } = useTranslation();
+  const { search } = useLocation();
   const published = chapter.publicationStatus === 'PUBLISHED';
   return (
     <Card>
@@ -895,7 +951,8 @@ function ChapterCard({
           <CardTitle className="truncate">
             <Link
               className="text-primary underline-offset-4 hover:underline"
-              to={getChapterDetailPath(storyId, chapter.id)}
+              state={{ storySearch: search }}
+to={getChapterDetailPath(storyId, chapter.id)}
             >
               {chapter.chapterName}
             </Link>
@@ -928,7 +985,10 @@ function ChapterCard({
         </p>
         <div className="mt-4 flex justify-between border-t pt-4">
           <Button asChild size="sm" variant="ghost">
-            <Link to={getChapterDetailPath(storyId, chapter.id)}>
+            <Link
+              state={{ storySearch: search }}
+              to={getChapterDetailPath(storyId, chapter.id)}
+            >
               <ArrowRight />
               {t(translations.management.stories.viewChapter)}
             </Link>

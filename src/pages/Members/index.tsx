@@ -1,9 +1,11 @@
 import {
   CalendarDays,
   Check,
+  CircleAlert,
   CreditCard,
   Layers3,
   Mail,
+  MoreHorizontal,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -27,13 +29,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Empty,
   EmptyDescription,
@@ -42,13 +45,6 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Sheet,
   SheetContent,
@@ -82,7 +78,9 @@ import { useWorkspaceStore } from '@/features/workspace/hooks';
 import { translations } from '@/locales/translations';
 import formatError from '@/utils/formatError';
 
-type StatusFilter = MemberStatus | 'ALL';
+type StatusFilter = MemberStatus | 'ALL' | 'ATTENTION';
+
+const MAX_VISIBLE_STAGES = 2;
 
 interface PendingTaskClaimAction {
   readonly enabled: boolean;
@@ -174,9 +172,11 @@ function StatusPill({
 function StageList({
   member,
   emptyLabel,
+  compact = false,
 }: {
   readonly member: Member;
   readonly emptyLabel: string;
+  readonly compact?: boolean;
 }) {
   if (member.stages.length === 0) {
     return <span className="text-sm text-muted-foreground">{emptyLabel}</span>;
@@ -184,7 +184,7 @@ function StageList({
 
   return (
     <div className="flex flex-wrap gap-1.5">
-      {member.stages.map((stage) => (
+      {(compact ? member.stages.slice(0, MAX_VISIBLE_STAGES) : member.stages).map((stage) => (
         <span
           className="rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground"
           key={stage.id}
@@ -193,171 +193,222 @@ function StageList({
           {stage.name}
         </span>
       ))}
+      {compact && member.stages.length > MAX_VISIBLE_STAGES ? (
+        <span
+          className="rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground"
+          title={member.stages
+            .slice(MAX_VISIBLE_STAGES)
+            .map((stage) => stage.name)
+            .join(', ')}
+        >
+          +{member.stages.length - MAX_VISIBLE_STAGES}
+        </span>
+      ) : null}
     </div>
   );
 }
 
-function MemberRow({
+interface MemberActionProps {
+  readonly member: Member;
+  readonly onView: (member: Member) => void;
+  readonly onRemove: (member: Member) => void;
+  readonly onRetryRevocation: (member: Member) => void;
+  readonly retrying: boolean;
+  readonly retryDisabled: boolean;
+  readonly t: ReturnType<typeof useTranslation>['t'];
+}
+
+function MemberStatusCell({
   member,
-  dateFormatter,
-  emptyLabel,
-  onView,
-  onRemove,
   t,
 }: {
   readonly member: Member;
-  readonly dateFormatter: Intl.DateTimeFormat;
-  readonly emptyLabel: string;
-  readonly onView: (member: Member) => void;
-  readonly onRemove: (member: Member) => void;
   readonly t: ReturnType<typeof useTranslation>['t'];
 }) {
   return (
-    <TableRow className="border-border/60 hover:bg-muted/30">
-      <TableCell className="px-4 py-4 align-top">
-        <div className="flex min-w-48 items-center gap-3">
-          <MemberAvatar member={member} />
-          <div className="min-w-0">
-            <p className="truncate font-semibold">{member.displayName}</p>
-            <p className="truncate text-xs text-muted-foreground">
-              {member.username ? `@${member.username}` : member.discordUserId}
-            </p>
-          </div>
-        </div>
-      </TableCell>
-      <TableCell className="max-w-56 px-4 py-4 align-top text-sm text-muted-foreground">
-        <span className="line-clamp-2 break-words">
-          {member.gmail ?? emptyLabel}
+    <div className="flex flex-wrap items-center gap-1.5">
+      <StatusPill status={member.status} t={t} />
+      {member.revocationStatus === 'PENDING' ? (
+        <span
+          className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-1 text-xs font-semibold text-destructive"
+          title={member.revocationError ?? undefined}
+        >
+          <CircleAlert aria-hidden="true" className="size-3.5" />
+          {t(translations.members.revocationStatus)}
         </span>
-      </TableCell>
-      <TableCell className="min-w-40 px-4 py-4 align-top">
-        <StageList emptyLabel={emptyLabel} member={member} />
-      </TableCell>
-      <TableCell className="px-4 py-4 align-top">
-        <div className="space-y-1.5">
-          <StatusPill status={member.status} t={t} />
-          {member.revocationStatus === 'PENDING' ? (
-            <p className="text-xs text-destructive">
-              {t(translations.members.revocationStatus)}
-            </p>
-          ) : null}
-        </div>
-      </TableCell>
-      <TableCell className="px-4 py-4 align-top">
-        <div className="flex items-center gap-2 text-sm">
-          <CreditCard aria-hidden="true" className="size-4 text-muted-foreground" />
-          <span className={member.bankQr.configured ? 'text-foreground' : 'text-muted-foreground'}>
-            {member.bankQr.configured
-              ? t(translations.members.bankQrConfigured)
-              : t(translations.members.bankQrNotConfigured)}
-          </span>
-        </div>
-      </TableCell>
-      <TableCell className="px-4 py-4 align-top text-sm whitespace-nowrap text-muted-foreground">
-        {formatMemberDate(member.joinedAt, dateFormatter)}
-      </TableCell>
-      <TableCell className="px-4 py-4 text-right align-top">
-        <div className="flex justify-end gap-2">
-          <Button onClick={() => onView(member)} size="sm" variant="outline">
-            {t(translations.members.viewDetails)}
-          </Button>
-          {member.status !== 'LEFT' ? (
-            <Button
-              aria-label={`${t(translations.members.removeMember)}: ${member.displayName}`}
-              onClick={() => onRemove(member)}
-              size="sm"
-              variant="destructive"
+      ) : null}
+    </div>
+  );
+}
+
+function BankQrIndicator({
+  member,
+  t,
+}: {
+  readonly member: Member;
+  readonly t: ReturnType<typeof useTranslation>['t'];
+}) {
+  const configured = member.bankQr.configured;
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 text-sm ${configured ? 'text-foreground' : 'text-muted-foreground'}`}
+    >
+      {configured ? (
+        <Check aria-hidden="true" className="size-4 text-primary" />
+      ) : (
+        <CreditCard aria-hidden="true" className="size-4" />
+      )}
+      {configured
+        ? t(translations.members.bankQrConfigured)
+        : t(translations.members.bankQrNotConfigured)}
+    </span>
+  );
+}
+
+function MemberActionsMenu({
+  member,
+  onView,
+  onRemove,
+  onRetryRevocation,
+  retrying,
+  retryDisabled,
+  t,
+}: MemberActionProps) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          aria-label={`${t(translations.members.moreActions)}: ${member.displayName}`}
+          size="icon"
+          variant="ghost"
+        >
+          <MoreHorizontal aria-hidden="true" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent>
+        <DropdownMenuItem onSelect={() => onView(member)}>
+          {t(translations.members.viewDetails)}
+        </DropdownMenuItem>
+        {member.revocationStatus === 'PENDING' ? (
+          <DropdownMenuItem disabled={retryDisabled} onSelect={() => onRetryRevocation(member)}>
+            <RefreshCw aria-hidden="true" className={retrying ? 'size-4 animate-spin' : 'size-4'} />
+            {t(translations.members.retryRevocation)}
+          </DropdownMenuItem>
+        ) : null}
+        {member.status !== 'LEFT' ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive data-[highlighted]:bg-destructive/10 data-[highlighted]:text-destructive"
+              onSelect={() => onRemove(member)}
             >
-              <UserX aria-hidden="true" />
+              <UserX aria-hidden="true" className="size-4" />
               {t(translations.members.removeMember)}
-            </Button>
-          ) : null}
-        </div>
+            </DropdownMenuItem>
+          </>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function MemberIdentity({
+  member,
+  emptyLabel,
+  onView,
+}: {
+  readonly member: Member;
+  readonly emptyLabel: string;
+  readonly onView: (member: Member) => void;
+}) {
+  return (
+    <div className="flex min-w-0 items-center gap-3">
+      <MemberAvatar member={member} />
+      <div className="min-w-0">
+        <button
+          className="block max-w-full truncate rounded text-left font-semibold hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          onClick={() => onView(member)}
+          type="button"
+        >
+          {member.displayName}
+        </button>
+        <p className="truncate text-xs text-muted-foreground">
+          {member.gmail ?? member.username ?? emptyLabel}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function MemberRow(props: MemberActionProps & { readonly emptyLabel: string }) {
+  const { member, emptyLabel, onView, t } = props;
+  return (
+    <TableRow className="border-border/60 hover:bg-muted/30">
+      <TableCell className="max-w-72 px-4 py-3">
+        <MemberIdentity emptyLabel={emptyLabel} member={member} onView={onView} />
+      </TableCell>
+      <TableCell className="px-4 py-3">
+        <StageList compact emptyLabel={emptyLabel} member={member} />
+      </TableCell>
+      <TableCell className="px-4 py-3">
+        <MemberStatusCell member={member} t={t} />
+      </TableCell>
+      <TableCell className="px-4 py-3">
+        <BankQrIndicator member={member} t={t} />
+      </TableCell>
+      <TableCell className="w-12 px-4 py-3 text-right">
+        <MemberActionsMenu {...props} />
       </TableCell>
     </TableRow>
   );
 }
 
-function MemberCard({
-  member,
-  dateFormatter,
-  emptyLabel,
-  onView,
-  onRemove,
-  t,
-}: {
-  readonly member: Member;
-  readonly dateFormatter: Intl.DateTimeFormat;
-  readonly emptyLabel: string;
-  readonly onView: (member: Member) => void;
-  readonly onRemove: (member: Member) => void;
-  readonly t: ReturnType<typeof useTranslation>['t'];
-}) {
+function MemberCard(props: MemberActionProps & { readonly emptyLabel: string }) {
+  const { member, emptyLabel, onView, t } = props;
   return (
-    <article className="rounded-2xl border border-border/70 bg-card p-4 shadow-[var(--soft-shadow)]">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <MemberAvatar member={member} />
-          <div className="min-w-0">
-            <h3 className="truncate font-semibold">{member.displayName}</h3>
-            <p className="truncate text-xs text-muted-foreground">
-              {member.username ? `@${member.username}` : member.discordUserId}
-            </p>
-          </div>
-        </div>
-        <StatusPill status={member.status} t={t} />
+    <article className="rounded-2xl border border-border/70 bg-card p-4">
+      <div className="flex items-start justify-between gap-2">
+        <MemberIdentity emptyLabel={emptyLabel} member={member} onView={onView} />
+        <MemberActionsMenu {...props} />
       </div>
-
-      <dl className="mt-4 grid gap-3 text-sm">
-        <div className="grid grid-cols-[7rem_1fr] gap-3">
-          <dt className="text-muted-foreground">{t(translations.members.email)}</dt>
-          <dd className="text-right break-words">{member.gmail ?? emptyLabel}</dd>
-        </div>
-        <div className="grid grid-cols-[7rem_1fr] gap-3">
-          <dt className="text-muted-foreground">{t(translations.members.stages)}</dt>
-          <dd className="text-right">
-            <div className="flex justify-end">
-              <StageList emptyLabel={emptyLabel} member={member} />
-            </div>
-          </dd>
-        </div>
-        <div className="grid grid-cols-[7rem_1fr] gap-3">
-          <dt className="text-muted-foreground">{t(translations.members.bankQr)}</dt>
-          <dd className="text-right">
-            {member.bankQr.configured
-              ? t(translations.members.bankQrConfigured)
-              : t(translations.members.bankQrNotConfigured)}
-          </dd>
-        </div>
-        <div className="grid grid-cols-[7rem_1fr] gap-3">
-          <dt className="text-muted-foreground">{t(translations.members.joinedAt)}</dt>
-          <dd className="text-right text-muted-foreground">
-            {formatMemberDate(member.joinedAt, dateFormatter)}
-          </dd>
-        </div>
-      </dl>
-
-      {member.revocationStatus === 'PENDING' ? (
-        <p className="mt-3 text-xs text-destructive">
-          {t(translations.members.revocationStatus)}
-        </p>
-      ) : null}
-      <div className="mt-4 flex gap-2">
-        <Button className="flex-1" onClick={() => onView(member)} variant="outline">
-          {t(translations.members.viewDetails)}
-        </Button>
-        {member.status !== 'LEFT' ? (
-          <Button
-            aria-label={`${t(translations.members.removeMember)}: ${member.displayName}`}
-            onClick={() => onRemove(member)}
-            variant="destructive"
-          >
-            <UserX aria-hidden="true" />
-            <span className="sr-only">{t(translations.members.removeMember)}</span>
-          </Button>
-        ) : null}
+      <div className="mt-3 space-y-3">
+        <MemberStatusCell member={member} t={t} />
+        <StageList compact emptyLabel={emptyLabel} member={member} />
+        <BankQrIndicator member={member} t={t} />
       </div>
     </article>
+  );
+}
+
+function SummaryFilter({
+  label,
+  count,
+  active,
+  tone = 'default',
+  onClick,
+}: {
+  readonly label: string;
+  readonly count: number;
+  readonly active: boolean;
+  readonly tone?: 'default' | 'warning';
+  readonly onClick: () => void;
+}) {
+  return (
+    <button
+      aria-pressed={active}
+      className={`flex min-w-28 flex-1 flex-col items-start rounded-xl border px-4 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
+        active ? 'border-primary bg-primary/10' : 'border-border/70 bg-card hover:bg-muted/40'
+      }`}
+      onClick={onClick}
+      type="button"
+    >
+      <span
+        className={`text-2xl font-bold tabular-nums ${tone === 'warning' && count > 0 ? 'text-destructive' : ''}`}
+      >
+        {count}
+      </span>
+      <span className="text-xs text-muted-foreground">{label}</span>
+    </button>
   );
 }
 
@@ -436,7 +487,6 @@ function MemberDetails({
                 </p>
                 <p className="text-xs leading-5 text-muted-foreground">
                   {t(translations.members.revocationCounts, {
-                    roles: member.pendingDiscordRoleCount ?? 0,
                     drive: member.pendingDriveGrantCount ?? 0,
                   })}
                 </p>
@@ -453,7 +503,7 @@ function MemberDetails({
                 {t(translations.members.cleanupComplete)}
               </p>
             ) : null}
-            {member.status === 'LEFT' ? (
+            {member.status === 'LEFT' || member.revocationStatus === 'PENDING' ? (
               <div className="flex flex-col gap-2 sm:flex-row">
                 {member.revocationStatus === 'PENDING' ? (
                   <Button
@@ -466,14 +516,16 @@ function MemberDetails({
                     {t(translations.members.retryRevocation)}
                   </Button>
                 ) : null}
-                <Button
-                  disabled={memberActionPending}
-                  onClick={() => onActivate(member)}
-                  size="sm"
-                >
-                  <ShieldCheck aria-hidden="true" />
-                  {t(translations.members.activateMember)}
-                </Button>
+                {member.status === 'LEFT' ? (
+                  <Button
+                    disabled={memberActionPending}
+                    onClick={() => onActivate(member)}
+                    size="sm"
+                  >
+                    <ShieldCheck aria-hidden="true" />
+                    {t(translations.members.activateMember)}
+                  </Button>
+                ) : null}
               </div>
             ) : null}
             {member.status === 'LEFT' ? (
@@ -576,18 +628,44 @@ export default function MembersPage() {
   const removeMemberMutation = useRemoveMemberMutation(workspaceId);
   const retryRevocationMutation = useRetryMemberRevocationMutation(workspaceId);
   const activateMemberMutation = useActivateMemberMutation(workspaceId);
+  const [retryingAll, setRetryingAll] = useState(false);
+  const pendingRevocationMembers = useMemo(
+    () =>
+      (membersQuery.data ?? []).filter((member) => member.revocationStatus === 'PENDING'),
+    [membersQuery.data],
+  );
   const memberActionPending =
+    retryingAll ||
     removeMemberMutation.isPending ||
     retryRevocationMutation.isPending ||
     activateMemberMutation.isPending;
+  const retryingId = retryRevocationMutation.isPending
+    ? retryRevocationMutation.variables?.discordUserId
+    : undefined;
   const dateFormatter = useMemo(
     () => new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium' }),
     [i18n.language],
   );
-  const filteredMembers = useMemo(
-    () => filterMembers(membersQuery.data ?? [], search, statusFilter),
-    [membersQuery.data, search, statusFilter],
-  );
+  const counts = useMemo(() => {
+    const members = membersQuery.data ?? [];
+    return {
+      total: members.length,
+      active: members.filter((member) => member.status === 'ACTIVE').length,
+      suspended: members.filter((member) => member.status === 'SUSPENDED').length,
+      left: members.filter((member) => member.status === 'LEFT').length,
+    };
+  }, [membersQuery.data]);
+  const filteredMembers = useMemo(() => {
+    const members = membersQuery.data ?? [];
+    if (statusFilter === 'ATTENTION') {
+      return filterMembers(
+        members.filter((member) => member.revocationStatus === 'PENDING'),
+        search,
+        'ALL',
+      );
+    }
+    return filterMembers(members, search, statusFilter);
+  }, [membersQuery.data, search, statusFilter]);
 
   function requestTaskClaimChange(member: Member, enabled: boolean): void {
     setPendingAction({ enabled, member });
@@ -595,6 +673,67 @@ export default function MembersPage() {
 
   function requestMemberRemoval(member: Member): void {
     setPendingRemoval({ member });
+  }
+
+  function retryRevocation(member: Member): void {
+    retryRevocationMutation.mutate(
+      { discordUserId: member.discordUserId },
+      {
+        onSuccess: (result) => {
+          setSelectedMember((current) =>
+            current?.discordUserId === result.member.discordUserId
+              ? result.member
+              : current,
+          );
+          if (result.member.revocationStatus === 'PENDING') {
+            toast.warning(t(translations.members.cleanupPending));
+          } else {
+            toast.success(t(translations.members.cleanupComplete));
+          }
+        },
+        onError: (error: Error) =>
+          toast.error(
+            isForbiddenError(error) ? t(translations.members.forbidden) : formatError(error),
+          ),
+      },
+    );
+  }
+
+  async function retryAllRevocations(): Promise<void> {
+    const targets = pendingRevocationMembers;
+    if (targets.length === 0) return;
+    setRetryingAll(true);
+    let success = 0;
+    let forbidden = false;
+    let lastError: string | null = null;
+    for (const member of targets) {
+      try {
+        const result = await retryRevocationMutation.mutateAsync({
+          discordUserId: member.discordUserId,
+        });
+        if (result.member.revocationStatus !== 'PENDING') success += 1;
+      } catch (error: unknown) {
+        if (isForbiddenError(error)) {
+          forbidden = true;
+          break;
+        }
+        lastError = formatError(error);
+      }
+    }
+    setRetryingAll(false);
+    if (forbidden) {
+      toast.error(t(translations.members.forbidden));
+      return;
+    }
+    const failed = targets.length - success;
+    const message = t(translations.members.retryAllResult, {
+      success,
+      total: targets.length,
+      failed,
+    });
+    if (failed > 0) {
+      toast.warning(lastError ? `${message} ${lastError}` : message);
+    } else toast.success(message);
   }
 
   function showRevocationResult(result: MemberRemovalResult): void {
@@ -623,61 +762,107 @@ export default function MembersPage() {
 
   return (
     <section className="space-y-6">
-      <div className="max-w-3xl">
+      <div className="flex flex-col gap-1">
         <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
           {t(translations.members.title)}
         </h1>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+        <p className="text-sm leading-6 text-muted-foreground">
           {t(translations.members.description)}
         </p>
       </div>
 
-      <Card className="border-border/70 shadow-[var(--soft-shadow)]">
-        <CardHeader className="gap-4 border-b border-border/60 sm:flex sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <CardTitle>{t(translations.members.memberDetails)}</CardTitle>
-            <CardDescription className="mt-1">
-              {t(translations.members.memberCount, { count: membersQuery.data?.length ?? 0 })}
-            </CardDescription>
-          </div>
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-            <div className="relative w-full sm:w-72">
-              <Search
-                aria-hidden="true"
-                className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-              />
-              <Input
-                aria-label={t(translations.members.search)}
-                className="pl-9"
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={t(translations.members.search)}
-                value={search}
-              />
-            </div>
-            <Select
-              onValueChange={(value) => setStatusFilter(value as StatusFilter)}
-              value={statusFilter}
-            >
-              <SelectTrigger aria-label={t(translations.members.statusFilter)} className="w-full sm:w-44">
-                <SelectValue placeholder={t(translations.members.statusFilter)} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">{t(translations.members.statusFilter)}</SelectItem>
-                <SelectItem value="ACTIVE">{t(translations.members.statusActive)}</SelectItem>
-                <SelectItem value="SUSPENDED">{t(translations.members.statusSuspended)}</SelectItem>
-                <SelectItem value="LEFT">{t(translations.members.statusLeft)}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardHeader>
+      {membersQuery.data && membersQuery.data.length > 0 ? (
+        <div className="flex flex-wrap gap-3">
+          <SummaryFilter
+            active={statusFilter === 'ALL'}
+            count={counts.total}
+            label={t(translations.members.filterAll)}
+            onClick={() => setStatusFilter('ALL')}
+          />
+          <SummaryFilter
+            active={statusFilter === 'ACTIVE'}
+            count={counts.active}
+            label={t(translations.members.statusActive)}
+            onClick={() => setStatusFilter('ACTIVE')}
+          />
+          <SummaryFilter
+            active={statusFilter === 'SUSPENDED'}
+            count={counts.suspended}
+            label={t(translations.members.statusSuspended)}
+            onClick={() => setStatusFilter('SUSPENDED')}
+          />
+          <SummaryFilter
+            active={statusFilter === 'LEFT'}
+            count={counts.left}
+            label={t(translations.members.statusLeft)}
+            onClick={() => setStatusFilter('LEFT')}
+          />
+          {pendingRevocationMembers.length > 0 ? (
+            <SummaryFilter
+              active={statusFilter === 'ATTENTION'}
+              count={pendingRevocationMembers.length}
+              label={t(translations.members.needsAttention)}
+              onClick={() => setStatusFilter('ATTENTION')}
+              tone="warning"
+            />
+          ) : null}
+        </div>
+      ) : null}
 
-        <CardContent className="pt-5">
+      {pendingRevocationMembers.length > 0 ? (
+        <div
+          className="flex flex-col gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4 sm:flex-row sm:items-center sm:justify-between"
+          role="status"
+        >
+          <div className="flex items-start gap-3 text-sm">
+            <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-destructive" />
+            <span>
+              {t(translations.members.attentionBanner, {
+                count: pendingRevocationMembers.length,
+              })}
+            </span>
+          </div>
+          <Button
+            disabled={memberActionPending}
+            onClick={() => void retryAllRevocations()}
+            size="sm"
+            variant="outline"
+          >
+            <RefreshCw aria-hidden="true" className={retryingAll ? 'animate-spin' : undefined} />
+            {t(translations.members.retryAllRevocations, {
+              count: pendingRevocationMembers.length,
+            })}
+          </Button>
+        </div>
+      ) : null}
+
+      <Card className="border-border/70 shadow-[var(--soft-shadow)]">
+        <div className="flex flex-col gap-3 border-b border-border/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            {t(translations.members.memberCount, { count: filteredMembers.length })}
+          </p>
+          <div className="relative w-full sm:w-80">
+            <Search
+              aria-hidden="true"
+              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              aria-label={t(translations.members.search)}
+              className="pl-9"
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={t(translations.members.search)}
+              value={search}
+            />
+          </div>
+        </div>
+
+        <CardContent className="p-0">
           {membersQuery.isLoading ? (
-            <LoadingMembers label={t(translations.members.loading)} />
+            <div className="p-4"><LoadingMembers label={t(translations.members.loading)} /></div>
           ) : null}
 
           {membersQuery.isError ? (
-            <Empty className="border border-destructive/20 bg-destructive/5 py-12">
+            <Empty className="m-4 border border-destructive/20 bg-destructive/5 py-12">
               <EmptyHeader>
                 <EmptyMedia variant="icon">
                   <ShieldOff />
@@ -702,7 +887,7 @@ export default function MembersPage() {
           ) : null}
 
           {!membersQuery.isLoading && !membersQuery.isError && membersQuery.data?.length === 0 ? (
-            <Empty className="border border-border/70 bg-muted/20 py-12">
+            <Empty className="m-4 border border-border/70 bg-muted/20 py-12">
               <EmptyHeader>
                 <EmptyMedia variant="icon">
                   <UsersRound />
@@ -714,7 +899,7 @@ export default function MembersPage() {
           ) : null}
 
           {!membersQuery.isLoading && !membersQuery.isError && membersQuery.data?.length && filteredMembers.length === 0 ? (
-            <Empty className="border border-border/70 bg-muted/20 py-12">
+            <Empty className="m-4 border border-border/70 bg-muted/20 py-12">
               <EmptyHeader>
                 <EmptyMedia variant="icon">
                   <Search />
@@ -728,42 +913,46 @@ export default function MembersPage() {
           {filteredMembers.length > 0 ? (
             <>
               <div className="hidden lg:block">
-                <Table className="min-w-[960px]">
+                <Table>
                   <TableHeader>
                     <TableRow className="border-border/60 hover:bg-transparent">
-                      <TableHead>{t(translations.members.discordMember)}</TableHead>
-                      <TableHead>{t(translations.members.email)}</TableHead>
-                      <TableHead>{t(translations.members.stages)}</TableHead>
-                      <TableHead>{t(translations.members.taskClaim)}</TableHead>
-                      <TableHead>{t(translations.members.bankQr)}</TableHead>
-                      <TableHead>{t(translations.members.joinedAt)}</TableHead>
-                      <TableHead className="text-right">{t(translations.members.actions)}</TableHead>
+                      <TableHead className="px-4">{t(translations.members.discordMember)}</TableHead>
+                      <TableHead className="px-4">{t(translations.members.stages)}</TableHead>
+                      <TableHead className="px-4">{t(translations.members.status)}</TableHead>
+                      <TableHead className="px-4">{t(translations.members.bankQr)}</TableHead>
+                      <TableHead className="w-12 px-4">
+                        <span className="sr-only">{t(translations.members.actions)}</span>
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredMembers.map((member) => (
                       <MemberRow
-                        dateFormatter={dateFormatter}
                         emptyLabel={t(translations.members.noEmail)}
                         key={member.discordUserId}
                         member={member}
-                        onView={setSelectedMember}
                         onRemove={requestMemberRemoval}
+                        onRetryRevocation={retryRevocation}
+                        onView={setSelectedMember}
+                        retryDisabled={memberActionPending}
+                        retrying={retryingId === member.discordUserId}
                         t={t}
                       />
                     ))}
                   </TableBody>
                 </Table>
               </div>
-              <div className="grid gap-3 lg:hidden">
+              <div className="grid gap-3 p-4 lg:hidden">
                 {filteredMembers.map((member) => (
                   <MemberCard
-                    dateFormatter={dateFormatter}
                     emptyLabel={t(translations.members.noEmail)}
                     key={member.discordUserId}
                     member={member}
-                    onView={setSelectedMember}
                     onRemove={requestMemberRemoval}
+                    onRetryRevocation={retryRevocation}
+                    onView={setSelectedMember}
+                    retryDisabled={memberActionPending}
+                    retrying={retryingId === member.discordUserId}
                     t={t}
                   />
                 ))}
@@ -786,27 +975,7 @@ export default function MembersPage() {
               member={selectedMember}
               workspaceId={workspaceId}
               onTaskClaim={requestTaskClaimChange}
-              onRetryRevocation={(member) =>
-                retryRevocationMutation.mutate(
-                  { discordUserId: member.discordUserId },
-                  {
-                    onSuccess: (result) => {
-                      setSelectedMember(result.member);
-                      if (result.member.revocationStatus === 'PENDING') {
-                        toast.warning(t(translations.members.cleanupPending));
-                      } else {
-                        toast.success(t(translations.members.cleanupComplete));
-                      }
-                    },
-                    onError: (error: Error) =>
-                      toast.error(
-                        isForbiddenError(error)
-                          ? t(translations.members.forbidden)
-                          : formatError(error),
-                      ),
-                  },
-                )
-              }
+              onRetryRevocation={retryRevocation}
               onActivate={(member) =>
                 activateMemberMutation.mutate(
                   { discordUserId: member.discordUserId },

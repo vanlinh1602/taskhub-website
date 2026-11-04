@@ -8,6 +8,7 @@ import {
 import { adminQueryKeys } from '@/features/admin/hooks';
 import { chaptersQueryKeys } from '@/features/chapters/hooks';
 import { tasksQueryKeys } from '@/features/tasks/hooks';
+import formatError from '@/utils/formatError';
 
 import {
   cancelPayrollBatch,
@@ -17,6 +18,7 @@ import {
   updatePayrollBatchTaskPrice,
 } from '../apis';
 import type {
+  PayrollBatchBulkPaymentResult,
   PayrollBatchPaymentResult,
   PayrollBatchSummary,
   PayrollRewardRecalculationResult,
@@ -56,6 +58,34 @@ export function usePayPayrollBatchRecipientMutation(
     mutationFn: (discordUserId: string) =>
       payPayrollBatchRecipient(workspaceId, batchId, discordUserId),
     onSuccess: async () => invalidatePayrollQueries(queryClient),
+  });
+}
+
+export function usePayAllPayrollBatchRecipientsMutation(
+  workspaceId: string,
+  batchId: string,
+): UseMutationResult<
+  PayrollBatchBulkPaymentResult,
+  Error,
+  readonly string[],
+  unknown
+> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (discordUserIds: readonly string[]) => {
+      const paidDiscordUserIds: string[] = [];
+      const failures: { discordUserId: string; message: string }[] = [];
+      for (const discordUserId of discordUserIds) {
+        try {
+          await payPayrollBatchRecipient(workspaceId, batchId, discordUserId);
+          paidDiscordUserIds.push(discordUserId);
+        } catch (error) {
+          failures.push({ discordUserId, message: formatError(error) });
+        }
+      }
+      return { paidDiscordUserIds, failures };
+    },
+    onSettled: async () => invalidatePayrollQueries(queryClient),
   });
 }
 

@@ -1055,13 +1055,26 @@ export default function PayrollPage() {
               </Button>
             ))}
           </div>
-          {status === 'PENDING' ? (
+        </div>
+      </div>
+
+      {status === 'PENDING' ? (
+        <div className="grid gap-3 sm:grid-cols-[minmax(0,1.6fr)_repeat(2,minmax(0,1fr))]">
+          <div className="flex min-w-0 flex-col justify-between gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:p-5">
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-muted-foreground">
+                {t(translations.management.payroll.pendingTotal)}
+              </p>
+              <p className="mt-1 text-2xl font-extrabold tracking-tight break-words tabular-nums sm:text-3xl">
+                {formatTotals(pendingSummary?.grandTotals ?? [], language)}
+              </p>
+            </div>
             <Button
-              className="w-full sm:w-auto"
+              className="w-full self-start sm:w-auto"
               disabled={recalculateMutation.isPending}
               onClick={() => setIsRecalculateDialogOpen(true)}
               size="sm"
-              variant="ghost"
+              variant="outline"
             >
               {recalculateMutation.isPending ? (
                 <LoaderCircle aria-hidden="true" className="animate-spin" />
@@ -1070,38 +1083,23 @@ export default function PayrollPage() {
               )}
               {t(translations.management.payroll.recalculateRewards)}
             </Button>
-          ) : null}
-        </div>
-      </div>
-
-      {status === 'PENDING' ? (
-        <div className="flex flex-col gap-5 rounded-2xl border border-border/70 bg-card px-5 py-4 shadow-sm shadow-black/5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <div className="min-w-0">
+          </div>
+          <div className="rounded-2xl border border-border/70 bg-card p-4 sm:p-5">
             <p className="text-xs font-medium text-muted-foreground">
-              {t(translations.management.payroll.pendingTotal)}
+              {t(translations.management.payroll.pendingTasks)}
             </p>
-            <p className="mt-1 text-2xl font-bold tracking-tight break-words tabular-nums">
-              {formatTotals(pendingSummary?.grandTotals ?? [], language)}
+            <p className="mt-1 text-2xl font-bold tabular-nums">
+              {pendingSummary?.taskCount ?? '—'}
             </p>
           </div>
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-3 border-t border-border/60 pt-4 sm:flex sm:items-center sm:gap-0 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-6">
-            <div className="sm:px-6">
-              <dt className="text-xs text-muted-foreground">
-                {t(translations.management.payroll.pendingTasks)}
-              </dt>
-              <dd className="mt-1 text-lg font-semibold tabular-nums">
-                {pendingSummary?.taskCount ?? '—'}
-              </dd>
-            </div>
-            <div className="sm:border-l sm:border-border/60 sm:px-6">
-              <dt className="text-xs text-muted-foreground">
-                {t(translations.management.payroll.pendingMembers)}
-              </dt>
-              <dd className="mt-1 text-lg font-semibold tabular-nums">
-                {pendingQuery.data?.total ?? '—'}
-              </dd>
-            </div>
-          </dl>
+          <div className="rounded-2xl border border-border/70 bg-card p-4 sm:p-5">
+            <p className="text-xs font-medium text-muted-foreground">
+              {t(translations.management.payroll.pendingMembers)}
+            </p>
+            <p className="mt-1 text-2xl font-bold tabular-nums">
+              {pendingQuery.data?.total ?? '—'}
+            </p>
+          </div>
         </div>
       ) : null}
 

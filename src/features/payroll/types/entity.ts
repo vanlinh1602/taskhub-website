@@ -158,3 +158,11 @@ export interface PayrollBatchDetailQuery {
 export interface PayrollBatchPaymentResult extends PayrollPaymentResult {
   readonly batchId: string;
 }
+
+export interface PayrollBatchBulkPaymentResult {
+  readonly paidDiscordUserIds: readonly string[];
+  readonly failures: readonly {
+    readonly discordUserId: string;
+    readonly message: string;
+  }[];
+}

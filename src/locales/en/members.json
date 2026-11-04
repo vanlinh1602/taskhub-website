@@ -17,7 +17,7 @@
   "confirmEnable": "Allow task claim",
   "confirmEnableDescription": "{{name}} will be able to claim new tasks again. Existing tasks are not affected.",
   "confirmRemove": "Remove this member from the workspace?",
-  "confirmRemoveDescription": "Revoke Taskory-managed Discord roles, stage access, and Drive access in workspace {{workspaceId}}. {{name}} stays in Discord; their profile, task/payroll history, and access in other workspaces are kept. In-progress tasks are unassigned unless a payroll batch locks them.",
+  "confirmRemoveDescription": "Revoke Taskory-managed stage access and Drive access in workspace {{workspaceId}}. {{name}} stays in Discord; their profile, task/payroll history, and access in other workspaces are kept. In-progress tasks are unassigned unless a payroll batch locks them.",
   "confirmCancel": "Cancel",
   "confirmAction": "Confirm",
   "description": "Review registered members, their profile configuration, and task-claim access.",
@@ -44,9 +44,11 @@
   "openTaskClaim": "Allow task claim",
   "qrDetails": "Bank QR configuration",
   "removeMember": "Remove member",
+  "retryAllResult": "Revoked {{success}}/{{total}} members; {{failed}} still incomplete.",
+  "retryAllRevocations": "Retry all ({{count}})",
   "retryRevocation": "Retry access revocation",
   "revocation": "Workspace access revocation",
-  "revocationCounts": "{{roles}} Discord roles and {{drive}} Drive grants remain to revoke.",
+  "revocationCounts": "{{drive}} Drive grants remain to revoke.",
   "revocationError": "Most recent error: {{error}}",
   "revocationScope": "Scope: workspace {{workspaceId}}",
   "revocationStatus": "Access revocation pending",
@@ -63,5 +65,9 @@
   "taskClaim": "Task claim",
   "taskClaimUnchanged": "This action does not affect tasks already in progress.",
   "updated": "Member task-claim access updated.",
-  "viewDetails": "View details"
+  "viewDetails": "View details",
+  "filterAll": "All",
+  "needsAttention": "Needs attention",
+  "attentionBanner": "{{count}} members still have access that could not be revoked.",
+  "moreActions": "More actions"
 }

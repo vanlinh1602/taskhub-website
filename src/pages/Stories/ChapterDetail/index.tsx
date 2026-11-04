@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { type FormEvent, type ReactNode, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -148,7 +148,9 @@ export default function ChapterDetailPage(): ReactNode {
       }),
     [i18n.language],
   );
-  const storyPath = `/stories/${encodeURIComponent(storyId)}`;
+  const location = useLocation();
+  const storySearch = (location.state as { storySearch?: string } | null)?.storySearch ?? '';
+  const storyPath = `/stories/${encodeURIComponent(storyId)}${storySearch}`;
 
   function openChapterEditor(): void {
     if (!detail) return;
