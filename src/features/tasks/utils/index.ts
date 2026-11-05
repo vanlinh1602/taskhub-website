@@ -5,6 +5,7 @@ import {
   canBulkChangeStatus,
   getBulkCompletableTasks,
   isMemberEligibleForStage,
+  MAX_BULK_TASK_COUNT,
   type TaskBulkMode,
 } from './task-bulk';
 import {
@@ -40,6 +41,7 @@ export {
   isTaskSortBy,
   isTaskSortOrder,
   isTaskStatus,
+  MAX_BULK_TASK_COUNT,
   normalizeTaskFilterValue,
   readTaskListView,
   TASK_SORT_BY_VALUES,

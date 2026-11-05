@@ -36,6 +36,7 @@ import {
   canBulkChangeStatus,
   getBulkCompletableTasks,
   isMemberEligibleForStage,
+  MAX_BULK_TASK_COUNT,
   type TaskBulkMode,
 } from '@/features/tasks/utils';
 import { translations } from '@/locales/translations';
@@ -103,22 +104,25 @@ export default function TaskBulkActionDialog({
         ? null
         : assignee;
   const eligibleTasks = useMemo((): readonly TaskListItem[] => {
-    switch (mode) {
-      case 'complete':
-        return getBulkCompletableTasks(tasks);
-      case 'assign':
-        return assigneeId === undefined
-          ? []
-          : tasks.filter((task) =>
-              canBulkAssignTask(task, assigneeId, members),
-            );
-      case 'deadline':
-        return tasks.filter(canBulkChangeDeadline);
-      case 'status':
-        return tasks.filter((task) => canBulkChangeStatus(task, status));
-      default:
-        return [];
-    }
+    const matching = ((): readonly TaskListItem[] => {
+      switch (mode) {
+        case 'complete':
+          return getBulkCompletableTasks(tasks);
+        case 'assign':
+          return assigneeId === undefined
+            ? []
+            : tasks.filter((task) =>
+                canBulkAssignTask(task, assigneeId, members),
+              );
+        case 'deadline':
+          return tasks.filter(canBulkChangeDeadline);
+        case 'status':
+          return tasks.filter((task) => canBulkChangeStatus(task, status));
+        default:
+          return [];
+      }
+    })();
+    return matching.slice(0, MAX_BULK_TASK_COUNT);
   }, [assigneeId, members, mode, status, tasks]);
   const skippedCount = tasks.length - eligibleTasks.length;
   const taskById = useMemo(

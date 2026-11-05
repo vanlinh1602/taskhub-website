@@ -7,6 +7,9 @@ export type TaskBulkMode = 'assign' | 'complete' | 'deadline' | 'status';
 
 export const BULK_UNASSIGN_VALUE = '__UNASSIGN__';
 
+/** Mirrors the backend limit on task ids per bulk request. */
+export const MAX_BULK_TASK_COUNT = 50;
+
 type TaskForBulk = Pick<
   TaskListItem,
   'assigneeDiscordUserId' | 'dueAt' | 'paymentStatus' | 'stageCode' | 'status'
