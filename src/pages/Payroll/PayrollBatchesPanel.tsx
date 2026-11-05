@@ -348,7 +348,7 @@ export default function PayrollBatchesPanel({
     if (status === 'PARTIALLY_PAID')
       return 'bg-secondary text-secondary-foreground';
     if (status === 'CANCELLED') return 'bg-muted text-muted-foreground';
-    return 'bg-primary/10 text-primary';
+    return 'bg-primary/10 text-link';
   };
 
   return (
@@ -357,7 +357,7 @@ export default function PayrollBatchesPanel({
         <CardHeader className="gap-4 border-b border-border/60 bg-card p-4 sm:p-5">
           <div className="min-w-0">
             <CardTitle className="flex items-center gap-2 text-lg">
-              <CalendarClock aria-hidden="true" className="size-5 text-primary" />
+              <CalendarClock aria-hidden="true" className="size-5 text-link" />
               {mode === 'pending'
                 ? t(translations.management.payroll.batchesPendingTitle)
                 : t(translations.management.payroll.batchesHistoryTitle)}
@@ -635,7 +635,7 @@ export default function PayrollBatchesPanel({
                             src={recipient.avatarUrl}
                           />
                         ) : (
-                          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-link">
                             <UserRound aria-hidden="true" className="size-5" />
                           </span>
                         )}
@@ -653,7 +653,7 @@ export default function PayrollBatchesPanel({
                           {formatTotals(recipient.grandTotals, i18n.language)}
                         </p>
                         <span
-                          className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${recipient.status === 'PAID' ? 'bg-accent text-accent-foreground' : 'bg-primary/10 text-primary'}`}
+                          className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${recipient.status === 'PAID' ? 'bg-accent text-accent-foreground' : 'bg-primary/10 text-link'}`}
                         >
                           {recipient.status === 'PAID' ? (
                             <Check aria-hidden="true" className="size-3.5" />

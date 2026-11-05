@@ -1,4 +1,7 @@
 export type {
+  BulkTaskFailure,
+  BulkTaskResult,
+  BulkUpdateTasksInput,
   DeductTaskInput,
   PaymentStatus,
   TaskActionTarget,

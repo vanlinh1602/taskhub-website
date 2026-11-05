@@ -46,7 +46,7 @@ function ErrorFallback() {
           className="mx-auto max-w-xl text-center lg:mx-0 lg:text-left"
           role="alert"
         >
-          <p className="mb-4 inline-flex rounded-full border border-border bg-card/80 px-4 py-2 text-sm font-extrabold tracking-[0.18em] text-primary shadow-control backdrop-blur-sm">
+          <p className="mb-4 inline-flex rounded-full border border-border bg-card/80 px-4 py-2 text-sm font-extrabold tracking-[0.18em] text-link shadow-control backdrop-blur-sm">
             {t(translations.errors.application.label)}
           </p>
           <h1 className="text-4xl font-black tracking-[-0.045em] text-balance sm:text-5xl lg:text-6xl">

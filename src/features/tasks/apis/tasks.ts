@@ -2,6 +2,8 @@ import { backendService } from '@/services';
 import formatError from '@/utils/formatError';
 
 import type {
+  BulkTaskResult,
+  BulkUpdateTasksInput,
   DeductTaskInput,
   TaskFilterOptions,
   TaskListPage,
@@ -21,6 +23,9 @@ function createTaskListQuery(query: TaskListQuery): string {
   if (query.storyId) parameters.set('storyId', query.storyId);
   if (query.stageDefinitionId)
     parameters.set('stageDefinitionId', query.stageDefinitionId);
+
+  if (query.assigneeDiscordUserId)
+    parameters.set('assigneeDiscordUserId', query.assigneeDiscordUserId);
 
   return parameters.toString();
 }
@@ -84,4 +89,28 @@ export async function deductTask(
     input,
   );
   if (response.kind !== 'ok') throw new Error(formatError(response));
+}
+
+export async function bulkUpdateTasks(
+  workspaceId: string,
+  input: BulkUpdateTasksInput,
+): Promise<BulkTaskResult> {
+  const response = await backendService.post<BulkTaskResult>(
+    `/api/story-workflow/${encodeURIComponent(workspaceId)}/tasks/bulk-update`,
+    input,
+  );
+  if (response.kind === 'ok') return response.data;
+  throw new Error(formatError(response));
+}
+
+export async function bulkCompleteTasks(
+  workspaceId: string,
+  taskIds: readonly string[],
+): Promise<BulkTaskResult> {
+  const response = await backendService.post<BulkTaskResult>(
+    `/api/story-workflow/${encodeURIComponent(workspaceId)}/tasks/bulk-complete`,
+    { taskIds },
+  );
+  if (response.kind === 'ok') return response.data;
+  throw new Error(formatError(response));
 }

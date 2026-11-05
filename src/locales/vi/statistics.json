@@ -79,6 +79,8 @@
   "taskId": "Task ID",
   "assigneeValue": "Người làm",
   "price": "Giá đã thỏa thuận",
+  "dueAt": "Hạn hoàn thành",
+  "timeline": "Tiến trình",
   "createdAt": "Ngày tạo",
   "completedAt": "Ngày hoàn thành",
   "paidAt": "Ngày thanh toán",
@@ -94,5 +96,17 @@
   "summaryTaskCount": "Số task",
   "summaryTotalAmount": "Tổng tiền",
   "summaryTotalTasks": "Tổng số task: {{count}}",
-  "summaryEmpty": "Không có task để tổng hợp"
+  "summaryEmpty": "Không có task để tổng hợp",
+  "progressTitle": "Tiến độ theo chapter",
+  "activeFilters": "Đang lọc:",
+  "removeFilter": "Bỏ lọc {{name}}",
+  "moreFilters": "Bộ lọc khác",
+  "lessFilters": "Thu gọn",
+  "chapterProgress": "Tiến độ chapter",
+  "storyMeta": "{{chapters}} chapter · {{done}}/{{total}} task xong",
+  "chipDone": "Xong",
+  "chipNotDone": "Chưa xong",
+  "chipPaid": "Đã trả",
+  "chipNotPaid": "Chưa trả",
+  "totalChapters": "{{count}} chapter"
 }

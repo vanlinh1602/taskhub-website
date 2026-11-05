@@ -28,7 +28,7 @@ export default function NotFoundPage() {
 
       <section className="relative z-10 mx-auto grid w-full max-w-6xl flex-1 items-center gap-8 py-8 lg:grid-cols-[0.86fr_1.14fr] lg:gap-14 lg:py-4">
         <div className="mx-auto max-w-xl text-center lg:mx-0 lg:text-left">
-          <p className="mb-4 inline-flex rounded-full border border-border bg-card/80 px-4 py-2 text-sm font-extrabold tracking-[0.24em] text-primary shadow-control backdrop-blur-sm">
+          <p className="mb-4 inline-flex rounded-full border border-border bg-card/80 px-4 py-2 text-sm font-extrabold tracking-[0.24em] text-link shadow-control backdrop-blur-sm">
             404
           </p>
           <h1 className="text-4xl font-black tracking-[-0.045em] text-balance sm:text-5xl lg:text-6xl">

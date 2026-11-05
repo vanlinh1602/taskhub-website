@@ -745,7 +745,7 @@ export default function WorkflowEditorPage() {
                 {statusLabel(status, t)}
               </span>
               {configuration.isDefault ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-link">
                   <Check aria-hidden="true" className="size-3.5" />
                   {t(translations.workflows.defaultShort)}
                 </span>
@@ -847,7 +847,7 @@ export default function WorkflowEditorPage() {
                 {t(translations.workflows.paletteDescription)}
               </p>
             </div>
-            <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
+            <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-semibold text-link">
               {availableStages.length}
             </span>
           </div>
@@ -893,7 +893,7 @@ export default function WorkflowEditorPage() {
                     {t(translations.workflows.paletteDescription)}
                   </CardDescription>
                 </div>
-                <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
+                <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-semibold text-link">
                   {availableStages.length}
                 </span>
               </div>
@@ -926,7 +926,7 @@ export default function WorkflowEditorPage() {
           <Card className="overflow-hidden border-border/70 shadow-[var(--soft-shadow)]">
             <CardHeader className="border-b border-border/60 bg-muted/20 py-3">
               <CardTitle className="flex items-center gap-2 text-base">
-                <GitBranch aria-hidden="true" className="size-4 text-primary" />
+                <GitBranch aria-hidden="true" className="size-4 text-link" />
                 {t(translations.workflows.canvas)}
               </CardTitle>
             </CardHeader>

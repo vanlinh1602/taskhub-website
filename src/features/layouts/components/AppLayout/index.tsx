@@ -222,7 +222,7 @@ export default function AppLayout() {
                     >
                       <span>{t(translations.layouts.english)}</span>
                       {currentLanguage === 'en' ? (
-                        <Check aria-hidden="true" className="size-4 text-primary" />
+                        <Check aria-hidden="true" className="size-4 text-link" />
                       ) : null}
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -231,7 +231,7 @@ export default function AppLayout() {
                     >
                       <span>{t(translations.layouts.vietnamese)}</span>
                       {currentLanguage === 'vi' ? (
-                        <Check aria-hidden="true" className="size-4 text-primary" />
+                        <Check aria-hidden="true" className="size-4 text-link" />
                       ) : null}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />

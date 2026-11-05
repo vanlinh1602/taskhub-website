@@ -1,4 +1,6 @@
 export {
+  bulkCompleteTasks,
+  bulkUpdateTasks,
   completeTask,
   deductTask,
   getTaskFilterOptions,

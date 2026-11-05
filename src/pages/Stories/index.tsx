@@ -89,7 +89,7 @@ export default function StoriesPage() {
     <section className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="max-w-2xl">
-          <p className="text-sm font-semibold text-primary">
+          <p className="text-sm font-semibold text-link">
             {t(translations.management.eyebrow)}
           </p>
           <h2 className="mt-1 text-3xl font-extrabold tracking-tight sm:text-4xl">
@@ -263,7 +263,7 @@ export default function StoriesPage() {
                         className="flex min-w-0 items-center gap-3 rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
                         to={`/stories/${encodeURIComponent(story.id)}`}
                       >
-                        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary/15">
+                        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-link transition-colors group-hover:bg-primary/15">
                           <BookOpenText aria-hidden="true" className="size-4" />
                         </span>
                         <span className="min-w-0">

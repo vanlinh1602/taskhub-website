@@ -1,4 +1,4 @@
-import { MoreHorizontal, Trash2 } from 'lucide-react';
+import { BellRing, MoreHorizontal, Trash2, Undo2 } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -7,14 +7,19 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { translations } from '@/locales/translations';
 
 export function ChapterActionsMenu({
   onDelete,
+  onNotifyProgress,
+  onUnpublish,
 }: {
   readonly onDelete: () => void;
+  readonly onNotifyProgress?: () => void;
+  readonly onUnpublish?: () => void;
 }): ReactNode {
   const { t } = useTranslation();
 
@@ -31,6 +36,19 @@ export function ChapterActionsMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
+        {onNotifyProgress ? (
+          <DropdownMenuItem onSelect={onNotifyProgress}>
+            <BellRing aria-hidden="true" />
+            {t(translations.management.stories.notifyProgress)}
+          </DropdownMenuItem>
+        ) : null}
+        {onUnpublish ? (
+          <DropdownMenuItem onSelect={onUnpublish}>
+            <Undo2 aria-hidden="true" />
+            {t(translations.management.stories.unpublish)}
+          </DropdownMenuItem>
+        ) : null}
+        {onNotifyProgress || onUnpublish ? <DropdownMenuSeparator /> : null}
         <DropdownMenuItem
           className="text-destructive data-[highlighted]:text-destructive"
           onSelect={onDelete}

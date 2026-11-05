@@ -10,8 +10,19 @@ import { chaptersQueryKeys } from '@/features/chapters/hooks/queryKeys';
 import { payrollQueryKeys } from '@/features/payroll/hooks/queryKeys';
 import { statisticsQueryKeys } from '@/features/statistics/hooks/queryKeys';
 
-import { completeTask, deductTask, updateTask } from '../apis';
-import type { DeductTaskInput, UpdateTaskInput } from '../types';
+import {
+  bulkCompleteTasks,
+  bulkUpdateTasks,
+  completeTask,
+  deductTask,
+  updateTask,
+} from '../apis';
+import type {
+  BulkTaskResult,
+  BulkUpdateTasksInput,
+  DeductTaskInput,
+  UpdateTaskInput,
+} from '../types';
 import { tasksQueryKeys } from './queryKeys';
 
 interface TaskMutationInput {
@@ -73,6 +84,50 @@ export async function invalidateTaskMutationQueries(
       queryKey: payrollQueryKeys.detailRoot(),
     }),
   ]);
+}
+
+async function invalidateBulkTaskMutationQueries(
+  queryClient: QueryClient,
+): Promise<void> {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: chaptersQueryKeys.root() }),
+    queryClient.invalidateQueries({ queryKey: adminQueryKeys.dashboardRoot() }),
+    queryClient.invalidateQueries({ queryKey: tasksQueryKeys.listRoot() }),
+    queryClient.invalidateQueries({ queryKey: statisticsQueryKeys.listRoot() }),
+    queryClient.invalidateQueries({
+      queryKey: statisticsQueryKeys.summaryRoot(),
+    }),
+    queryClient.invalidateQueries({ queryKey: payrollQueryKeys.listRoot() }),
+    queryClient.invalidateQueries({ queryKey: payrollQueryKeys.detailRoot() }),
+  ]);
+}
+
+export function useBulkUpdateTasksMutation(
+  workspaceId: string,
+): UseMutationResult<BulkTaskResult, Error, BulkUpdateTasksInput, unknown> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: BulkUpdateTasksInput) =>
+      bulkUpdateTasks(workspaceId, input),
+    onSettled: async () => {
+      await invalidateBulkTaskMutationQueries(queryClient);
+    },
+  });
+}
+
+export function useBulkCompleteTasksMutation(
+  workspaceId: string,
+): UseMutationResult<BulkTaskResult, Error, readonly string[], unknown> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (taskIds: readonly string[]) =>
+      bulkCompleteTasks(workspaceId, taskIds),
+    onSettled: async () => {
+      await invalidateBulkTaskMutationQueries(queryClient);
+    },
+  });
 }
 
 export function useUpdateTaskMutation(

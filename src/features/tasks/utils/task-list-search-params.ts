@@ -3,6 +3,7 @@ import type { TaskSortBy, TaskSortOrder, TaskStatus } from '../types';
 export type TaskListStatus = TaskStatus | 'ALL';
 
 export interface TaskListViewState {
+  readonly assigneeDiscordUserId: string;
   readonly status: TaskListStatus;
   readonly storyId: string;
   readonly stageDefinitionId: string;
@@ -27,6 +28,7 @@ export const TASK_SORT_BY_VALUES: readonly TaskSortBy[] = [
 ];
 
 export const DEFAULT_TASK_LIST_VIEW: TaskListViewState = {
+  assigneeDiscordUserId: '',
   page: 0,
   sortBy: 'DEADLINE',
   sortOrder: 'ASC',
@@ -39,22 +41,25 @@ const TASK_LIST_MANAGED_PARAMS = [
   'status',
   'storyId',
   'stageDefinitionId',
+  'assigneeDiscordUserId',
   'sortBy',
   'sortOrder',
   'page',
 ] as const;
 
 export function isTaskStatus(value: string | null): value is TaskStatus {
-  return value !== null && TASK_STATUS_VALUES.some((status) => status === value);
+  return (
+    value !== null && TASK_STATUS_VALUES.some((status) => status === value)
+  );
 }
 
 export function isTaskSortBy(value: string | null): value is TaskSortBy {
-  return value !== null && TASK_SORT_BY_VALUES.some((sortBy) => sortBy === value);
+  return (
+    value !== null && TASK_SORT_BY_VALUES.some((sortBy) => sortBy === value)
+  );
 }
 
-export function isTaskSortOrder(
-  value: string | null,
-): value is TaskSortOrder {
+export function isTaskSortOrder(value: string | null): value is TaskSortOrder {
   return value === 'ASC' || value === 'DESC';
 }
 
@@ -72,6 +77,7 @@ export function readTaskListView(
   const sortOrder = searchParams.get('sortOrder');
 
   return {
+    assigneeDiscordUserId: searchParams.get('assigneeDiscordUserId') ?? '',
     page: readPage(searchParams.get('page')),
     sortBy: isTaskSortBy(sortBy) ? sortBy : DEFAULT_TASK_LIST_VIEW.sortBy,
     sortOrder: isTaskSortOrder(sortOrder)
@@ -97,6 +103,9 @@ export function createTaskListSearchParams(
   if (view.storyId) searchParams.set('storyId', view.storyId);
   if (view.stageDefinitionId) {
     searchParams.set('stageDefinitionId', view.stageDefinitionId);
+  }
+  if (view.assigneeDiscordUserId) {
+    searchParams.set('assigneeDiscordUserId', view.assigneeDiscordUserId);
   }
   if (view.sortBy !== DEFAULT_TASK_LIST_VIEW.sortBy) {
     searchParams.set('sortBy', view.sortBy);

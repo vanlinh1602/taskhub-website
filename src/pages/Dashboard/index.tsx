@@ -82,7 +82,7 @@ function getActionMeta(type: DashboardActionType, t: Translate): ActionMeta {
       return {
         icon: GitPullRequest,
         label: t(translations.dashboard.actionTypes.pendingExtension),
-        tone: 'bg-primary/10 text-primary',
+        tone: 'bg-primary/10 text-link',
       };
     case 'PENDING_PAYMENT':
       return {
@@ -122,7 +122,7 @@ function getAttentionItems(
       href: ROUTES.DEADLINE_EXTENSIONS,
       icon: GitPullRequest,
       label: t(translations.dashboard.extensions),
-      tone: 'text-primary',
+      tone: 'text-link',
       value: attention.pendingExtensions,
     },
     {
@@ -145,7 +145,8 @@ function getAttentionItems(
 function getActionHref(item: DashboardActionItem): string {
   if (item.type === 'PENDING_EXTENSION') return ROUTES.DEADLINE_EXTENSIONS;
   if (item.type === 'PENDING_PAYMENT') return ROUTES.PAYROLL;
-  return `/stories/${encodeURIComponent(item.storyId)}/chapter/${encodeURIComponent(item.chapterId)}`;
+  const query = new URLSearchParams({ q: item.chapterName });
+  return `/stories/${encodeURIComponent(item.storyId)}?${query.toString()}`;
 }
 
 function buildTrendPoints(progress: AdminDashboard['progress']): TrendPoint[] {
@@ -291,7 +292,7 @@ function ActionItemsPanel({
         {dashboard.actionItems.length === 0 ? (
           <Empty className="min-h-64 border-0 p-4">
             <EmptyHeader>
-              <EmptyMedia className="text-primary" variant="icon">
+              <EmptyMedia className="text-link" variant="icon">
                 <CheckCircle2 />
               </EmptyMedia>
               <EmptyTitle>{t(translations.dashboard.emptyActions)}</EmptyTitle>

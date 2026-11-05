@@ -35,7 +35,7 @@ export default function TaskActionButtons({
     >
       <Button
         aria-label={editTaskLabel}
-        className="text-primary hover:bg-primary/10 hover:text-primary"
+        className="text-link hover:bg-primary/10 hover:text-link"
         onClick={onEdit}
         size={compact ? 'icon-sm' : 'sm'}
         type="button"
@@ -47,7 +47,7 @@ export default function TaskActionButtons({
       </Button>
       <Button
         aria-label={completeTaskLabel}
-        className="text-primary hover:bg-primary/10 hover:text-primary"
+        className="text-link hover:bg-primary/10 hover:text-link"
         disabled={isCompleteDisabled}
         onClick={onComplete}
         size={compact ? 'icon-sm' : 'sm'}

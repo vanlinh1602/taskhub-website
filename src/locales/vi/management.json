@@ -190,6 +190,10 @@
     "description": "Thiết lập các công đoạn sản xuất để tổ chức quy trình làm việc."
   },
   "stories": {
+    "breadcrumbStories": "Truyện",
+    "searchChapter": "Tìm chapter",
+    "searchChapterPlaceholder": "Nhập tên chapter…",
+    "chapterCount": "{{count}} chapter",
     "actions": "Thao tác",
     "adultContent": "18+",
     "activeTaskCount": "Task đang thực hiện",
@@ -361,6 +365,9 @@
     "workflowUnset": "Chưa gán workflow"
   },
   "tasks": {
+    "allAssignees": "Tất cả người làm",
+    "filterAssignee": "Lọc theo người làm",
+    "searchAssignees": "Tìm người làm...",
     "allStages": "Tất cả công đoạn",
     "allStatuses": "Tất cả trạng thái",
     "allStories": "Tất cả truyện",
@@ -417,7 +424,29 @@
     "task": "Task",
     "chapter": "Chapter",
     "assignee": "Người làm",
-    "forbidden": "Bạn không có quyền xem task của workspace này."
+    "forbidden": "Bạn không có quyền xem task của workspace này.",
+    "bulkApplicable": "Áp dụng được {{applicable}}/{{total}} task",
+    "bulkApply": "Áp dụng cho {{count}} task",
+    "bulkAssign": "Giao cho…",
+    "bulkAssignHint": "Chỉ hiện thành viên đủ điều kiện cho công đoạn của các task đã chọn. Task không phù hợp sẽ được bỏ qua.",
+    "bulkAssignTitle": "Giao các task đã chọn",
+    "bulkBarLabel": "Thao tác hàng loạt",
+    "bulkChooseAssignee": "Chọn người làm",
+    "bulkClear": "Bỏ chọn tất cả",
+    "bulkClose": "Đóng",
+    "bulkCompleteTitle": "Hoàn thành các task đã chọn",
+    "bulkDeadline": "Đổi deadline",
+    "bulkDeadlineTitle": "Đổi deadline các task đã chọn",
+    "bulkFailedStaySelected": "Các task lỗi vẫn được giữ chọn để bạn thử lại.",
+    "bulkPartialFailure": "{{failed}}/{{total}} task không xử lý được",
+    "bulkSelectAll": "Chọn tất cả task trong trang",
+    "bulkSelectTask": "Chọn task #{{id}}",
+    "bulkSelected": "Đã chọn {{count}} task",
+    "bulkSkipped": "{{count}} task không đủ điều kiện sẽ được bỏ qua.",
+    "bulkStatus": "Đổi trạng thái",
+    "bulkStatusTitle": "Đổi trạng thái các task đã chọn",
+    "bulkSuccess": "Đã xử lý {{count}} task",
+    "bulkUnassign": "Bỏ phân công"
   },
   "workflows": {
     "description": "Tạo và quản lý các workflow mẫu tái sử dụng cho truyện."

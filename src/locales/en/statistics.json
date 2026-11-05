@@ -79,6 +79,8 @@
   "taskId": "Task ID",
   "assigneeValue": "Assignee",
   "price": "Agreed price",
+  "dueAt": "Due date",
+  "timeline": "Timeline",
   "createdAt": "Created",
   "completedAt": "Completed",
   "paidAt": "Paid",
@@ -94,5 +96,17 @@
   "summaryTaskCount": "Task count",
   "summaryTotalAmount": "Total amount",
   "summaryTotalTasks": "Total tasks: {{count}}",
-  "summaryEmpty": "No tasks to summarize"
+  "summaryEmpty": "No tasks to summarize",
+  "progressTitle": "Progress by chapter",
+  "activeFilters": "Active filters:",
+  "removeFilter": "Remove filter {{name}}",
+  "moreFilters": "More filters",
+  "lessFilters": "Collapse",
+  "chapterProgress": "Chapter progress",
+  "storyMeta": "{{chapters}} chapters · {{done}}/{{total}} tasks done",
+  "chipDone": "Done",
+  "chipNotDone": "Not done",
+  "chipPaid": "Paid",
+  "chipNotPaid": "Unpaid",
+  "totalChapters": "{{count}} chapters"
 }

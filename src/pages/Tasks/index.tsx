@@ -1,13 +1,20 @@
-import { ArrowDown, ArrowUp, ListTodo, SearchX, ShieldOff } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import {
+  ArrowDown,
+  ArrowUp,
+  CheckCircle2,
+  CircleMinus,
+  ListTodo,
+  SearchX,
+  Settings2,
+  ShieldOff,
+} from 'lucide-react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-} from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Empty,
   EmptyDescription,
@@ -34,11 +41,19 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import TaskActionButtons from '@/features/tasks/components/task-action-buttons';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { useMembersQuery } from '@/features/members/hooks';
 import {
   default as TaskActionDialogs,
   type TaskActionMode,
 } from '@/features/tasks/components/task-action-dialogs';
+import TaskBulkActionBar from '@/features/tasks/components/task-bulk-action-bar';
+import TaskBulkActionDialog from '@/features/tasks/components/task-bulk-action-dialog';
 import {
   useTaskFilterOptionsQuery,
   useTasksQuery,
@@ -59,10 +74,10 @@ import {
   getTaskStatusLabelKey,
   isTaskOverdue,
   isTaskSortBy,
-  isTaskStatus,
   readTaskListView,
   TASK_SORT_BY_VALUES,
   TASK_STATUS_VALUES,
+  type TaskBulkMode,
   type TaskListViewState,
 } from '@/features/tasks/utils';
 import { toTaskActionTarget } from '@/features/tasks/utils/task-action-target';
@@ -102,7 +117,7 @@ function isForbiddenError(error: unknown): boolean {
 
 function getStatusClassName(status: TaskStatus): string {
   if (status === 'BLOCKED') return 'bg-destructive/10 text-destructive';
-  if (status === 'READY') return 'bg-primary/10 text-primary';
+  if (status === 'READY') return 'bg-primary/10 text-link';
   if (status === 'IN_PROGRESS') return 'bg-accent text-accent-foreground';
   if (status === 'COMPLETED') return 'bg-secondary text-secondary-foreground';
   return 'bg-muted text-muted-foreground';
@@ -132,8 +147,9 @@ function TaskStatusBadge({
       className={`flex flex-col gap-1 ${alignment === 'center' ? 'items-center text-center' : alignment === 'end' ? 'items-end text-right' : 'items-start text-left'}`}
     >
       <span
-        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getStatusClassName(status)}`}
+        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${getStatusClassName(status)}`}
       >
+        <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
         {t(translations.management.tasks[getTaskStatusLabelKey(status)])}
       </span>
       {isValidCompletedDate && completedDate ? (
@@ -199,6 +215,46 @@ function TaskDeadline({
   );
 }
 
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '–';
+  const first = parts[0]?.[0] ?? '';
+  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : '';
+  return `${first}${last}`.toLocaleUpperCase();
+}
+
+function AssigneeAvatar({
+  avatarUrl,
+  name,
+}: {
+  readonly avatarUrl?: string | null;
+  readonly name: string;
+}) {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+
+  if (avatarUrl && failedUrl !== avatarUrl) {
+    return (
+      <img
+        alt=""
+        className="size-7 shrink-0 rounded-full object-cover"
+        loading="lazy"
+        onError={() => setFailedUrl(avatarUrl)}
+        referrerPolicy="no-referrer"
+        src={avatarUrl}
+      />
+    );
+  }
+
+  return (
+    <span
+      aria-hidden="true"
+      className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-xs font-bold"
+    >
+      {getInitials(name)}
+    </span>
+  );
+}
+
 function TaskAssignee({
   task,
   t,
@@ -208,35 +264,144 @@ function TaskAssignee({
 }) {
   if (!task.assigneeDiscordUserId) {
     return (
-      <span className="text-sm text-muted-foreground">
-        {t(translations.management.tasks.noAssignee)}
-      </span>
+      <div className="flex min-w-0 items-center gap-2.5">
+        <span
+          aria-hidden="true"
+          className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground"
+        >
+          –
+        </span>
+        <span className="truncate text-sm text-muted-foreground">
+          {t(translations.management.tasks.noAssignee)}
+        </span>
+      </div>
     );
   }
 
+  const name = task.assigneeDisplayName ?? task.assigneeDiscordUserId;
   return (
-    <div className="min-w-0">
-      <p className="truncate text-sm font-medium">
-        {task.assigneeDisplayName ?? task.assigneeDiscordUserId}
-      </p>
-      {task.assigneeDisplayName ? (
-        <p className="truncate font-mono text-xs text-muted-foreground">
-          {task.assigneeDiscordUserId}
-        </p>
-      ) : null}
+    <div className="flex min-w-0 items-center gap-2.5">
+      <AssigneeAvatar avatarUrl={task.assigneeAvatarUrl} name={name} />
+      <span className="truncate text-sm" title={name}>
+        {name}
+      </span>
     </div>
   );
 }
 
+function ActionTooltip({
+  children,
+  enabled,
+  label,
+}: {
+  readonly children: ReactNode;
+  readonly enabled: boolean;
+  readonly label: string;
+}) {
+  if (!enabled) return <>{children}</>;
+
+  return (
+    <Tooltip>
+      {/* The span keeps the tooltip working while the button is disabled. */}
+      <TooltipTrigger asChild>
+        <span className="inline-flex">{children}</span>
+      </TooltipTrigger>
+      <TooltipContent side="top">{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+function TaskRowActions({
+  fullWidth = false,
+  onComplete,
+  onDeduct,
+  onEdit,
+  task,
+  t,
+}: {
+  readonly fullWidth?: boolean;
+  readonly onComplete: (task: TaskListItem) => void;
+  readonly onDeduct: (task: TaskListItem) => void;
+  readonly onEdit: (task: TaskListItem) => void;
+  readonly task: TaskListItem;
+  readonly t: ReturnType<typeof useTranslation>['t'];
+}) {
+  const editLabel = t(translations.management.stories.editTask);
+  const deductLabel = t(translations.management.stories.deductMoney);
+  const completeLabel = t(translations.management.stories.completeTask);
+  const showTooltips = !fullWidth;
+
+  return (
+    <div
+      className={`flex items-center gap-1 ${fullWidth ? 'w-full gap-2' : 'justify-end'}`}
+    >
+      <ActionTooltip enabled={showTooltips} label={completeLabel}>
+        <Button
+          aria-label={completeLabel}
+          className={
+            fullWidth ? 'h-11 flex-1' : 'text-link hover:bg-primary/15'
+          }
+          disabled={!canCompleteTask(task)}
+          onClick={() => onComplete(task)}
+          size={fullWidth ? 'default' : 'icon-sm'}
+          type="button"
+          variant={fullWidth ? 'default' : 'ghost'}
+        >
+          <CheckCircle2 aria-hidden="true" />
+          {fullWidth ? t(translations.management.tasks.completed) : null}
+        </Button>
+      </ActionTooltip>
+      <ActionTooltip enabled={showTooltips} label={editLabel}>
+        <Button
+          aria-label={editLabel}
+          className={fullWidth ? 'size-11' : ''}
+          onClick={() => onEdit(task)}
+          size={fullWidth ? 'icon' : 'icon-sm'}
+          title={fullWidth ? editLabel : undefined}
+          type="button"
+          variant={fullWidth ? 'outline' : 'ghost'}
+        >
+          <Settings2 aria-hidden="true" />
+        </Button>
+      </ActionTooltip>
+      <ActionTooltip enabled={showTooltips} label={deductLabel}>
+        <Button
+          aria-label={deductLabel}
+          className={`text-destructive hover:bg-destructive/10 hover:text-destructive ${fullWidth ? 'size-11' : ''}`}
+          disabled={task.paymentStatus === 'PAID'}
+          onClick={() => onDeduct(task)}
+          size={fullWidth ? 'icon' : 'icon-sm'}
+          title={fullWidth ? deductLabel : undefined}
+          type="button"
+          variant={fullWidth ? 'outline' : 'ghost'}
+        >
+          <CircleMinus aria-hidden="true" />
+        </Button>
+      </ActionTooltip>
+    </div>
+  );
+}
+
+const chapterLinkClassName =
+  'block truncate text-sm text-link underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none';
+
 function TaskTable({
+  allSelectedState,
   completionDateFormatter,
   dateFormatter,
   onComplete,
   onDeduct,
   onEdit,
+  onToggleAll,
+  onToggleTask,
+  selectedIds,
   tasks,
   t,
 }: {
+  readonly allSelectedState: boolean | 'indeterminate';
+  readonly onToggleAll: () => void;
+  readonly onToggleTask: (index: number, shiftKey: boolean) => void;
+  readonly selectedIds: ReadonlySet<string>;
   readonly completionDateFormatter: Intl.DateTimeFormat;
   readonly dateFormatter: Intl.DateTimeFormat;
   readonly onComplete: (task: TaskListItem) => void;
@@ -245,104 +410,152 @@ function TaskTable({
   readonly tasks: readonly TaskListItem[];
   readonly t: ReturnType<typeof useTranslation>['t'];
 }) {
+  const headClassName =
+    'h-11 px-3 text-xs font-bold tracking-wider text-muted-foreground uppercase';
   return (
-    <div className="hidden lg:block">
-      <Table className="min-w-[67rem] table-fixed">
-        <TableHeader>
-          <TableRow className="border-border/60 hover:bg-transparent">
-            <TableHead className="h-9 w-20 px-3 py-2 text-xs font-medium tracking-wide uppercase">
-              {t(translations.management.tasks.task)}
-            </TableHead>
-            <TableHead className="h-9 w-44 px-3 py-2 text-xs font-medium tracking-wide uppercase">
-              {t(translations.management.tasks.story)}
-            </TableHead>
-            <TableHead className="h-9 w-40 px-3 py-2 text-xs font-medium tracking-wide uppercase">
-              {t(translations.management.tasks.chapter)}
-            </TableHead>
-            <TableHead className="h-9 w-28 px-3 py-2 text-xs font-medium tracking-wide uppercase">
-              {t(translations.management.tasks.stage)}
-            </TableHead>
-            <TableHead className="h-9 w-40 px-3 py-2 text-xs font-medium tracking-wide uppercase">
-              {t(translations.management.tasks.assignee)}
-            </TableHead>
-            <TableHead className="h-9 w-36 px-3 py-2 text-center text-xs font-medium tracking-wide uppercase">
-              {t(translations.management.tasks.status)}
-            </TableHead>
-            <TableHead className="h-9 w-36 px-3 py-2 text-xs font-medium tracking-wide uppercase">
-              {t(translations.management.tasks.deadline)}
-            </TableHead>
-            <TableHead className="h-9 w-24 px-3 py-2 text-right text-xs font-medium tracking-wide uppercase">
-              {t(translations.management.stories.actions)}
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {tasks.map((task) => (
-            <TableRow className="border-border/50 hover:bg-muted/30" key={task.id}>
-              <TableCell className="px-3 py-2.5 font-mono text-xs font-medium text-primary">
-                {t(translations.management.tasks.taskId, { id: task.id })}
-              </TableCell>
-              <TableCell className="px-3 py-2.5 font-medium">
-                <span className="block truncate" title={task.storyTitle}>
-                  {task.storyTitle}
-                </span>
-              </TableCell>
-              <TableCell className="px-3 py-2.5">
-                <Link
-                  className="block truncate text-primary underline decoration-primary/40 underline-offset-4 transition-colors hover:decoration-primary focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
-                  title={task.chapterName}
-                  to={getChapterDetailPath(task.storyId, task.chapterId)}
-                >
-                  {task.chapterName}
-                </Link>
-              </TableCell>
-              <TableCell className="px-3 py-2.5">
-                <span className="block truncate" title={task.stageCode}>
-                  {task.stageName}
-                </span>
-              </TableCell>
-              <TableCell className="px-3 py-2.5">
-                <TaskAssignee task={task} t={t} />
-              </TableCell>
-              <TableCell className="px-3 py-2.5 text-center">
-                <TaskStatusBadge
-                  alignment="center"
-                  completedAt={task.completedAt}
-                  dateFormatter={completionDateFormatter}
-                  status={task.status}
-                  t={t}
+    <TooltipProvider delayDuration={150}>
+      <div className="hidden overflow-x-auto lg:block">
+        <Table className="min-w-[56rem] table-fixed">
+          <TableHeader className="bg-muted/30">
+            <TableRow className="border-border/60 hover:bg-transparent">
+              <TableHead className="h-11 w-12 pr-0 pl-5">
+                <Checkbox
+                  aria-label={t(translations.management.tasks.bulkSelectAll)}
+                  checked={allSelectedState}
+                  onCheckedChange={onToggleAll}
                 />
-              </TableCell>
-              <TableCell className="px-3 py-2.5">
-                <TaskDeadline dateFormatter={dateFormatter} task={task} t={t} />
-              </TableCell>
-              <TableCell className="px-3 py-2.5 text-right whitespace-nowrap">
-                <TaskActionButtons
-                  compact
-                  isCompleteDisabled={!canCompleteTask(task)}
-                  isDeductDisabled={task.paymentStatus === 'PAID'}
-                  onComplete={() => onComplete(task)}
-                  onDeduct={() => onDeduct(task)}
-                  onEdit={() => onEdit(task)}
-                />
-              </TableCell>
+              </TableHead>
+              <TableHead className={`${headClassName} w-[38%] pl-3`}>
+                {t(translations.management.tasks.task)}
+              </TableHead>
+              <TableHead className={`${headClassName} w-44`}>
+                {t(translations.management.tasks.assignee)}
+              </TableHead>
+              <TableHead className={`${headClassName} w-40`}>
+                {t(translations.management.tasks.deadline)}
+              </TableHead>
+              <TableHead className={`${headClassName} w-36`}>
+                {t(translations.management.tasks.status)}
+              </TableHead>
+              <TableHead className={`${headClassName} w-32 pr-5 text-right`}>
+                {t(translations.management.stories.actions)}
+              </TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+          </TableHeader>
+          <TableBody>
+            {tasks.map((task, index) => (
+              <TableRow
+                className={`cursor-pointer border-border/50 hover:bg-muted/30 data-[state=selected]:bg-primary/10 ${isTaskOverdue(task) ? 'shadow-[inset_3px_0_0_var(--destructive)]' : ''}`}
+                data-state={selectedIds.has(task.id) ? 'selected' : undefined}
+                key={task.id}
+                onClick={(event) => {
+                  if (
+                    (event.target as HTMLElement).closest(
+                      'a, button, input, [role="menuitem"]',
+                    )
+                  )
+                    return;
+                  onToggleTask(index, event.shiftKey);
+                }}
+              >
+                <TableCell className="w-12 py-2.5 pr-0 pl-5">
+                  <Checkbox
+                    aria-label={t(
+                      translations.management.tasks.bulkSelectTask,
+                      {
+                        id: task.id,
+                      },
+                    )}
+                    checked={selectedIds.has(task.id)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onToggleTask(index, event.shiftKey);
+                    }}
+                  />
+                </TableCell>
+                <TableCell className="py-2.5 pr-3 pl-3">
+                  <div className="flex min-w-0 flex-col gap-0.5">
+                    <div className="flex min-w-0 items-baseline gap-2">
+                      <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                        #{task.id}
+                      </span>
+                      <Link
+                        className={`${chapterLinkClassName} text-[15px] font-bold`}
+                        title={task.chapterName}
+                        to={getChapterStoryPath(task.storyId, task.chapterName)}
+                      >
+                        {task.chapterName}
+                      </Link>
+                    </div>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span
+                        className="truncate text-sm text-muted-foreground"
+                        title={task.storyTitle}
+                      >
+                        {task.storyTitle}
+                      </span>
+                      <span
+                        className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground"
+                        title={task.stageCode}
+                      >
+                        {task.stageName}
+                      </span>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="px-3 py-2.5">
+                  <TaskAssignee task={task} t={t} />
+                </TableCell>
+                <TableCell className="px-3 py-2.5">
+                  <TaskDeadline
+                    dateFormatter={dateFormatter}
+                    task={task}
+                    t={t}
+                  />
+                </TableCell>
+                <TableCell className="px-3 py-2.5">
+                  <TaskStatusBadge
+                    completedAt={task.completedAt}
+                    dateFormatter={completionDateFormatter}
+                    status={task.status}
+                    t={t}
+                  />
+                </TableCell>
+                <TableCell className="py-2.5 pr-5 pl-3">
+                  <TaskRowActions
+                    onComplete={onComplete}
+                    onDeduct={onDeduct}
+                    onEdit={onEdit}
+                    t={t}
+                    task={task}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </TooltipProvider>
   );
 }
 
 function TaskCardList({
+  allSelectedState,
   completionDateFormatter,
   dateFormatter,
   onComplete,
   onDeduct,
   onEdit,
+  onToggleAll,
+  onToggleTask,
+  selectedIds,
   tasks,
   t,
 }: {
+  readonly allSelectedState: boolean | 'indeterminate';
+  readonly onToggleAll: () => void;
+  readonly onToggleTask: (index: number, shiftKey: boolean) => void;
+  readonly selectedIds: ReadonlySet<string>;
   readonly completionDateFormatter: Intl.DateTimeFormat;
   readonly dateFormatter: Intl.DateTimeFormat;
   readonly onComplete: (task: TaskListItem) => void;
@@ -352,30 +565,46 @@ function TaskCardList({
   readonly t: ReturnType<typeof useTranslation>['t'];
 }) {
   return (
-    <div className="grid gap-3 lg:hidden">
-      {tasks.map((task) => (
+    <div className="grid gap-3 p-3 lg:hidden">
+      <label className="flex items-center gap-2 px-1 text-sm text-muted-foreground">
+        <Checkbox
+          aria-label={t(translations.management.tasks.bulkSelectAll)}
+          checked={allSelectedState}
+          onCheckedChange={onToggleAll}
+        />
+        {t(translations.management.tasks.bulkSelectAll)}
+      </label>
+      {tasks.map((task, index) => (
         <article
-          className="rounded-xl border border-border/70 bg-card p-4 shadow-sm"
+          className={`flex flex-col gap-3 rounded-2xl border bg-card p-4 ${selectedIds.has(task.id) ? 'border-primary ring-1 ring-primary/40' : 'border-border/70'}`}
           key={task.id}
         >
           <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="font-semibold text-primary">
-                {t(translations.management.tasks.taskId, { id: task.id })}
+            <Checkbox
+              aria-label={t(translations.management.tasks.bulkSelectTask, {
+                id: task.id,
+              })}
+              checked={selectedIds.has(task.id)}
+              className="mt-1"
+              onClick={(event) => onToggleTask(index, event.shiftKey)}
+            />
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <p className="font-mono text-xs text-muted-foreground">
+                #{task.id} · {task.stageName}
               </p>
-              <h3
-                className="mt-1 truncate font-semibold"
-                title={task.storyTitle}
-              >
-                {task.storyTitle}
-              </h3>
               <Link
-                className="mt-0.5 block truncate text-sm text-primary underline decoration-primary/40 underline-offset-4 transition-colors hover:decoration-primary focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+                className={`${chapterLinkClassName} font-bold`}
                 title={task.chapterName}
-                to={getChapterDetailPath(task.storyId, task.chapterId)}
+                to={getChapterStoryPath(task.storyId, task.chapterName)}
               >
                 {task.chapterName}
               </Link>
+              <p
+                className="truncate text-sm text-muted-foreground"
+                title={task.storyTitle}
+              >
+                {task.storyTitle}
+              </p>
             </div>
             <TaskStatusBadge
               alignment="end"
@@ -385,49 +614,31 @@ function TaskCardList({
               t={t}
             />
           </div>
-          <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-            <div>
-              <dt className="text-xs text-muted-foreground">
-                {t(translations.management.tasks.stage)}
-              </dt>
-              <dd className="mt-1 truncate font-medium" title={task.stageCode}>
-                {task.stageName}
-              </dd>
+          <div className="flex items-center justify-between gap-3 border-t border-border/60 pt-3">
+            <div className="min-w-0">
+              <TaskAssignee task={task} t={t} />
             </div>
-            <div>
-              <dt className="text-xs text-muted-foreground">
-                {t(translations.management.tasks.deadline)}
-              </dt>
-              <dd className="mt-1">
-                <TaskDeadline dateFormatter={dateFormatter} task={task} t={t} />
-              </dd>
+            <div className="shrink-0 text-right">
+              <TaskDeadline dateFormatter={dateFormatter} task={task} t={t} />
             </div>
-            <div className="col-span-2">
-              <dt className="text-xs text-muted-foreground">
-                {t(translations.management.tasks.assignee)}
-              </dt>
-              <dd className="mt-1">
-                <TaskAssignee task={task} t={t} />
-              </dd>
-            </div>
-          </dl>
-          <div className="mt-4 border-t border-border/60 pt-3">
-            <TaskActionButtons
-              isCompleteDisabled={!canCompleteTask(task)}
-              isDeductDisabled={task.paymentStatus === 'PAID'}
-              onComplete={() => onComplete(task)}
-              onDeduct={() => onDeduct(task)}
-              onEdit={() => onEdit(task)}
-            />
           </div>
+          <TaskRowActions
+            fullWidth
+            onComplete={onComplete}
+            onDeduct={onDeduct}
+            onEdit={onEdit}
+            t={t}
+            task={task}
+          />
         </article>
       ))}
     </div>
   );
 }
 
-function getChapterDetailPath(storyId: string, chapterId: string): string {
-  return `/stories/${encodeURIComponent(storyId)}/chapter/${encodeURIComponent(chapterId)}`;
+function getChapterStoryPath(storyId: string, chapterName: string): string {
+  const query = new URLSearchParams({ q: chapterName });
+  return `/stories/${encodeURIComponent(storyId)}?${query.toString()}`;
 }
 
 function LoadingTaskList({ label }: { readonly label: string }) {
@@ -451,9 +662,24 @@ export default function TasksPage() {
     readonly mode: TaskActionMode;
     readonly target: TaskActionTarget;
   } | null>(null);
-  const { page, sortBy, sortOrder, stageDefinitionId, status, storyId } = view;
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const [bulkMode, setBulkMode] = useState<TaskBulkMode | null>(null);
+  const lastToggledIndex = useRef<number | null>(null);
+  const {
+    assigneeDiscordUserId,
+    page,
+    sortBy,
+    sortOrder,
+    stageDefinitionId,
+    status,
+    storyId,
+  } = view;
+  const membersQuery = useMembersQuery(workspaceId);
   const filterOptionsQuery = useTaskFilterOptionsQuery(workspaceId);
   const taskQuery = useTasksQuery(workspaceId, {
+    assigneeDiscordUserId: assigneeDiscordUserId || undefined,
     page,
     pageSize: TASK_PAGE_SIZE,
     stageDefinitionId: stageDefinitionId || undefined,
@@ -462,12 +688,14 @@ export default function TasksPage() {
     status: status === 'ALL' ? undefined : status,
     storyId: storyId || undefined,
   });
-  const statusOptions = useMemo<SelectSearchOption[]>(
+  const statusTabs = useMemo<
+    readonly {
+      readonly label: string;
+      readonly value: TaskListViewState['status'];
+    }[]
+  >(
     () => [
-      {
-        label: t(translations.management.tasks.allStatuses),
-        value: 'ALL',
-      },
+      { label: t(translations.management.tasks.allStatuses), value: 'ALL' },
       ...TASK_STATUS_VALUES.map((taskStatus) => ({
         label: t(
           translations.management.tasks[getTaskStatusLabelKey(taskStatus)],
@@ -517,23 +745,53 @@ export default function TasksPage() {
       })),
     [filterOptionsQuery.data?.stages, t],
   );
+  const assigneeOptions = useMemo<SelectSearchOption[]>(
+    () =>
+      (membersQuery.data ?? []).map((member) => ({
+        value: member.discordUserId,
+        label: member.displayName,
+        muted: member.status !== 'ACTIVE',
+      })),
+    [membersQuery.data],
+  );
+  const selectedAssignee = useMemo(
+    () =>
+      assigneeOptions.find(
+        (option) => option.value === assigneeDiscordUserId,
+      ) ??
+      (assigneeDiscordUserId
+        ? { value: assigneeDiscordUserId, label: assigneeDiscordUserId }
+        : null),
+    [assigneeDiscordUserId, assigneeOptions],
+  );
   const selectedStory = useMemo(
     () => storyOptions.find((option) => option.value === storyId) ?? null,
     [storyId, storyOptions],
   );
-  const selectedStatus = useMemo(
-    () => statusOptions.find((option) => option.value === status) ?? null,
-    [status, statusOptions],
-  );
   const selectedStage = useMemo(
     () =>
-      stageOptions.find((option) => option.value === stageDefinitionId) ??
-      null,
+      stageOptions.find((option) => option.value === stageDefinitionId) ?? null,
     [stageDefinitionId, stageOptions],
   );
-  const tasks = taskQuery.data?.items ?? [];
+  const tasks = useMemo(
+    () => taskQuery.data?.items ?? [],
+    [taskQuery.data?.items],
+  );
+  const selectedTasks = useMemo(
+    () => tasks.filter((task) => selectedIds.has(task.id)),
+    [selectedIds, tasks],
+  );
+  const allSelectedState: boolean | 'indeterminate' =
+    tasks.length > 0 && selectedTasks.length === tasks.length
+      ? true
+      : selectedTasks.length > 0
+        ? 'indeterminate'
+        : false;
   const hasActiveFilters =
-    status !== 'ALL' || storyId.length > 0 || stageDefinitionId.length > 0;
+    status !== 'ALL' ||
+    storyId.length > 0 ||
+    stageDefinitionId.length > 0 ||
+    assigneeDiscordUserId.length > 0;
   const hasActiveViewState =
     hasActiveFilters ||
     sortBy !== DEFAULT_TASK_LIST_VIEW.sortBy ||
@@ -551,10 +809,10 @@ export default function TasksPage() {
       ? translations.management.tasks.ascending
       : translations.management.tasks.descending,
   );
-  const sortDirectionLabel = t(
-    translations.management.tasks.sortDirection,
-    { direction: sortOrderLabel, field: sortLabel },
-  );
+  const sortDirectionLabel = t(translations.management.tasks.sortDirection, {
+    direction: sortOrderLabel,
+    field: sortLabel,
+  });
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -571,6 +829,11 @@ export default function TasksPage() {
   }, [view]);
 
   useEffect(() => {
+    lastToggledIndex.current = null;
+    setSelectedIds(new Set());
+  }, [view, workspaceId]);
+
+  useEffect(() => {
     const normalizedPage = taskQuery.data?.page;
     if (normalizedPage === undefined || normalizedPage === page) return;
 
@@ -578,6 +841,45 @@ export default function TasksPage() {
       current.page === page ? { ...current, page: normalizedPage } : current,
     );
   }, [page, taskQuery.data?.page]);
+
+  function clearSelection(): void {
+    lastToggledIndex.current = null;
+    setSelectedIds(new Set());
+  }
+
+  function toggleAllTasks(): void {
+    lastToggledIndex.current = null;
+    setSelectedIds(
+      allSelectedState === true
+        ? new Set()
+        : new Set(tasks.map((task) => task.id)),
+    );
+  }
+
+  function toggleTask(index: number, shiftKey: boolean): void {
+    const anchor = lastToggledIndex.current;
+    const task = tasks[index];
+    if (!task) return;
+    const shouldSelect = !selectedIds.has(task.id);
+    const range =
+      shiftKey && anchor !== null
+        ? tasks.slice(Math.min(anchor, index), Math.max(anchor, index) + 1)
+        : [task];
+    lastToggledIndex.current = index;
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      for (const item of range) {
+        if (shouldSelect) next.add(item.id);
+        else next.delete(item.id);
+      }
+      return next;
+    });
+  }
+
+  function finishBulkAction(failedTaskIds: readonly string[]): void {
+    lastToggledIndex.current = null;
+    setSelectedIds(new Set(failedTaskIds));
+  }
 
   function updateView(nextView: Partial<TaskListViewState>): void {
     setView((current) => ({ ...current, ...nextView }));
@@ -587,18 +889,16 @@ export default function TasksPage() {
     setView(DEFAULT_TASK_LIST_VIEW);
   }
 
-  function handleStatusChange(option: SelectSearchOption | null): void {
-    const nextStatus = option?.value ?? 'ALL';
-    if (nextStatus !== 'ALL' && !isTaskStatus(nextStatus)) return;
-    updateView({ page: 0, status: nextStatus });
-  }
-
   function handleStoryChange(option: SelectSearchOption | null): void {
     updateView({ page: 0, storyId: option?.value ?? '' });
   }
 
   function handleStageChange(option: SelectSearchOption | null): void {
     updateView({ page: 0, stageDefinitionId: option?.value ?? '' });
+  }
+
+  function handleAssigneeChange(option: SelectSearchOption | null): void {
+    updateView({ page: 0, assigneeDiscordUserId: option?.value ?? '' });
   }
 
   function handleSortByChange(value: string): void {
@@ -620,137 +920,144 @@ export default function TasksPage() {
   }
 
   return (
-    <section className="space-y-6">
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-        <div>
-          <p className="text-sm font-medium text-muted-foreground">
-            {t(translations.management.eyebrow)}
-          </p>
-          <h2 className="text-2xl font-extrabold tracking-tight">
+    <section className="space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="space-y-1">
+          <h2 className="text-3xl font-extrabold tracking-tight">
             {t(translations.navigation.tasks)}
           </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            {t(translations.management.tasks.description)}
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2 rounded-lg border border-primary/15 bg-primary/5 px-3 py-2 text-sm">
-          <span className="text-xs text-muted-foreground">
-            {t(translations.management.tasks.status)}
-          </span>
-          <strong className="text-sm font-semibold text-primary">
+          <p className="text-sm text-muted-foreground">
             {t(translations.management.tasks.taskCount, {
               count: taskQuery.data?.total ?? 0,
             })}
-          </strong>
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-border/70 bg-card/70 p-3 shadow-sm sm:p-4">
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1.2fr_1.2fr_1fr_auto_auto] xl:items-end">
-          <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">
-            {t(translations.management.tasks.filterStatus)}
-            <SelectSearch
-              noOptionsText={t(
-                translations.management.tasks.noMatchingOptions,
-              )}
-              onChange={handleStatusChange}
-              options={statusOptions}
-              placeholder={t(translations.management.tasks.allStatuses)}
-              searchPlaceholder={t(
-                translations.management.tasks.searchStatuses,
-              )}
-              value={selectedStatus}
-            />
-          </label>
-
-          <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">
-            {t(translations.management.tasks.filterStory)}
-            <SelectSearch
-              disabled={!workspaceId || filterOptionsQuery.isLoading}
-              noOptionsText={t(
-                translations.management.tasks.noMatchingOptions,
-              )}
-              onChange={handleStoryChange}
-              options={storyOptions}
-              placeholder={t(translations.management.tasks.allStories)}
-              searchPlaceholder={t(translations.management.tasks.searchStories)}
-              value={selectedStory}
-            />
-          </label>
-
-          <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">
-            {t(translations.management.tasks.filterStage)}
-            <SelectSearch
-              disabled={!workspaceId || filterOptionsQuery.isLoading}
-              noOptionsText={t(
-                translations.management.tasks.noMatchingOptions,
-              )}
-              onChange={handleStageChange}
-              options={stageOptions}
-              placeholder={t(translations.management.tasks.allStages)}
-              searchPlaceholder={t(translations.management.tasks.searchStages)}
-              value={selectedStage}
-            />
-          </label>
-
-          <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">
-            {t(translations.management.tasks.sortBy)}
-            <Select onValueChange={handleSortByChange} value={sortBy}>
-              <SelectTrigger
-                aria-label={t(translations.management.tasks.sortBy)}
-                className="w-full bg-card"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TASK_SORT_BY_VALUES.map((sortValue: TaskSortBy) => (
-                  <SelectItem key={sortValue} value={sortValue}>
-                    {t(
-                      translations.management.tasks[
-                        getTaskSortLabelKey(sortValue)
-                      ],
-                    )}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </label>
-
-          <Button
-            aria-label={sortDirectionLabel}
-            className="justify-start bg-card sm:justify-center"
-            onClick={toggleSortOrder}
-            title={sortDirectionLabel}
-            type="button"
-            variant="outline"
-          >
-            {sortOrder === 'ASC' ? (
-              <ArrowUp aria-hidden="true" />
-            ) : (
-              <ArrowDown aria-hidden="true" />
-            )}
-            <span className="hidden xl:inline">
-              {t(
-                sortOrder === 'ASC'
-                  ? translations.management.tasks.ascending
-                  : translations.management.tasks.descending,
-              )}
-            </span>
-          </Button>
-
-          <Button
-            className="justify-start sm:justify-center"
-            disabled={!hasActiveViewState}
-            onClick={resetFilters}
-            type="button"
-            variant="ghost"
-          >
-            {t(translations.management.tasks.clearFilters)}
-          </Button>
+          </p>
         </div>
       </div>
 
       <Card className="overflow-hidden border-border/70 shadow-sm">
+        <div
+          aria-label={t(translations.management.tasks.filterStatus)}
+          className="flex gap-1 overflow-x-auto border-b border-border/60 px-3 pt-2"
+          role="group"
+        >
+          {statusTabs.map((tab) => (
+            <button
+              aria-pressed={status === tab.value}
+              className={`relative shrink-0 px-3 py-2.5 text-sm font-semibold transition-colors outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-ring/50 ${status === tab.value ? 'text-foreground after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-primary' : 'text-muted-foreground hover:text-foreground'}`}
+              key={tab.value}
+              onClick={() => updateView({ page: 0, status: tab.value })}
+              type="button"
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {selectedTasks.length > 0 ? (
+          <TaskBulkActionBar
+            onAction={setBulkMode}
+            onClear={clearSelection}
+            selectedCount={selectedTasks.length}
+          />
+        ) : (
+          <div className="flex flex-wrap items-center gap-2 border-b border-border/60 bg-muted/20 px-3 py-2.5">
+            <div className="w-full sm:w-56">
+              <SelectSearch
+                aria-label={t(translations.management.tasks.filterStory)}
+                disabled={!workspaceId || filterOptionsQuery.isLoading}
+                noOptionsText={t(
+                  translations.management.tasks.noMatchingOptions,
+                )}
+                onChange={handleStoryChange}
+                options={storyOptions}
+                placeholder={t(translations.management.tasks.allStories)}
+                searchPlaceholder={t(
+                  translations.management.tasks.searchStories,
+                )}
+                value={selectedStory}
+              />
+            </div>
+            <div className="w-full sm:w-48">
+              <SelectSearch
+                aria-label={t(translations.management.tasks.filterStage)}
+                disabled={!workspaceId || filterOptionsQuery.isLoading}
+                noOptionsText={t(
+                  translations.management.tasks.noMatchingOptions,
+                )}
+                onChange={handleStageChange}
+                options={stageOptions}
+                placeholder={t(translations.management.tasks.allStages)}
+                searchPlaceholder={t(
+                  translations.management.tasks.searchStages,
+                )}
+                value={selectedStage}
+              />
+            </div>
+            <div className="w-full sm:w-52">
+              <SelectSearch
+                aria-label={t(translations.management.tasks.filterAssignee)}
+                disabled={!workspaceId || membersQuery.isLoading}
+                noOptionsText={t(
+                  translations.management.tasks.noMatchingOptions,
+                )}
+                onChange={handleAssigneeChange}
+                options={assigneeOptions}
+                placeholder={t(translations.management.tasks.allAssignees)}
+                searchPlaceholder={t(
+                  translations.management.tasks.searchAssignees,
+                )}
+                value={selectedAssignee}
+              />
+            </div>
+            <div className="flex items-center gap-1.5 sm:ml-auto">
+              <Select onValueChange={handleSortByChange} value={sortBy}>
+                <SelectTrigger
+                  aria-label={t(translations.management.tasks.sortBy)}
+                  className="w-40 bg-card"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TASK_SORT_BY_VALUES.map((sortValue: TaskSortBy) => (
+                    <SelectItem key={sortValue} value={sortValue}>
+                      {t(
+                        translations.management.tasks[
+                          getTaskSortLabelKey(sortValue)
+                        ],
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                aria-label={sortDirectionLabel}
+                className="bg-card"
+                onClick={toggleSortOrder}
+                size="icon"
+                title={sortDirectionLabel}
+                type="button"
+                variant="outline"
+              >
+                {sortOrder === 'ASC' ? (
+                  <ArrowUp aria-hidden="true" />
+                ) : (
+                  <ArrowDown aria-hidden="true" />
+                )}
+              </Button>
+              {hasActiveViewState ? (
+                <Button
+                  className="text-link"
+                  onClick={resetFilters}
+                  type="button"
+                  variant="ghost"
+                >
+                  {t(translations.management.tasks.clearFilters)}
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        )}
+
         <CardContent className="p-0" aria-busy={taskQuery.isFetching}>
           {!workspaceId ? (
             <Empty className="min-h-72 rounded-none border-0">
@@ -825,20 +1132,28 @@ export default function TasksPage() {
           ) : (
             <>
               <TaskTable
+                allSelectedState={allSelectedState}
                 completionDateFormatter={completionDateFormatter}
                 dateFormatter={dateFormatter}
                 onComplete={(task) => openTaskAction('complete', task)}
                 onDeduct={(task) => openTaskAction('deduct', task)}
                 onEdit={(task) => openTaskAction('edit', task)}
+                onToggleAll={toggleAllTasks}
+                onToggleTask={toggleTask}
+                selectedIds={selectedIds}
                 tasks={tasks}
                 t={t}
               />
               <TaskCardList
+                allSelectedState={allSelectedState}
                 completionDateFormatter={completionDateFormatter}
                 dateFormatter={dateFormatter}
                 onComplete={(task) => openTaskAction('complete', task)}
                 onDeduct={(task) => openTaskAction('deduct', task)}
                 onEdit={(task) => openTaskAction('edit', task)}
+                onToggleAll={toggleAllTasks}
+                onToggleTask={toggleTask}
+                selectedIds={selectedIds}
                 tasks={tasks}
                 t={t}
               />
@@ -854,9 +1169,7 @@ export default function TasksPage() {
                   <Button
                     aria-label={t(translations.management.tasks.previousPage)}
                     disabled={page <= 0 || taskQuery.isFetching}
-                    onClick={() =>
-                      updateView({ page: Math.max(0, page - 1) })
-                    }
+                    onClick={() => updateView({ page: Math.max(0, page - 1) })}
                     size="sm"
                     variant="outline"
                   >
@@ -879,6 +1192,15 @@ export default function TasksPage() {
           )}
         </CardContent>
       </Card>
+      <TaskBulkActionDialog
+        mode={bulkMode}
+        onFinished={finishBulkAction}
+        onOpenChange={(open) => {
+          if (!open) setBulkMode(null);
+        }}
+        tasks={selectedTasks}
+        workspaceId={workspaceId}
+      />
       <TaskActionDialogs
         mode={taskAction?.mode ?? null}
         onOpenChange={(open) => {

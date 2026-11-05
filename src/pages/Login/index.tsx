@@ -213,7 +213,7 @@ export default function LoginPage() {
                 alt=""
               />
             </div>
-            <p className="mt-5 text-sm font-bold tracking-[0.18em] text-primary uppercase lg:mt-0">
+            <p className="mt-5 text-sm font-bold tracking-[0.18em] text-link uppercase lg:mt-0">
               {t(translations.common.appName)}
             </p>
             <h2 className="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">

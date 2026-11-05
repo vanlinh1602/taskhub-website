@@ -1,4 +1,13 @@
 import {
+  BULK_UNASSIGN_VALUE,
+  canBulkAssignTask,
+  canBulkChangeDeadline,
+  canBulkChangeStatus,
+  getBulkCompletableTasks,
+  isMemberEligibleForStage,
+  type TaskBulkMode,
+} from './task-bulk';
+import {
   createTaskListSearchParams,
   DEFAULT_TASK_LIST_VIEW,
   isTaskSortBy,
@@ -17,10 +26,16 @@ import {
 } from './task-state';
 
 export {
+  BULK_UNASSIGN_VALUE,
+  canBulkAssignTask,
+  canBulkChangeDeadline,
+  canBulkChangeStatus,
   canCompleteTask,
   createTaskListSearchParams,
   DEFAULT_TASK_LIST_VIEW,
+  getBulkCompletableTasks,
   getTaskStatusLabelKey,
+  isMemberEligibleForStage,
   isTaskOverdue,
   isTaskSortBy,
   isTaskSortOrder,
@@ -29,5 +44,6 @@ export {
   readTaskListView,
   TASK_SORT_BY_VALUES,
   TASK_STATUS_VALUES,
+  type TaskBulkMode,
   type TaskListViewState,
 };

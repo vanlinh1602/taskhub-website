@@ -31,8 +31,7 @@ interface UpdateChapterConfigurationMutationInput {
   readonly input: UpdateChapterConfigurationInput;
 }
 
-interface UpdateChapterPublicationMutationInput
-  extends UpdateChapterPublicationInput {
+interface UpdateChapterPublicationMutationInput extends UpdateChapterPublicationInput {
   readonly chapterId: string;
 }
 
@@ -197,7 +196,11 @@ export function useUpdateChapterConfigurationMutation(
         await invalidateChapterRenameQueries(queryClient, workspaceId, storyId);
         return;
       }
-      await invalidateChapterConfigurationQueries(queryClient, workspaceId, storyId);
+      await invalidateChapterConfigurationQueries(
+        queryClient,
+        workspaceId,
+        storyId,
+      );
     },
   });
 }
@@ -218,12 +221,7 @@ export function useUpdateChapterPublicationMutation(
       chapterId,
       ...input
     }: UpdateChapterPublicationMutationInput) =>
-      updateChapterPublication(
-        workspaceId,
-        storyId,
-        chapterId,
-        input,
-      ),
+      updateChapterPublication(workspaceId, storyId, chapterId, input),
     onSuccess: async (_result, { chapterId }) => {
       await invalidateChapterPublicationQueries(
         queryClient,
@@ -238,10 +236,10 @@ export function useUpdateChapterPublicationMutation(
 export function useNotifyChapterProgressMutation(
   workspaceId: string,
   storyId: string,
-  chapterId: string,
-): UseMutationResult<void, Error, void, unknown> {
+): UseMutationResult<void, Error, string, unknown> {
   return useMutation({
-    mutationFn: () => notifyChapterProgress(workspaceId, storyId, chapterId),
+    mutationFn: (chapterId: string) =>
+      notifyChapterProgress(workspaceId, storyId, chapterId),
   });
 }
 

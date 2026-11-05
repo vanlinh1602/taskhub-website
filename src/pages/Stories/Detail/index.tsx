@@ -1,20 +1,21 @@
 import {
-  ArrowRight,
+  CheckCircle2,
+  Circle,
+  CreditCard,
   ExternalLink,
   FilePenLine,
   PencilLine,
   Plus,
-  Settings2,
+  Search,
 } from 'lucide-react';
 import { type FormEvent, type ReactNode, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useLocation, useParams, useSearchParams } from 'react-router';
+import { Link, useParams, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -44,21 +45,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { ChapterActionsMenu } from '@/features/chapters/components/chapter-actions-menu';
 import { ChapterDeleteDialog } from '@/features/chapters/components/chapter-delete-dialog';
+import {
+  ChapterProgressTable,
+  type ChapterTaskReference,
+} from '@/features/chapters/components/ChapterProgressTable';
 import ChapterPublicationDialog from '@/features/chapters/components/ChapterPublicationDialog';
 import {
   useChaptersQuery,
   useCreateChapterMutation,
   useDeleteChapterMutation,
+  useNotifyChapterProgressMutation,
   useUpdateChapterConfigurationMutation,
   useUpdateChapterPublicationMutation,
 } from '@/features/chapters/hooks';
@@ -67,13 +64,30 @@ import type {
   ChapterDifficulty,
   ChapterPriority,
   ChapterWorkflowFilter,
-  ChapterWorkflowStatus,
 } from '@/features/chapters/types';
+import {
+  getPriorityLabel,
+  getWorkflowLabel,
+} from '@/features/chapters/utils/chapter-labels';
 import {
   type ChapterNameSortOrder,
   sortChaptersByName,
 } from '@/features/chapters/utils/sort-chapters-by-name';
-import { useRenameStoryMutation, useStoryQuery } from '@/features/stories/hooks';
+import {
+  type SelectedTask,
+  TaskDetail,
+} from '@/features/statistics/components/TaskDetail';
+import { useStoryStatisticsQuery } from '@/features/statistics/hooks';
+import { toTaskActionTarget } from '@/features/statistics/utils/task-action-target';
+import {
+  useRenameStoryMutation,
+  useStoryQuery,
+} from '@/features/stories/hooks';
+import {
+  default as TaskActionDialogs,
+  type TaskActionMode,
+} from '@/features/tasks/components/task-action-dialogs';
+import type { TaskActionTarget } from '@/features/tasks/types';
 import { useWorkspaceStore } from '@/features/workspace/hooks';
 import { translations } from '@/locales/translations';
 import formatError from '@/utils/formatError';
@@ -110,16 +124,11 @@ function readFilterParam<T extends string>(
 }
 
 export default function StoryDetailPage(): ReactNode {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const { storyId = '' } = useParams();
   const { activeWorkspaceId: workspaceId } = useWorkspaceStore();
   const [searchParams, setSearchParams] = useSearchParams();
-  const workflow = readFilterParam(
-    searchParams,
-    'workflow',
-    workflows,
-    'ALL',
-  );
+  const workflow = readFilterParam(searchParams, 'workflow', workflows, 'ALL');
   const publication = readFilterParam(
     searchParams,
     'publication',
@@ -138,6 +147,13 @@ export default function StoryDetailPage(): ReactNode {
     chapterNameSortOrders,
     'ASC',
   );
+  const search = searchParams.get('q') ?? '';
+  const [selectedTaskReference, setSelectedTaskReference] =
+    useState<ChapterTaskReference | null>(null);
+  const [taskAction, setTaskAction] = useState<{
+    readonly mode: TaskActionMode;
+    readonly target: TaskActionTarget;
+  } | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isRenameStoryOpen, setIsRenameStoryOpen] = useState(false);
   const [editingChapter, setEditingChapter] = useState<Chapter | null>(null);
@@ -150,15 +166,55 @@ export default function StoryDetailPage(): ReactNode {
   const storyQuery = useStoryQuery(workspaceId, storyId);
   const renameStoryMutation = useRenameStoryMutation(workspaceId, storyId);
   const chaptersQuery = useChaptersQuery(workspaceId, storyId, workflow);
+  const statisticsQuery = useStoryStatisticsQuery(workspaceId, storyId);
   const chapters = useMemo(() => {
+    const keyword = search.trim().toLocaleLowerCase();
     const filteredChapters = (chaptersQuery.data ?? []).filter(
       (chapter) =>
         (publication === 'ALL' || chapter.publicationStatus === publication) &&
-        (priority === 'ALL' || chapter.priority === priority),
+        (priority === 'ALL' || chapter.priority === priority) &&
+        (keyword === '' ||
+          chapter.chapterName.toLocaleLowerCase().includes(keyword)),
     );
 
     return sortChaptersByName(filteredChapters, chapterNameSortOrder);
-  }, [chapterNameSortOrder, chaptersQuery.data, priority, publication]);
+  }, [chapterNameSortOrder, chaptersQuery.data, priority, publication, search]);
+  const storyTotals = useMemo(
+    () => ({
+      chapters: chaptersQuery.data?.length ?? 0,
+      done: (chaptersQuery.data ?? []).reduce(
+        (sum, chapter) => sum + chapter.completedTasks,
+        0,
+      ),
+      total: (chaptersQuery.data ?? []).reduce(
+        (sum, chapter) => sum + chapter.totalTasks,
+        0,
+      ),
+    }),
+    [chaptersQuery.data],
+  );
+  const selectedTask = useMemo<SelectedTask | null>(() => {
+    if (!selectedTaskReference || !statisticsQuery.data) return null;
+    const row = statisticsQuery.data.items.find(
+      (item) => item.chapterId === selectedTaskReference.chapterId,
+    );
+    const stage = statisticsQuery.data.columns.find(
+      (column) => column.id === selectedTaskReference.stageDefinitionId,
+    );
+    const cell = row?.stages[selectedTaskReference.stageDefinitionId] ?? null;
+    if (!row || !stage || !cell || cell.taskId !== selectedTaskReference.taskId)
+      return null;
+    return {
+      cell,
+      chapterName: row.chapterName,
+      stage,
+      storyTitle: row.storyTitle,
+    };
+  }, [selectedTaskReference, statisticsQuery.data]);
+  const progressMutation = useNotifyChapterProgressMutation(
+    workspaceId,
+    storyId,
+  );
   const createMutation = useCreateChapterMutation(workspaceId, storyId);
   const deleteMutation = useDeleteChapterMutation(workspaceId, storyId);
   const configurationMutation = useUpdateChapterConfigurationMutation(
@@ -198,16 +254,19 @@ export default function StoryDetailPage(): ReactNode {
     updateFilterParam('priority', value, 'ALL');
   }
 
-  function changeChapterNameSortOrder(value: ChapterNameSortOrder): void {
-    updateFilterParam('sort', value, 'ASC');
+  function changeSearch(value: string): void {
+    updateFilterParam('q', value, '');
   }
 
-  function togglePublication(chapter: Chapter): void {
-    if (chapter.publicationStatus === 'UNPUBLISHED') {
-      setPublicationNotificationError(null);
-      setPublishingChapter(chapter);
-      return;
-    }
+  function notifyProgress(chapter: Chapter): void {
+    progressMutation.mutate(chapter.id, {
+      onSuccess: () =>
+        toast.success(t(translations.management.stories.notifyProgressSuccess)),
+      onError: (error: Error) => toast.error(formatError(error)),
+    });
+  }
+
+  function unpublish(chapter: Chapter): void {
     publicationMutation.mutate(
       {
         chapterId: chapter.id,
@@ -222,9 +281,27 @@ export default function StoryDetailPage(): ReactNode {
     );
   }
 
-  function submitPublication(
-    input: { readonly notify?: boolean; readonly publicationUrl?: string },
-  ): void {
+  function openPublication(chapter: Chapter): void {
+    setPublicationNotificationError(null);
+    setPublishingChapter(chapter);
+  }
+
+  function openSelectedTaskAction(mode: TaskActionMode): void {
+    if (!selectedTask) return;
+    setTaskAction({
+      mode,
+      target: toTaskActionTarget(selectedTask.cell, selectedTask.stage),
+    });
+  }
+
+  function changeChapterNameSortOrder(value: ChapterNameSortOrder): void {
+    updateFilterParam('sort', value, 'ASC');
+  }
+
+  function submitPublication(input: {
+    readonly notify?: boolean;
+    readonly publicationUrl?: string;
+  }): void {
     if (!publishingChapter) return;
     setPublicationNotificationError(null);
     publicationMutation.mutate(
@@ -331,7 +408,9 @@ export default function StoryDetailPage(): ReactNode {
         chapterId: editingChapter.id,
         input: {
           chapterName,
-          difficulty: String(form.get('difficulty') ?? 'NORMAL') as ChapterDifficulty,
+          difficulty: String(
+            form.get('difficulty') ?? 'NORMAL',
+          ) as ChapterDifficulty,
           hasAdultContent: form.get('hasAdultContent') === 'on',
           priority: String(form.get('priority') ?? 'NORMAL') as ChapterPriority,
         },
@@ -355,90 +434,154 @@ export default function StoryDetailPage(): ReactNode {
   return (
     <section className="space-y-6">
       {storyQuery.data ? (
-        <div className="rounded-3xl border border-primary/15 bg-linear-to-br from-primary/12 via-card to-card p-5 shadow-[var(--soft-shadow)] sm:p-8">
-          <p className="text-sm font-semibold text-primary">
-            {t(translations.management.stories.storyWorkspace)}
-          </p>
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-2xl font-extrabold tracking-tight sm:text-4xl">
-                  {storyQuery.data.title}
-                </h2>
-                <Dialog
-                  open={isRenameStoryOpen}
-                  onOpenChange={setIsRenameStoryOpen}
-                >
-                  <DialogTrigger asChild>
-                    <Button
-                      aria-label={t(
-                        translations.management.stories.renameStory,
-                      )}
-                      size="icon"
-                      variant="ghost"
-                    >
-                      <PencilLine />
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>
-                        {t(translations.management.stories.renameStory)}
-                      </DialogTitle>
-                    </DialogHeader>
-                    <form className="space-y-4" onSubmit={submitStoryRename}>
-                      <div className="space-y-2">
-                        <Label htmlFor="story-title">
-                          {t(translations.management.stories.name)}
-                        </Label>
-                        <Input
-                          autoComplete="off"
-                          defaultValue={storyQuery.data.title}
-                          id="story-title"
-                          maxLength={255}
-                          name="title"
-                          required
-                        />
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          onClick={() => setIsRenameStoryOpen(false)}
-                          type="button"
-                          variant="outline"
-                        >
-                          {t(translations.management.stories.cancel)}
-                        </Button>
-                        <Button
-                          disabled={renameStoryMutation.isPending}
-                          type="submit"
-                        >
-                          {t(translations.management.stories.save)}
-                        </Button>
-                      </div>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-              </div>
+        <>
+          <nav
+            aria-label={t(translations.management.stories.breadcrumbStories)}
+            className="flex items-center gap-2 text-sm text-muted-foreground"
+          >
+            <Link className="hover:underline" to="/stories">
+              {t(translations.management.stories.breadcrumbStories)}
+            </Link>
+            <span aria-hidden="true">/</span>
+            <span className="font-semibold text-foreground">
+              {storyQuery.data.title}
+            </span>
+          </nav>
+          <header className="flex flex-wrap items-end justify-between gap-4">
+            <div className="min-w-0 space-y-1">
+              <h2 className="text-3xl font-extrabold tracking-tight">
+                {storyQuery.data.title}
+              </h2>
               {storyQuery.data.alternativeTitle ? (
-                <p className="mt-1 text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   {storyQuery.data.alternativeTitle}
                 </p>
               ) : null}
+              {chaptersQuery.data ? (
+                <p className="text-sm text-muted-foreground">
+                  {t(translations.statistics.storyMeta, storyTotals)}
+                </p>
+              ) : null}
             </div>
-            <Button asChild size="sm" variant="outline">
-              <a
-                href={storyQuery.data.googleDriveUrl}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <ExternalLink />
-                {t(translations.management.stories.openStoryDrive)}
-              </a>
-            </Button>
+            <div className="flex flex-wrap gap-2">
+          <Dialog
+            open={isRenameStoryOpen}
+            onOpenChange={setIsRenameStoryOpen}
+          >
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <PencilLine />
+                {t(translations.management.stories.renameStory)}
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
+                  {t(translations.management.stories.renameStory)}
+                </DialogTitle>
+              </DialogHeader>
+              <form className="space-y-4" onSubmit={submitStoryRename}>
+                <div className="space-y-2">
+                  <Label htmlFor="story-title">
+                    {t(translations.management.stories.name)}
+                  </Label>
+                  <Input
+                    autoComplete="off"
+                    defaultValue={storyQuery.data.title}
+                    id="story-title"
+                    maxLength={255}
+                    name="title"
+                    required
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    onClick={() => setIsRenameStoryOpen(false)}
+                    type="button"
+                    variant="outline"
+                  >
+                    {t(translations.management.stories.cancel)}
+                  </Button>
+                  <Button
+                    disabled={renameStoryMutation.isPending}
+                    type="submit"
+                  >
+                    {t(translations.management.stories.save)}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+          <Button asChild variant="outline">
+            <a
+              href={storyQuery.data.googleDriveUrl}
+              rel="noreferrer"
+              target="_blank"
+            >
+              <ExternalLink />
+              {t(translations.management.stories.openStoryDrive)}
+            </a>
+          </Button>
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus />
+                {t(translations.management.stories.createChapter)}
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
+                  {t(translations.management.stories.createChapter)}
+                </DialogTitle>
+              </DialogHeader>
+              <form className="space-y-4" onSubmit={submitCreate}>
+                <div className="space-y-2">
+                  <Label htmlFor="chapter-folder-id">
+                    {t(translations.management.stories.chapterFolderId)}
+                  </Label>
+                  <Input id="chapter-folder-id" name="folderId" required />
+                </div>
+                <PrioritySelect
+                  label={t(translations.management.stories.priority)}
+                />
+                <Button
+                  className="w-full"
+                  disabled={createMutation.isPending}
+                  type="submit"
+                >
+                  {t(translations.management.stories.createChapter)}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+            </div>
+          </header>
+        </>
+      ) : null}
+      <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-border/70 bg-card p-4">
+        <div className="min-w-56 flex-[2] space-y-1.5">
+          <Label htmlFor="chapter-search">
+            {t(translations.management.stories.searchChapter)}
+          </Label>
+          <div className="relative">
+            <Search
+              aria-hidden="true"
+              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              autoComplete="off"
+              className="bg-background pl-9"
+              id="chapter-search"
+              onChange={(event) => changeSearch(event.target.value)}
+              placeholder={t(
+                translations.management.stories.searchChapterPlaceholder,
+              )}
+              type="search"
+              value={search}
+            />
           </div>
         </div>
-      ) : null}
-      <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-border/70 bg-muted/30 p-3">
         <FilterSelect
           id="workflow-filter"
           label={t(translations.management.stories.workflow)}
@@ -489,39 +632,6 @@ export default function StoryDetailPage(): ReactNode {
               : t(translations.management.stories.chapterNameDescending)
           }
         />
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus />
-              {t(translations.management.stories.createChapter)}
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {t(translations.management.stories.createChapter)}
-              </DialogTitle>
-            </DialogHeader>
-            <form className="space-y-4" onSubmit={submitCreate}>
-              <div className="space-y-2">
-                <Label htmlFor="chapter-folder-id">
-                  {t(translations.management.stories.chapterFolderId)}
-                </Label>
-                <Input id="chapter-folder-id" name="folderId" required />
-              </div>
-              <PrioritySelect
-                label={t(translations.management.stories.priority)}
-              />
-              <Button
-                className="w-full"
-                disabled={createMutation.isPending}
-                type="submit"
-              >
-                {t(translations.management.stories.createChapter)}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
       </div>
       {chaptersQuery.isLoading ? (
         <p className="py-8 text-center text-sm text-muted-foreground">
@@ -575,29 +685,60 @@ export default function StoryDetailPage(): ReactNode {
         </Empty>
       ) : null}
       {chapters.length ? (
-        <>
-          <ChapterTable
+        <Card className="overflow-hidden">
+          <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <CardTitle className="text-base">
+                {t(translations.statistics.progressTitle)}
+              </CardTitle>
+              <CardDescription>
+                {t(translations.statistics.tableDescription)}
+              </CardDescription>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold">
+              <span className="inline-flex items-center gap-1.5">
+                <CheckCircle2
+                  aria-hidden="true"
+                  className="size-3.5 text-positive"
+                />
+                {t(translations.statistics.completed)}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <CreditCard
+                  aria-hidden="true"
+                  className="size-3.5 text-positive"
+                />
+                {t(translations.statistics.paid)}
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                <Circle aria-hidden="true" className="size-3.5" />
+                {t(translations.statistics.no)}
+              </span>
+            </div>
+          </CardHeader>
+          {statisticsQuery.isError ? (
+            <p className="px-4 pb-4 text-sm text-destructive">
+              {formatError(statisticsQuery.error)}
+            </p>
+          ) : null}
+          <ChapterProgressTable
             chapters={chapters}
+            isUpdating={publicationMutation.isPending}
+            language={i18n.language}
             onDelete={setDeletingChapter}
             onEdit={setEditingChapter}
-            onTogglePublication={togglePublication}
-            isUpdating={publicationMutation.isPending}
-            storyId={storyId}
+            onNotifyProgress={notifyProgress}
+            onPublish={openPublication}
+            onSelectTask={setSelectedTaskReference}
+            onUnpublish={unpublish}
+            statistics={statisticsQuery.data}
           />
-          <div className="grid gap-3 lg:hidden">
-            {chapters.map((chapter) => (
-              <ChapterCard
-                key={chapter.id}
-                chapter={chapter}
-                onDelete={() => setDeletingChapter(chapter)}
-                onEdit={() => setEditingChapter(chapter)}
-                onTogglePublication={() => togglePublication(chapter)}
-                isUpdating={publicationMutation.isPending}
-                storyId={storyId}
-              />
-            ))}
+          <div className="border-t border-border/60 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+            {t(translations.management.stories.chapterCount, {
+              count: chapters.length,
+            })}
           </div>
-        </>
+        </Card>
       ) : null}
       <Dialog
         open={editingChapter !== null}
@@ -671,6 +812,33 @@ export default function StoryDetailPage(): ReactNode {
         isPending={deleteMutation.isPending}
         onConfirm={submitDelete}
         onOpenChange={(open) => !open && setDeletingChapter(null)}
+      />
+      <Dialog
+        onOpenChange={(open) => {
+          if (!open) setSelectedTaskReference(null);
+        }}
+        open={selectedTask !== null}
+      >
+        <DialogContent className="flex max-h-[90vh] flex-col gap-0 overflow-hidden bg-card p-0 sm:max-w-lg">
+          {selectedTask ? (
+            <TaskDetail
+              language={i18n.language}
+              onComplete={() => openSelectedTaskAction('complete')}
+              onDeduct={() => openSelectedTaskAction('deduct')}
+              onEdit={() => openSelectedTaskAction('edit')}
+              selected={selectedTask}
+              t={t}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
+      <TaskActionDialogs
+        mode={taskAction?.mode ?? null}
+        onOpenChange={(open) => {
+          if (!open) setTaskAction(null);
+        }}
+        target={taskAction?.target ?? null}
+        workspaceId={workspaceId}
       />
       <ChapterPublicationDialog
         chapter={publishingChapter}
@@ -749,317 +917,6 @@ function PrioritySelect({
   );
 }
 
-function ChapterTable({
-  chapters,
-  onDelete,
-  onEdit,
-  onTogglePublication,
-  isUpdating,
-  storyId,
-}: {
-  chapters: readonly Chapter[];
-  onDelete: (chapter: Chapter) => void;
-  onEdit: (chapter: Chapter) => void;
-  onTogglePublication: (chapter: Chapter) => void;
-  isUpdating: boolean;
-  storyId: string;
-}): ReactNode {
-  const { t } = useTranslation();
-  return (
-    <div className="hidden overflow-hidden rounded-2xl border border-border/70 bg-card lg:block">
-      <Table>
-        <TableHeader className="bg-muted/40">
-          <TableRow>
-            <TableHead>
-              {t(translations.management.stories.chapterName)}
-            </TableHead>
-            <TableHead>{t(translations.management.stories.workflow)}</TableHead>
-            <TableHead>{t(translations.management.stories.priority)}</TableHead>
-            <TableHead>
-              {t(translations.management.stories.taskProgress)}
-            </TableHead>
-            <TableHead>
-              {t(translations.management.stories.publication)}
-            </TableHead>
-            <TableHead className="text-right">
-              {t(translations.management.stories.actions)}
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {chapters.map((chapter) => (
-            <ChapterRow
-              key={chapter.id}
-              chapter={chapter}
-              onDelete={() => onDelete(chapter)}
-              onEdit={() => onEdit(chapter)}
-              onTogglePublication={() => onTogglePublication(chapter)}
-              isUpdating={isUpdating}
-              storyId={storyId}
-            />
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  );
-}
-
-function ChapterRow({
-  chapter,
-  onDelete,
-  onEdit,
-  onTogglePublication,
-  isUpdating,
-  storyId,
-}: {
-  chapter: Chapter;
-  onDelete: () => void;
-  onEdit: () => void;
-  onTogglePublication: () => void;
-  isUpdating: boolean;
-  storyId: string;
-}): ReactNode {
-  const { t } = useTranslation();
-  const { search } = useLocation();
-  const progress = progressOf(chapter);
-  const published = chapter.publicationStatus === 'PUBLISHED';
-  return (
-    <TableRow>
-      <TableCell>
-        <Link
-          className="font-semibold text-primary underline-offset-4 hover:underline"
-          state={{ storySearch: search }}
-to={getChapterDetailPath(storyId, chapter.id)}
-        >
-          {chapter.chapterName}
-        </Link>
-        {chapter.hasAdultContent ? (
-          <p className="text-xs font-medium text-destructive">
-            {t(translations.management.stories.adultContent)}
-          </p>
-        ) : null}
-      </TableCell>
-      <TableCell>
-        <Badge className={workflowClass(chapter.workflowStatus)}>
-          {getWorkflowLabel(t)(chapter.workflowStatus ?? 'ALL')}
-        </Badge>
-      </TableCell>
-      <TableCell>
-        <Badge className={priorityClass(chapter.priority)}>
-          {getPriorityLabel(t, chapter.priority)}
-        </Badge>
-      </TableCell>
-      <TableCell>
-        <div className="min-w-28">
-          <div className="flex justify-between text-xs">
-            <span>
-              {chapter.completedTasks}/{chapter.totalTasks}
-            </span>
-            <span>{progress}%</span>
-          </div>
-          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full rounded-full bg-primary"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
-      </TableCell>
-      <TableCell>
-        <span
-          className={
-            published
-              ? 'text-xs font-semibold text-primary'
-              : 'text-xs font-semibold text-muted-foreground'
-          }
-        >
-          {published
-            ? t(translations.management.stories.published)
-            : t(translations.management.stories.unpublished)}
-        </span>
-      </TableCell>
-      <TableCell>
-        <div className="flex justify-end gap-1">
-          <Button asChild size="sm" variant="ghost">
-            <Link
-              state={{ storySearch: search }}
-              to={getChapterDetailPath(storyId, chapter.id)}
-            >
-              <ArrowRight />
-              {t(translations.management.stories.viewChapter)}
-            </Link>
-          </Button>
-          <Button
-            aria-label={t(translations.management.stories.editChapter)}
-            onClick={onEdit}
-            size="icon-sm"
-            variant="ghost"
-          >
-            <Settings2 />
-          </Button>
-          {chapter.googleDriveUrl ? (
-            <Button asChild size="icon-sm" variant="ghost">
-              <a
-                href={chapter.googleDriveUrl}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={t(translations.management.stories.drive)}
-              >
-                <ExternalLink />
-              </a>
-            </Button>
-          ) : null}
-          <Button
-            disabled={isUpdating}
-            onClick={onTogglePublication}
-            size="sm"
-            variant="outline"
-          >
-            {published
-              ? t(translations.management.stories.unpublish)
-              : t(translations.management.stories.publish)}
-          </Button>
-          <ChapterActionsMenu onDelete={onDelete} />
-        </div>
-      </TableCell>
-    </TableRow>
-  );
-}
-
-function ChapterCard({
-  chapter,
-  onDelete,
-  onEdit,
-  onTogglePublication,
-  isUpdating,
-  storyId,
-}: {
-  chapter: Chapter;
-  onDelete: () => void;
-  onEdit: () => void;
-  onTogglePublication: () => void;
-  isUpdating: boolean;
-  storyId: string;
-}): ReactNode {
-  const { t } = useTranslation();
-  const { search } = useLocation();
-  const published = chapter.publicationStatus === 'PUBLISHED';
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-start gap-3">
-        <div className="min-w-0 flex-1">
-          <CardTitle className="truncate">
-            <Link
-              className="text-primary underline-offset-4 hover:underline"
-              state={{ storySearch: search }}
-to={getChapterDetailPath(storyId, chapter.id)}
-            >
-              {chapter.chapterName}
-            </Link>
-          </CardTitle>
-          <CardDescription className="mt-1 flex flex-wrap gap-2">
-            <Badge className={workflowClass(chapter.workflowStatus)}>
-              {getWorkflowLabel(t)(chapter.workflowStatus ?? 'ALL')}
-            </Badge>
-            <Badge className={priorityClass(chapter.priority)}>
-              {getPriorityLabel(t, chapter.priority)}
-            </Badge>
-          </CardDescription>
-        </div>
-        <Button
-          aria-label={t(translations.management.stories.editChapter)}
-          onClick={onEdit}
-          size="icon-sm"
-          variant="ghost"
-        >
-          <Settings2 />
-        </Button>
-        <ChapterActionsMenu onDelete={onDelete} />
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm">
-          {t(translations.management.stories.completedTasks, {
-            completed: chapter.completedTasks,
-            total: chapter.totalTasks,
-          })}
-        </p>
-        <div className="mt-4 flex justify-between border-t pt-4">
-          <Button asChild size="sm" variant="ghost">
-            <Link
-              state={{ storySearch: search }}
-              to={getChapterDetailPath(storyId, chapter.id)}
-            >
-              <ArrowRight />
-              {t(translations.management.stories.viewChapter)}
-            </Link>
-          </Button>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold">
-              {published
-                ? t(translations.management.stories.published)
-                : t(translations.management.stories.unpublished)}
-            </span>
-            <Button
-              disabled={isUpdating}
-              onClick={onTogglePublication}
-              size="sm"
-              variant="outline"
-            >
-              {published
-                ? t(translations.management.stories.unpublish)
-                : t(translations.management.stories.publish)}
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function Badge({
-  className,
-  children,
-}: {
-  className: string;
-  children: ReactNode;
-}): ReactNode {
-  return <span className={className}>{children}</span>;
-}
-
-function progressOf(chapter: Chapter): number {
-  return chapter.totalTasks
-    ? Math.round((chapter.completedTasks / chapter.totalTasks) * 100)
-    : 0;
-}
-
-function getWorkflowLabel(
-  t: ReturnType<typeof useTranslation>['t'],
-): (status: ChapterWorkflowFilter) => string {
-  return (status) =>
-    status === 'DRAFT'
-      ? t(translations.management.stories.workflowDraft)
-      : status === 'ACTIVE'
-        ? t(translations.management.stories.workflowActive)
-        : status === 'COMPLETED'
-          ? t(translations.management.stories.workflowCompleted)
-          : status === 'CANCELLED'
-            ? t(translations.management.stories.workflowCancelled)
-            : status === 'ALL'
-              ? t(translations.management.stories.allWorkflows)
-              : t(translations.management.stories.workflowUnset);
-}
-
-function getPriorityLabel(
-  t: ReturnType<typeof useTranslation>['t'],
-  priority: ChapterPriority,
-): string {
-  return priority === 'HIGH'
-    ? t(translations.management.stories.priorityHigh)
-    : priority === 'LOW'
-      ? t(translations.management.stories.priorityLow)
-      : t(translations.management.stories.priorityNormal);
-}
-
 function getDifficultyLabel(
   t: ReturnType<typeof useTranslation>['t'],
   difficulty: ChapterDifficulty,
@@ -1069,26 +926,4 @@ function getDifficultyLabel(
     : difficulty === 'HARD'
       ? t(translations.management.stories.difficultyHard)
       : t(translations.management.stories.difficultyNormal);
-}
-
-function workflowClass(status: ChapterWorkflowStatus | null): string {
-  return status === 'COMPLETED'
-    ? 'rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary'
-    : status === 'ACTIVE'
-      ? 'rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-accent-foreground'
-      : status === 'CANCELLED'
-        ? 'rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-semibold text-destructive'
-        : 'rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground';
-}
-
-function priorityClass(priority: ChapterPriority): string {
-  return priority === 'HIGH'
-    ? 'rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-semibold text-destructive'
-    : priority === 'LOW'
-      ? 'rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground'
-      : 'rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary';
-}
-
-function getChapterDetailPath(storyId: string, chapterId: string): string {
-  return `/stories/${encodeURIComponent(storyId)}/chapter/${encodeURIComponent(chapterId)}`;
 }

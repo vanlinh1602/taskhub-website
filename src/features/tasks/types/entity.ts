@@ -1,9 +1,5 @@
 export type TaskStatus =
-  | 'BLOCKED'
-  | 'READY'
-  | 'IN_PROGRESS'
-  | 'COMPLETED'
-  | 'CANCELLED';
+  'BLOCKED' | 'READY' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 
 export type TaskManagerTaskStatus = Extract<
   TaskStatus,
@@ -13,10 +9,7 @@ export type TaskManagerTaskStatus = Extract<
 export type PaymentStatus = 'NOT_READY' | 'PENDING' | 'PAID';
 
 export type TaskSortBy =
-  | 'DEADLINE'
-  | 'STORY_TITLE'
-  | 'CHAPTER_NAME'
-  | 'CHAPTER_ID';
+  'DEADLINE' | 'STORY_TITLE' | 'CHAPTER_NAME' | 'CHAPTER_ID';
 
 export type TaskSortOrder = 'ASC' | 'DESC';
 
@@ -67,6 +60,7 @@ export interface TaskListItem {
   readonly dueAt: string | null;
   readonly assigneeDiscordUserId: string | null;
   readonly assigneeDisplayName: string | null;
+  readonly assigneeAvatarUrl?: string | null;
   readonly paymentStatus: PaymentStatus;
   readonly agreedPrice: string;
   readonly currency: string;
@@ -85,6 +79,7 @@ export interface TaskListQuery {
   readonly status?: TaskStatus;
   readonly storyId?: string;
   readonly stageDefinitionId?: string;
+  readonly assigneeDiscordUserId?: string;
   readonly sortBy: TaskSortBy;
   readonly sortOrder: TaskSortOrder;
 }
@@ -105,4 +100,21 @@ export interface TaskFilterStage {
 export interface TaskFilterOptions {
   readonly stories: readonly TaskFilterStory[];
   readonly stages: readonly TaskFilterStage[];
+}
+
+export interface BulkUpdateTasksInput {
+  readonly taskIds: readonly string[];
+  readonly status?: TaskManagerTaskStatus;
+  readonly assigneeDiscordUserId?: string | null;
+  readonly dueAt?: string | null;
+}
+
+export interface BulkTaskFailure {
+  readonly taskId: string;
+  readonly message: string;
+}
+
+export interface BulkTaskResult {
+  readonly succeededIds: readonly string[];
+  readonly failed: readonly BulkTaskFailure[];
 }

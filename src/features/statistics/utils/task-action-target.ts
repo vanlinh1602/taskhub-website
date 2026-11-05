@@ -1,9 +1,6 @@
 import type { TaskActionTarget } from '@/features/tasks/types';
 
-import type {
-  StatisticsStageColumn,
-  StatisticsTaskCell,
-} from '../types';
+import type { StatisticsStageColumn, StatisticsTaskCell } from '../types';
 
 export function toTaskActionTarget(
   cell: StatisticsTaskCell,

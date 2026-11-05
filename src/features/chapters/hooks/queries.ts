@@ -1,7 +1,4 @@
-import {
-  useQuery,
-  type UseQueryResult,
-} from '@tanstack/react-query';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
 import { getChapter, getChapters } from '@/features/chapters/apis';
 import type {
@@ -57,9 +54,7 @@ export function useChaptersQuery(
   storyId: string,
   workflow: ChapterWorkflowFilter,
 ): UseQueryResult<Chapter[], Error> {
-  return useQuery(
-    createChaptersQueryOptions(workspaceId, storyId, workflow),
-  );
+  return useQuery(createChaptersQueryOptions(workspaceId, storyId, workflow));
 }
 
 export function useChapterQuery(

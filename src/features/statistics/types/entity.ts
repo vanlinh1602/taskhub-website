@@ -1,11 +1,7 @@
 export type StatisticsDateBasis = 'CREATED' | 'COMPLETED' | 'PAID';
 
 export type StatisticsTaskStatus =
-  | 'BLOCKED'
-  | 'READY'
-  | 'IN_PROGRESS'
-  | 'COMPLETED'
-  | 'CANCELLED';
+  'BLOCKED' | 'READY' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 
 export type StatisticsPaymentStatus = 'NOT_READY' | 'PENDING' | 'PAID';
 
@@ -19,11 +15,14 @@ export interface StatisticsFilters {
   readonly stageDefinitionId: string;
   readonly status: StatisticsTaskStatus | '';
   readonly paymentStatus: StatisticsPaymentStatus | '';
-  readonly page: number;
-  readonly pageSize: number;
+  readonly page?: number;
+  readonly pageSize?: number;
 }
 
-export type StatisticsSummaryFilters = Omit<StatisticsFilters, 'page' | 'pageSize'>;
+export type StatisticsSummaryFilters = Omit<
+  StatisticsFilters,
+  'page' | 'pageSize'
+>;
 
 export interface StatisticsStageColumn {
   readonly id: string;
@@ -36,6 +35,7 @@ export interface StatisticsTaskCell {
   readonly taskId: string;
   readonly assigneeDiscordUserId: string | null;
   readonly assigneeDisplayName: string | null;
+  readonly assigneeAvatarUrl: string | null;
   readonly agreedPrice: string;
   readonly currency: string;
   readonly taskStatus: StatisticsTaskStatus;

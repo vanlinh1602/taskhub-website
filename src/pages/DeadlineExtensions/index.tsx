@@ -118,7 +118,7 @@ function StatusBadge({
 }) {
   const className =
     status === 'PENDING'
-      ? 'bg-primary/10 text-primary'
+      ? 'bg-primary/10 text-link'
       : status === 'APPROVED'
         ? 'bg-accent text-accent-foreground'
         : 'bg-destructive/10 text-destructive';
@@ -522,7 +522,7 @@ function RequestDetails({
               </p>
             </div>
             <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-              <div className="flex items-center gap-2 text-xs text-primary">
+              <div className="flex items-center gap-2 text-xs text-link">
                 <CalendarClock aria-hidden="true" className="size-4" />
                 {isPending
                   ? t(
@@ -710,7 +710,7 @@ export default function DeadlineExtensionsPage() {
     <section className="space-y-6">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div className="max-w-3xl">
-          <p className="text-sm font-semibold text-primary">
+          <p className="text-sm font-semibold text-link">
             {t(translations.management.eyebrow)}
           </p>
           <h2 className="mt-1 text-3xl font-extrabold tracking-tight sm:text-4xl">
@@ -724,7 +724,7 @@ export default function DeadlineExtensionsPage() {
           <span className="block text-xs text-muted-foreground">
             {getStatusLabel(status, t)}
           </span>
-          <strong className="text-lg text-primary">
+          <strong className="text-lg text-link">
             {t(translations.management.deadlineExtensions.count, {
               count: requestsQuery.data?.total ?? 0,
             })}
@@ -768,7 +768,7 @@ export default function DeadlineExtensionsPage() {
             {STATUS_FILTERS.map((filter) => (
               <button
                 aria-selected={status === filter}
-                className={`shrink-0 border-b-2 px-3 py-2 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${status === filter ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground'}`}
+                className={`shrink-0 border-b-2 px-3 py-2 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${status === filter ? 'border-primary text-link' : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground'}`}
                 key={filter}
                 onClick={() => changeStatus(filter)}
                 role="tab"

@@ -23,7 +23,7 @@ beforeEach(() => {
 });
 
 describe('TasksPage', () => {
-  it('renders labeled edit and deduction actions for task rows', async () => {
+  it('renders labeled complete, edit and deduction actions for task rows', async () => {
     await i18n.changeLanguage('vi');
     const workspaceId = 'workspace-1';
     const queryClient = new QueryClient();
@@ -72,7 +72,10 @@ describe('TasksPage', () => {
 
     expect(markup).toContain('Chỉnh sửa task');
     expect(markup).toContain('Trừ tiền');
+    expect(markup).toContain('Task đã hoàn thành');
     expect(markup).toContain('Tất cả trạng thái');
     expect(markup).toContain('Sắp xếp theo');
+    expect(markup).toContain('Chọn tất cả task trong trang');
+    expect(markup).toContain('Chọn task #task-1');
   });
 });

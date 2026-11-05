@@ -103,7 +103,7 @@ function StageStatus({
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${active ? 'bg-primary/10 text-link' : 'bg-muted text-muted-foreground'}`}
     >
       {active ? <Check aria-hidden="true" className="size-3.5" /> : null}
       {active ? t(translations.stages.active) : t(translations.stages.inactive)}
@@ -396,7 +396,7 @@ function StageCard({
     <article className="rounded-2xl border border-border/70 bg-card p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 font-mono text-xs font-semibold text-primary">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 font-mono text-xs font-semibold text-link">
             {stage.displayOrder}
           </span>
           <div className="min-w-0">
@@ -610,7 +610,7 @@ export default function StagesPage() {
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
             {t(translations.stages.description)}
           </p>
-          <p className="mt-3 text-sm font-semibold text-primary">
+          <p className="mt-3 text-sm font-semibold text-link">
             {t(translations.stages.totalSummary, {
               active: stagePage?.activeTotal ?? 0,
               total: stagePage?.total ?? 0,

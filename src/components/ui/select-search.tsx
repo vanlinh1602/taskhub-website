@@ -72,13 +72,13 @@ const MENU_MIN_HEIGHT_PX = 120;
 /** Extra pixels allowed past the portal host bottom/top so the panel can grow when the dialog uses overflow-visible. */
 const MENU_HOST_OVERFLOW_ALLOWANCE_PX = 48;
 const SEARCH_SELECT_TRIGGER_CLASS_NAME =
-  "flex h-8 w-full items-center justify-between gap-1.5 rounded-lg border border-input bg-transparent py-2 pr-2 pl-2.5 text-sm font-normal whitespace-nowrap transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 data-placeholder:text-muted-foreground dark:bg-input/30 dark:hover:bg-input/50 [&>span]:line-clamp-1 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4";
+  "group/trigger flex h-10 w-full items-center justify-between gap-1.5 rounded-xl border border-input bg-transparent py-2 pr-2.5 pl-3 text-sm font-normal whitespace-nowrap shadow-xs transition-[color,box-shadow,border-color] duration-150 outline-none select-none hover:border-ring/50 aria-expanded:border-ring aria-expanded:ring-3 aria-expanded:ring-ring/30 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 data-placeholder:text-muted-foreground dark:bg-input/30 dark:hover:bg-input/50 [&>span]:line-clamp-1 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4";
 const SEARCH_SELECT_MENU_CLASS_NAME =
-  'overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10';
+  'animate-in fade-in-0 zoom-in-95 slide-in-from-top-1 overflow-hidden rounded-xl bg-popover p-1.5 text-popover-foreground shadow-lg ring-1 ring-foreground/10 duration-100';
 const SEARCH_SELECT_ITEM_CLASS_NAME =
-  'relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none';
+  'relative flex w-full cursor-pointer items-center gap-2 rounded-lg py-2 pr-9 pl-2.5 text-sm outline-hidden transition-colors select-none';
 const SEARCH_SELECT_SEARCH_ROW_CLASS_NAME =
-  'flex shrink-0 items-center gap-1.5 border-b border-border px-2.5 py-1.5';
+  'mb-1.5 flex shrink-0 items-center gap-2 rounded-lg bg-muted px-2.5 py-0.5 focus-within:ring-2 focus-within:ring-ring/40';
 
 function computeMenuLayoutAdaptive(
   triggerRect: DOMRect,
@@ -412,9 +412,7 @@ export default function SearchSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={toggleOpen}
-        className={cn(
-          SEARCH_SELECT_TRIGGER_CLASS_NAME,
-        )}
+        className={cn(SEARCH_SELECT_TRIGGER_CLASS_NAME)}
         disabled={disabled}
       >
         <span
@@ -430,7 +428,10 @@ export default function SearchSelect({
           )}
         </span>
         <ChevronDown
-          className="pointer-events-none size-4 shrink-0 text-muted-foreground"
+          className={cn(
+            'pointer-events-none size-4 shrink-0 text-muted-foreground transition-transform duration-200',
+            open && 'rotate-180',
+          )}
           aria-hidden
         />
       </button>
@@ -479,7 +480,7 @@ export default function SearchSelect({
             aria-activedescendant={
               highlight >= 0 ? `opt-${highlight}` : undefined
             }
-            className={cn('h-56 overflow-auto p-1')}
+            className={cn('h-56 space-y-0.5 overflow-auto')}
           >
             {showCreate && (
               <li
@@ -503,7 +504,7 @@ export default function SearchSelect({
             )}
 
             {filtered.length === 0 && !showCreate && (
-              <li className="px-2 py-1.5 text-sm text-muted-foreground">
+              <li className="px-2.5 py-6 text-center text-sm text-muted-foreground">
                 {noOptionsText}
               </li>
             )}
@@ -529,11 +530,14 @@ export default function SearchSelect({
                       : isMuted
                         ? 'text-muted-foreground'
                         : 'text-foreground',
+                    selected &&
+                      highlight !== idx &&
+                      'bg-primary/15 font-medium',
                   )}
                 >
                   <span>{opt.label}</span>
-                  <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center">
-                    {selected && <Check aria-hidden />}
+                  <span className="pointer-events-none absolute right-2.5 flex size-4 items-center justify-center">
+                    {selected && <Check className="size-4" aria-hidden />}
                   </span>
                 </li>
               );
@@ -596,7 +600,7 @@ export default function SearchSelect({
                     highlight >= 0 ? `opt-${highlight}` : undefined
                   }
                   className={cn(
-                    'min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain p-1',
+                    'min-h-0 flex-1 touch-pan-y space-y-0.5 overflow-y-auto overscroll-y-contain',
                   )}
                 >
                   {showCreate && (
@@ -621,7 +625,7 @@ export default function SearchSelect({
                   )}
 
                   {filtered.length === 0 && !showCreate && (
-                    <li className="px-2 py-1.5 text-sm text-muted-foreground">
+                    <li className="px-2.5 py-6 text-center text-sm text-muted-foreground">
                       {noOptionsText}
                     </li>
                   )}
@@ -647,11 +651,14 @@ export default function SearchSelect({
                             : isMuted
                               ? 'text-muted-foreground'
                               : 'text-foreground',
+                          selected &&
+                            highlight !== idx &&
+                            'bg-primary/15 font-medium',
                         )}
                       >
                         <span>{opt.label}</span>
-                        <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center">
-                          {selected && <Check aria-hidden />}
+                        <span className="pointer-events-none absolute right-2.5 flex size-4 items-center justify-center">
+                          {selected && <Check className="size-4" aria-hidden />}
                         </span>
                       </li>
                     );

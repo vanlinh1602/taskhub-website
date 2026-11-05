@@ -131,7 +131,7 @@ function getStatusLabel(
 
 function getStatusClassName(status: PayrollStatus): string {
   return status === 'PENDING'
-    ? 'bg-primary/10 text-primary'
+    ? 'bg-primary/10 text-link'
     : 'bg-accent text-accent-foreground';
 }
 
@@ -165,7 +165,7 @@ function MemberValue({
           src={recipient.avatarUrl}
         />
       ) : (
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-link">
           <UserRound aria-hidden="true" className="size-4" />
         </span>
       )}
@@ -716,7 +716,7 @@ function PayrollDetailPanel({
               src={recipient.avatarUrl}
             />
           ) : (
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-link">
               <UserRound aria-hidden="true" />
             </span>
           )}
@@ -786,7 +786,7 @@ function PayrollDetailPanel({
                   t(translations.management.payroll.bankQrMissing)}
               </p>
             </div>
-            <Banknote aria-hidden="true" className="size-5 text-primary" />
+            <Banknote aria-hidden="true" className="size-5 text-link" />
           </div>
           {detail.bankQr.configured ? (
             isBankQrLoading ? (
@@ -813,7 +813,7 @@ function PayrollDetailPanel({
 
         <section className="space-y-3">
           <div className="flex items-center gap-2">
-            <FileText aria-hidden="true" className="size-4 text-primary" />
+            <FileText aria-hidden="true" className="size-4 text-link" />
             <h3 className="font-semibold">
               {t(translations.management.payroll.taskDetails)}
             </h3>
@@ -1353,7 +1353,7 @@ function PageIntro({
 }) {
   return (
     <div className="flex items-start gap-3 sm:gap-4">
-      <span className="mt-1 flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary sm:size-11">
+      <span className="mt-1 flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-link sm:size-11">
         <CircleDollarSign aria-hidden="true" />
       </span>
       <div className="min-w-0">

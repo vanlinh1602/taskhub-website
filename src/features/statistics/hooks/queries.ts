@@ -1,9 +1,14 @@
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useQuery,
+  type UseQueryResult,
+} from '@tanstack/react-query';
 
 import {
   getStatistics,
   getStatisticsFilters,
   getStatisticsSummary,
+  getStoryStatistics,
 } from '@/features/statistics/apis';
 
 import type {
@@ -20,9 +25,25 @@ export function useStatisticsQuery(
   filters: StatisticsFilters,
 ): UseQueryResult<StatisticsResult, Error> {
   return useQuery({
-    enabled: workspaceId.length > 0 && filters.from.length > 0 && filters.to.length > 0,
+    enabled:
+      workspaceId.length > 0 &&
+      filters.from.length > 0 &&
+      filters.to.length > 0,
+    placeholderData: keepPreviousData,
     queryFn: () => getStatistics(workspaceId, filters),
     queryKey: statisticsQueryKeys.list(workspaceId, filters),
+    staleTime: 30000,
+  });
+}
+
+export function useStoryStatisticsQuery(
+  workspaceId: string,
+  storyId: string,
+): UseQueryResult<StatisticsResult, Error> {
+  return useQuery({
+    enabled: workspaceId.length > 0 && storyId.length > 0,
+    queryFn: () => getStoryStatistics(workspaceId, storyId),
+    queryKey: statisticsQueryKeys.story(workspaceId, storyId),
     staleTime: 30000,
   });
 }
@@ -55,7 +76,11 @@ export function useStatisticsSummaryQuery(
     paymentStatus: filters.paymentStatus,
   };
   return useQuery({
-    enabled: enabled && workspaceId.length > 0 && filters.from.length > 0 && filters.to.length > 0,
+    enabled:
+      enabled &&
+      workspaceId.length > 0 &&
+      filters.from.length > 0 &&
+      filters.to.length > 0,
     queryFn: () => getStatisticsSummary(workspaceId, summaryFilters),
     queryKey: statisticsQueryKeys.summary(workspaceId, summaryFilters),
     staleTime: 30000,

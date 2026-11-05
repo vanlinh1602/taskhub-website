@@ -12,7 +12,6 @@ const DeadlineExtensionsPage = lazy(() => import('@/pages/DeadlineExtensions'));
 const NotFoundPage = lazy(() => import('@/pages/NotFound'));
 const StoriesPage = lazy(() => import('@/pages/Stories'));
 const StoryDetailPage = lazy(() => import('@/pages/Stories/Detail'));
-const ChapterDetailPage = lazy(() => import('@/pages/Stories/ChapterDetail'));
 const LoginPage = lazy(() => import('@/pages/Login'));
 const MembersPage = lazy(() => import('@/pages/Members'));
 const PayrollPage = lazy(() => import('@/pages/Payroll'));
@@ -48,10 +47,6 @@ function App() {
               <Route path="stages" element={<StagesPage />} />
               <Route path="stories" element={<StoriesPage />} />
               <Route path="stories/:storyId" element={<StoryDetailPage />} />
-              <Route
-                path="stories/:storyId/chapter/:chapterId"
-                element={<ChapterDetailPage />}
-              />
               <Route path="tasks" element={<TasksPage />} />
               <Route path="workflows" element={<WorkflowsPage />} />
               <Route

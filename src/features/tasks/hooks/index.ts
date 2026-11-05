@@ -5,6 +5,8 @@ export {
   type TaskMutationInput,
   type TaskMutationScope,
   type UpdateTaskMutationInput,
+  useBulkCompleteTasksMutation,
+  useBulkUpdateTasksMutation,
   useCompleteTaskMutation,
   useDeductTaskMutation,
   useUpdateTaskMutation,

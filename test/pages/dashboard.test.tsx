@@ -107,7 +107,7 @@ describe('DashboardPage', () => {
     expect(markup).toContain('Story 1');
     expect(markup).toContain('Tóm tắt');
     expect(markup).toContain('Tiến độ theo công đoạn');
-    expect(markup).toContain('/stories/story-1/chapter/chapter-1');
+    expect(markup).toContain('/stories/story-1?q=Chapter+1');
     expect(markup).toContain('/deadline-extensions');
     expect(markup).toContain('/payroll');
   });

@@ -152,8 +152,7 @@ export default function TaskActionDialogs({
       return;
     }
     const previousAssignee = target.assigneeDiscordUserId;
-    const nextAssignee =
-      taskAssignee === unassignedValue ? null : taskAssignee;
+    const nextAssignee = taskAssignee === unassignedValue ? null : taskAssignee;
     const input: UpdateTaskInput = {
       agreedPrice: taskPrice,
       ...(taskDueAtDirty
@@ -350,7 +349,7 @@ export default function TaskActionDialogs({
                 ) : null}
                 {taskAssignee !== unassignedValue &&
                 taskAssignee !== target.assigneeDiscordUserId ? (
-                  <p className="text-xs text-primary">
+                  <p className="text-xs text-link">
                     {t(translations.management.stories.assigneeWillStart)}
                   </p>
                 ) : null}
@@ -446,7 +445,11 @@ export default function TaskActionDialogs({
                   {t(translations.management.stories.taskId, { id: target.id })}
                   {' · '}
                   {t(translations.management.stories.agreedPrice)}:{' '}
-                  {formatMoney(target.agreedPrice, target.currency, i18n.language)}
+                  {formatMoney(
+                    target.agreedPrice,
+                    target.currency,
+                    i18n.language,
+                  )}
                 </p>
               </div>
               <p className="text-sm text-muted-foreground">

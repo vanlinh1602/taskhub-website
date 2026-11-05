@@ -12,18 +12,12 @@ export type ChapterPriority = 'LOW' | 'NORMAL' | 'HIGH';
 export type ChapterDifficulty = 'NORMAL' | 'HARD' | 'VERY_HARD';
 
 export type ChapterWorkflowStatus =
-  | 'DRAFT'
-  | 'ACTIVE'
-  | 'COMPLETED'
-  | 'CANCELLED';
+  'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
 
 export type ChapterWorkflowFilter = ChapterWorkflowStatus | 'ALL';
 
 export type ChapterDeleteBlockReason =
-  | 'PUBLISHED'
-  | 'WORKFLOW_FINALIZED'
-  | 'TASK_ACTIVITY'
-  | 'PAYMENT_ACTIVITY';
+  'PUBLISHED' | 'WORKFLOW_FINALIZED' | 'TASK_ACTIVITY' | 'PAYMENT_ACTIVITY';
 
 export interface ChapterDeleteState {
   readonly canDelete: boolean;
@@ -37,10 +31,7 @@ export type ChapterManagerTaskStatus = TaskManagerTaskStatus;
 export type ChapterPaymentStatus = PaymentStatus;
 
 export type ChapterPublicationNotificationStatus =
-  | 'NOT_REQUESTED'
-  | 'SENT'
-  | 'NOT_CONFIGURED'
-  | 'FAILED';
+  'NOT_REQUESTED' | 'SENT' | 'NOT_CONFIGURED' | 'FAILED';
 
 export interface Chapter {
   readonly id: string;

@@ -190,6 +190,10 @@
     "description": "Define the production stages used to organize your workflow."
   },
   "stories": {
+    "breadcrumbStories": "Stories",
+    "searchChapter": "Search chapter",
+    "searchChapterPlaceholder": "Enter chapter name…",
+    "chapterCount": "{{count}} chapters",
     "actions": "Actions",
     "adultContent": "Adult content",
     "activeTaskCount": "Active tasks",
@@ -361,6 +365,9 @@
     "workflowUnset": "No workflow assigned"
   },
   "tasks": {
+    "allAssignees": "All assignees",
+    "filterAssignee": "Filter by assignee",
+    "searchAssignees": "Search assignees...",
     "allStages": "All stages",
     "allStatuses": "All statuses",
     "allStories": "All stories",
@@ -417,7 +424,29 @@
     "task": "Task",
     "chapter": "Chapter",
     "assignee": "Assignee",
-    "forbidden": "You do not have permission to view this workspace's tasks."
+    "forbidden": "You do not have permission to view this workspace's tasks.",
+    "bulkApplicable": "{{applicable}} of {{total}} tasks can be updated",
+    "bulkApply": "Apply to {{count}} tasks",
+    "bulkAssign": "Assign to…",
+    "bulkAssignHint": "Only members eligible for the selected tasks' stages are listed. Tasks that do not match are skipped.",
+    "bulkAssignTitle": "Assign selected tasks",
+    "bulkBarLabel": "Bulk actions",
+    "bulkChooseAssignee": "Choose an assignee",
+    "bulkClear": "Clear selection",
+    "bulkClose": "Close",
+    "bulkCompleteTitle": "Complete selected tasks",
+    "bulkDeadline": "Change deadline",
+    "bulkDeadlineTitle": "Change deadline of selected tasks",
+    "bulkFailedStaySelected": "Failed tasks stay selected so you can retry.",
+    "bulkPartialFailure": "{{failed}} of {{total}} tasks could not be processed",
+    "bulkSelectAll": "Select all tasks on this page",
+    "bulkSelectTask": "Select task #{{id}}",
+    "bulkSelected": "{{count}} tasks selected",
+    "bulkSkipped": "{{count}} tasks that do not qualify will be skipped.",
+    "bulkStatus": "Change status",
+    "bulkStatusTitle": "Change status of selected tasks",
+    "bulkSuccess": "{{count}} tasks updated",
+    "bulkUnassign": "Unassign"
   },
   "workflows": {
     "description": "Create and maintain reusable workflow templates for your stories."

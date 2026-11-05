@@ -102,7 +102,7 @@ function getStatusLabel(
 
 function getStatusClassName(status: MemberStatus): string {
   if (status === 'ACTIVE') {
-    return 'bg-primary/10 text-primary';
+    return 'bg-primary/10 text-link';
   }
   if (status === 'SUSPENDED') {
     return 'bg-destructive/10 text-destructive';
@@ -132,7 +132,7 @@ function MemberAvatar({ member }: { readonly member: Member }) {
   const initial = member.displayName.trim().charAt(0).toUpperCase() || '?';
 
   return (
-    <div className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/10 font-semibold text-primary">
+    <div className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/10 font-semibold text-link">
       <span aria-hidden="true">{initial}</span>
       {member.avatarUrl ? (
         <img
@@ -254,7 +254,7 @@ function BankQrIndicator({
       className={`inline-flex items-center gap-1.5 text-sm ${configured ? 'text-foreground' : 'text-muted-foreground'}`}
     >
       {configured ? (
-        <Check aria-hidden="true" className="size-4 text-primary" />
+        <Check aria-hidden="true" className="size-4 text-link" />
       ) : (
         <CreditCard aria-hidden="true" className="size-4" />
       )}
@@ -326,7 +326,7 @@ function MemberIdentity({
       <MemberAvatar member={member} />
       <div className="min-w-0">
         <button
-          className="block max-w-full truncate rounded text-left font-semibold hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="block max-w-full truncate rounded text-left font-semibold hover:text-link focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           onClick={() => onView(member)}
           type="button"
         >

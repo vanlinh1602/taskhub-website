@@ -127,7 +127,7 @@ function StatusBadge({
 }) {
   const tone =
     status === 'ACTIVE'
-      ? 'bg-primary/10 text-primary'
+      ? 'bg-primary/10 text-link'
       : status === 'DRAFT'
         ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
         : 'bg-muted text-muted-foreground';
@@ -585,7 +585,7 @@ export default function WorkflowsPage() {
                     </TableCell>
                     <TableCell>
                       {workflow.isDefault ? (
-                        <span className="inline-flex items-center gap-1 text-sm font-medium text-primary">
+                        <span className="inline-flex items-center gap-1 text-sm font-medium text-link">
                           <Check aria-hidden="true" className="size-4" />
                           {t(translations.workflows.yes)}
                         </span>

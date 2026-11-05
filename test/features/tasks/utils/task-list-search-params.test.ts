@@ -10,11 +10,12 @@ describe('task list search params', () => {
   it('reads valid filters, sort state, and page from the URL', () => {
     const view = readTaskListView(
       new URLSearchParams(
-        'status=IN_PROGRESS&storyId=story-1&stageDefinitionId=stage-1&sortBy=CHAPTER_NAME&sortOrder=DESC&page=3',
+        'status=IN_PROGRESS&storyId=story-1&stageDefinitionId=stage-1&assigneeDiscordUserId=user-1&sortBy=CHAPTER_NAME&sortOrder=DESC&page=3',
       ),
     );
 
     expect(view).toEqual({
+      assigneeDiscordUserId: 'user-1',
       page: 3,
       sortBy: 'CHAPTER_NAME',
       sortOrder: 'DESC',
@@ -37,6 +38,7 @@ describe('task list search params', () => {
   it('serializes active view state while preserving unrelated parameters', () => {
     const searchParams = createTaskListSearchParams(
       {
+        assigneeDiscordUserId: 'user-1',
         page: 2,
         sortBy: 'STORY_TITLE',
         sortOrder: 'DESC',
@@ -48,7 +50,7 @@ describe('task list search params', () => {
     );
 
     expect(searchParams.toString()).toBe(
-      'tab=tasks&status=COMPLETED&storyId=story-1&stageDefinitionId=stage-1&sortBy=STORY_TITLE&sortOrder=DESC&page=2',
+      'tab=tasks&status=COMPLETED&storyId=story-1&stageDefinitionId=stage-1&assigneeDiscordUserId=user-1&sortBy=STORY_TITLE&sortOrder=DESC&page=2',
     );
   });
 

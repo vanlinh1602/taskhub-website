@@ -1,6 +1,6 @@
 import type { Member } from '@/features/members/types';
 
-import type { TaskActionTarget,TaskAssignee } from '../types';
+import type { TaskActionTarget, TaskAssignee } from '../types';
 
 export function filterTaskAssignees(
   members: readonly Member[],

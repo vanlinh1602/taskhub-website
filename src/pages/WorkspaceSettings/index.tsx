@@ -95,7 +95,7 @@ function SettingGroup({
     <section className="border-t border-border/70 pt-6 first:border-t-0 first:pt-0 sm:pt-8">
       <div className="grid gap-3 sm:grid-cols-[minmax(0,11rem)_minmax(0,1fr)] sm:gap-6">
         <div className="flex items-center gap-2.5 text-xs font-bold tracking-[0.12em] text-muted-foreground uppercase sm:items-start sm:pt-1">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-link">
             {icon}
           </span>
           <span>{title}</span>
@@ -118,7 +118,7 @@ function ConfiguredBadge({
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${configured ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${configured ? 'bg-primary/10 text-link' : 'bg-muted text-muted-foreground'}`}
     >
       {configured ? <Check aria-hidden="true" className="size-3.5" /> : null}
       {label}
@@ -498,7 +498,7 @@ function ConfigurationSummary({
       <div className="relative grid gap-8 p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-link">
               {t(translations.workspaceSettings.serverStatus)}
             </span>
             <ConfiguredBadge
@@ -546,7 +546,7 @@ function ConfigurationSummary({
                 </span>
               </p>
             </div>
-            <span className="text-sm font-semibold text-primary">{progress}%</span>
+            <span className="text-sm font-semibold text-link">{progress}%</span>
           </div>
           <div
             aria-label={`${progress}%`}
@@ -619,7 +619,7 @@ function ConfigurationMap({
                 <div className="flex items-center justify-between gap-2">
                   <p className="truncate text-sm font-semibold">{item.label}</p>
                   <span
-                    className={`text-xs font-semibold ${item.progress > 0 ? 'text-primary' : 'text-muted-foreground'}`}
+                    className={`text-xs font-semibold ${item.progress > 0 ? 'text-link' : 'text-muted-foreground'}`}
                   >
                     {item.value}
                   </span>

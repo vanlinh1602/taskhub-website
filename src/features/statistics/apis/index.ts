@@ -4,4 +4,5 @@ export {
   getStatistics,
   getStatisticsFilters,
   getStatisticsSummary,
+  getStoryStatistics,
 } from './statistics';
