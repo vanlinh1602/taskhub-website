@@ -1,6 +1,6 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
-import { getStages } from '@/features/stages/apis';
+import { getAllStages } from '@/features/stages/apis';
 import type { Stage } from '@/features/stages/types';
 
 import { getWorkflowTemplate, getWorkflowTemplates } from '../apis';
@@ -22,10 +22,11 @@ export function useWorkflowTemplatesQuery(
   workspaceId: string,
   statuses: readonly WorkflowTemplateStatus[] = ALL_STATUSES,
   page = 0,
+  search = '',
 ): UseQueryResult<WorkflowTemplatePage, Error> {
   return useQuery({
-    queryKey: workflowQueryKeys.list(workspaceId, statuses, page, PAGE_SIZE),
-    queryFn: () => getWorkflowTemplates(workspaceId, statuses, page, PAGE_SIZE),
+    queryKey: workflowQueryKeys.list(workspaceId, statuses, page, PAGE_SIZE, search),
+    queryFn: () => getWorkflowTemplates(workspaceId, statuses, page, PAGE_SIZE, search),
     enabled: workspaceId.length > 0,
     placeholderData: (previousData) => previousData,
   });
@@ -47,19 +48,7 @@ export function useWorkflowStageCatalogQuery(
 ): UseQueryResult<readonly Stage[], Error> {
   return useQuery({
     queryKey: workflowQueryKeys.stageCatalog(workspaceId),
-    queryFn: async () => {
-      const firstPage = await getStages(workspaceId, 0, PAGE_SIZE);
-      if (firstPage.pageCount <= 1) return firstPage.items;
-      const remainingPages = await Promise.all(
-        Array.from({ length: firstPage.pageCount - 1 }, (_, index) =>
-          getStages(workspaceId, index + 1, PAGE_SIZE),
-        ),
-      );
-      return [
-        ...firstPage.items,
-        ...remainingPages.flatMap((page) => page.items),
-      ];
-    },
+    queryFn: () => getAllStages(workspaceId),
     enabled: workspaceId.length > 0,
   });
 }

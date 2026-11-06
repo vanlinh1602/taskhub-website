@@ -1124,6 +1124,9 @@ export default function MembersPage() {
                 );
               }}
             >
+              {taskClaimMutation.isPending ? (
+                <RefreshCw aria-hidden="true" className="animate-spin" />
+              ) : null}
               {t(translations.members.confirmAction)}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1169,6 +1172,9 @@ export default function MembersPage() {
               }}
               variant="destructive"
             >
+              {removeMemberMutation.isPending ? (
+                <RefreshCw aria-hidden="true" className="animate-spin" />
+              ) : null}
               {t(translations.members.removeMember)}
             </AlertDialogAction>
           </AlertDialogFooter>

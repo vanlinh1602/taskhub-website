@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Outlet, useLocation } from 'react-router';
 import { useShallow } from 'zustand/shallow';
 
+import { GlobalLoadingBar } from '@/components/global-loading-bar';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -87,6 +88,7 @@ export default function AppLayout() {
 
   return (
     <TooltipProvider>
+      <GlobalLoadingBar />
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset className="app-canvas min-h-svh bg-transparent md:my-3 md:mr-3 md:rounded-3xl md:border md:border-border/70">

@@ -30,6 +30,13 @@ import {
 } from '@/components/ui/empty';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -39,10 +46,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import type { ChapterPriority } from '@/features/chapters/types';
+import { getPriorityLabel } from '@/features/chapters/utils/chapter-labels';
 import {
   useCreateStoryMutation,
   useStoriesQuery,
 } from '@/features/stories/hooks';
+import { useUpdateStoryPriorityMutation } from '@/features/stories/hooks';
 import { useWorkspaceStore } from '@/features/workspace/hooks';
 import { translations } from '@/locales/translations';
 import formatError from '@/utils/formatError';
@@ -179,7 +189,7 @@ export default function StoriesPage() {
                 </div>
                 <Button
                   className="w-full"
-                  disabled={createMutation.isPending}
+                  loading={createMutation.isPending}
                   type="submit"
                 >
                   {t(translations.management.stories.save)}
@@ -277,6 +287,9 @@ export default function StoriesPage() {
                   <TableHead className="min-w-28">
                     {t(translations.management.stories.status)}
                   </TableHead>
+                  <TableHead className="min-w-40">
+                    {t(translations.management.stories.priority)}
+                  </TableHead>
                   <TableHead className="min-w-36">
                     {t(translations.management.stories.createdAt)}
                   </TableHead>
@@ -323,6 +336,13 @@ export default function StoriesPage() {
                       >
                         {statusLabel(story.status)}
                       </span>
+                    </TableCell>
+                    <TableCell onClick={(event) => event.stopPropagation()}>
+                      <StoryPrioritySelect
+                        priority={story.priority}
+                        storyId={story.id}
+                        workspaceId={workspaceId}
+                      />
                     </TableCell>
                     <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
                       <span className="inline-flex items-center gap-1.5">
@@ -373,5 +393,44 @@ export default function StoriesPage() {
         </CardContent>
       </Card>
     </section>
+  );
+}
+
+const storyPriorities: readonly ChapterPriority[] = ['HIGH', 'NORMAL', 'LOW'];
+
+function StoryPrioritySelect({
+  priority,
+  storyId,
+  workspaceId,
+}: {
+  priority: ChapterPriority;
+  storyId: string;
+  workspaceId: string;
+}) {
+  const { t } = useTranslation();
+  const mutation = useUpdateStoryPriorityMutation(workspaceId, storyId);
+
+  return (
+    <Select
+      disabled={mutation.isPending}
+      onValueChange={(value) =>
+        mutation.mutate(
+          { priority: value as ChapterPriority },
+          { onError: (error: Error) => toast.error(formatError(error)) },
+        )
+      }
+      value={priority}
+    >
+      <SelectTrigger aria-label={t(translations.management.stories.priority)}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {storyPriorities.map((item) => (
+          <SelectItem key={item} value={item}>
+            {getPriorityLabel(t, item)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

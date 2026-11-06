@@ -267,7 +267,11 @@ function WorkspaceDetailsSection({
         >
           {isDirty ? t(translations.workspaceSettings.unsavedChanges) : null}
         </p>
-        <Button disabled={!isDirty || updateMutation.isPending} type="submit">
+        <Button
+          disabled={!isDirty}
+          loading={updateMutation.isPending}
+          type="submit"
+        >
           {t(translations.workspaceSettings.saveWorkspace)}
         </Button>
       </div>

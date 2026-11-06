@@ -1,44 +1,9 @@
-import {
-  Check,
-  CircleAlert,
-  Edit3,
-  Layers3,
-  MoreHorizontal,
-  Plus,
-  Power,
-} from 'lucide-react';
-import { type FormEvent, useEffect, useMemo, useState } from 'react';
+import { CircleAlert, Layers3, Plus, Search } from 'lucide-react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
-import MoneyInput from '@/components/MoneyInput';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import {
   Empty,
   EmptyDescription,
@@ -47,43 +12,34 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Textarea } from '@/components/ui/textarea';
-import {
+  useAllStagesQuery,
   useCreateStageMutation,
-  useStagesQuery,
+  useReorderStagesMutation,
   useUpdateStageMutation,
   useUpdateStageStatusMutation,
 } from '@/features/stages/hooks';
-import type {
-  Stage,
-  StageFormValues,
-  StagePayload,
-} from '@/features/stages/types';
+import type { Stage, StagePayload } from '@/features/stages/types';
+import { getNextDisplayOrder, moveStage } from '@/features/stages/utils/order';
 import { useWorkspaceStore } from '@/features/workspace/hooks';
+import { useMediaQuery } from '@/hooks/use-media-query';
 import { translations } from '@/locales/translations';
 import formatError from '@/utils/formatError';
-import { formatMoney } from '@/utils/money';
 
-const PAGE_SIZE = 25;
+import StageForm from './StageForm';
+import StageRow from './StageRow';
 
-const EMPTY_FORM: StageFormValues = {
-  name: '',
-  description: '',
-  defaultPrice: '0',
-  durationHours: '24',
-  displayOrder: '0',
-  isRewardEligible: true,
-};
+const SIDE_PANEL_QUERY = '(min-width: 1280px)';
+const STATUS_FILTERS = ['ALL', 'ACTIVE', 'INACTIVE'] as const;
+type StatusFilter = (typeof STATUS_FILTERS)[number];
 
 function isForbiddenError(error: unknown): boolean {
   const message = formatError(error).toLocaleLowerCase();
@@ -94,375 +50,17 @@ function isForbiddenError(error: unknown): boolean {
   );
 }
 
-function StageStatus({
-  active,
-  t,
-}: {
-  readonly active: boolean;
-  readonly t: ReturnType<typeof useTranslation>['t'];
-}) {
+function matchesFilter(
+  stage: Stage,
+  filter: StatusFilter,
+  search: string,
+): boolean {
+  if (filter === 'ACTIVE' && !stage.isActive) return false;
+  if (filter === 'INACTIVE' && stage.isActive) return false;
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${active ? 'bg-primary/10 text-link' : 'bg-muted text-muted-foreground'}`}
-    >
-      {active ? <Check aria-hidden="true" className="size-3.5" /> : null}
-      {active ? t(translations.stages.active) : t(translations.stages.inactive)}
-    </span>
-  );
-}
-
-function StageRewardStatus({
-  eligible,
-  t,
-}: {
-  readonly eligible: boolean;
-  readonly t: ReturnType<typeof useTranslation>['t'];
-}) {
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${eligible ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300' : 'bg-muted text-muted-foreground'}`}
-    >
-      {eligible
-        ? t(translations.stages.rewardEnabled)
-        : t(translations.stages.rewardDisabled)}
-    </span>
-  );
-}
-
-function StageForm({
-  editingStage,
-  language,
-  isPending,
-  onCancel,
-  onSubmit,
-  t,
-}: {
-  readonly editingStage: Stage | null;
-  readonly language: string;
-  readonly isPending: boolean;
-  readonly onCancel: () => void;
-  readonly onSubmit: (payload: StagePayload) => void;
-  readonly t: ReturnType<typeof useTranslation>['t'];
-}) {
-  const [values, setValues] = useState<StageFormValues>(EMPTY_FORM);
-  const [validationError, setValidationError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setValues(
-      editingStage
-        ? {
-            name: editingStage.name,
-            description: editingStage.description ?? '',
-            defaultPrice: editingStage.defaultPrice,
-            durationHours: String(editingStage.defaultDurationHours),
-            displayOrder: String(editingStage.displayOrder),
-            isRewardEligible: editingStage.isRewardEligible !== false,
-          }
-        : EMPTY_FORM,
-    );
-    setValidationError(null);
-  }, [editingStage]);
-
-  function setValue<Key extends keyof StageFormValues>(
-    key: Key,
-    value: StageFormValues[Key],
-  ): void {
-    setValues((current) => ({ ...current, [key]: value }));
-    setValidationError(null);
-  }
-
-  function submit(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault();
-    const name = values.name.trim();
-    const defaultPrice = values.defaultPrice.trim();
-    const durationHours = Number(values.durationHours);
-    const displayOrder = Number(values.displayOrder);
-    if (!name || !defaultPrice) {
-      setValidationError(t(translations.stages.invalidRequired));
-      return;
-    }
-    if (!/^\d{1,12}(?:\.\d{1,2})?$/.test(defaultPrice)) {
-      setValidationError(t(translations.stages.invalidPrice));
-      return;
-    }
-    if (!Number.isInteger(durationHours) || durationHours < 1) {
-      setValidationError(t(translations.stages.invalidWholeNumber));
-      return;
-    }
-    if (!Number.isInteger(displayOrder) || displayOrder < 0) {
-      setValidationError(t(translations.stages.invalidWholeNumber));
-      return;
-    }
-    onSubmit({
-      defaultPrice,
-      description: values.description.trim() || undefined,
-      displayOrder,
-      durationHours,
-      isRewardEligible: values.isRewardEligible,
-      name,
-    });
-  }
-
-  return (
-    <form className="grid gap-4" onSubmit={submit}>
-      {editingStage ? (
-        <div className="rounded-xl border border-border/70 bg-muted/30 px-3 py-2">
-          <p className="text-xs font-medium text-muted-foreground">
-            {t(translations.stages.code)}
-          </p>
-          <p className="mt-1 font-mono text-sm font-semibold">
-            {editingStage.code}
-          </p>
-        </div>
-      ) : null}
-      <div className="grid gap-2">
-        <Label htmlFor="stage-name">{t(translations.stages.name)}</Label>
-        <Input
-          id="stage-name"
-          maxLength={100}
-          onChange={(event) => setValue('name', event.target.value)}
-          value={values.name}
-        />
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="stage-description">
-          {t(translations.stages.descriptionField)}
-        </Label>
-        <Textarea
-          id="stage-description"
-          onChange={(event) => setValue('description', event.target.value)}
-          rows={3}
-          value={values.description}
-        />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="grid gap-2">
-          <Label htmlFor="stage-duration">
-            {t(translations.stages.durationHours)}
-          </Label>
-          <Input
-            id="stage-duration"
-            min={1}
-            onChange={(event) => setValue('durationHours', event.target.value)}
-            type="number"
-            value={values.durationHours}
-          />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="stage-price">
-            {t(translations.stages.defaultPrice)}
-          </Label>
-          <MoneyInput
-            id="stage-price"
-            language={language}
-            onValueChange={(value) => setValue('defaultPrice', value)}
-            placeholder={t(translations.stages.defaultPriceHint)}
-            value={values.defaultPrice}
-          />
-        </div>
-      </div>
-      <div className="grid gap-2 sm:max-w-[calc(50%-0.5rem)]">
-        <Label htmlFor="stage-order">
-          {t(translations.stages.displayOrder)}
-        </Label>
-        <Input
-          id="stage-order"
-          min={0}
-          onChange={(event) => setValue('displayOrder', event.target.value)}
-          type="number"
-          value={values.displayOrder}
-        />
-      </div>
-      <label className="group flex cursor-pointer items-start gap-3 rounded-xl border border-border/70 bg-muted/20 p-3">
-        <Checkbox
-          aria-describedby="stage-reward-description"
-          checked={values.isRewardEligible}
-          id="stage-reward-eligible"
-          onCheckedChange={(checked) =>
-            setValue('isRewardEligible', checked === true)
-          }
-        />
-        <span className="grid gap-1">
-          <span className="text-sm font-semibold">
-            {t(translations.stages.rewardEligible)}
-          </span>
-          <span
-            className="text-xs leading-5 text-muted-foreground"
-            id="stage-reward-description"
-          >
-            {t(translations.stages.rewardEligibleDescription)}
-          </span>
-        </span>
-      </label>
-      {validationError ? (
-        <p className="text-sm text-destructive" role="alert">
-          {validationError}
-        </p>
-      ) : null}
-      <DialogFooter>
-        <Button onClick={onCancel} type="button" variant="outline">
-          {t(translations.stages.cancel)}
-        </Button>
-        <Button disabled={isPending} type="submit">
-          {t(translations.stages.save)}
-        </Button>
-      </DialogFooter>
-    </form>
-  );
-}
-
-function StageRow({
-  locale,
-  onDeactivate,
-  onEdit,
-  onToggle,
-  stage,
-  t,
-}: {
-  readonly locale: string;
-  readonly onDeactivate: (stage: Stage) => void;
-  readonly onEdit: (stage: Stage) => void;
-  readonly onToggle: (stage: Stage) => void;
-  readonly stage: Stage;
-  readonly t: ReturnType<typeof useTranslation>['t'];
-}) {
-  return (
-    <TableRow>
-      <TableCell className="w-20 font-mono text-xs text-muted-foreground">
-        {stage.displayOrder}
-      </TableCell>
-      <TableCell>
-        <div className="min-w-36">
-          <p className="font-semibold">{stage.name}</p>
-          <p className="mt-1 font-mono text-xs text-muted-foreground">
-            {stage.code}
-          </p>
-        </div>
-      </TableCell>
-      <TableCell className="max-w-64 text-muted-foreground">
-        <p className="line-clamp-2">
-          {stage.description || t(translations.stages.notSet)}
-        </p>
-      </TableCell>
-      <TableCell className="whitespace-nowrap">
-        {stage.defaultDurationHours} {t(translations.stages.hoursShort)}
-      </TableCell>
-      <TableCell className="font-medium whitespace-nowrap">
-        {formatMoney(stage.defaultPrice, stage.currency, locale)}
-      </TableCell>
-      <TableCell>
-        <StageRewardStatus eligible={stage.isRewardEligible !== false} t={t} />
-      </TableCell>
-      <TableCell>
-        <StageStatus active={stage.isActive} t={t} />
-      </TableCell>
-      <TableCell>
-        <div className="flex items-center justify-end gap-1">
-          <Button
-            aria-label={`${t(translations.stages.edit)}: ${stage.name}`}
-            onClick={() => onEdit(stage)}
-            size="icon-sm"
-            type="button"
-            variant="ghost"
-          >
-            <Edit3 aria-hidden="true" />
-          </Button>
-          <Button
-            aria-label={`${stage.isActive ? t(translations.stages.deactivate) : t(translations.stages.activate)}: ${stage.name}`}
-            onClick={() =>
-              stage.isActive ? onDeactivate(stage) : onToggle(stage)
-            }
-            size="icon-sm"
-            type="button"
-            variant="ghost"
-          >
-            <Power aria-hidden="true" />
-          </Button>
-        </div>
-      </TableCell>
-    </TableRow>
-  );
-}
-
-function StageCard({
-  locale,
-  onDeactivate,
-  onEdit,
-  onToggle,
-  stage,
-  t,
-}: Parameters<typeof StageRow>[0]) {
-  return (
-    <article className="rounded-2xl border border-border/70 bg-card p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 font-mono text-xs font-semibold text-link">
-            {stage.displayOrder}
-          </span>
-          <div className="min-w-0">
-            <h3 className="truncate font-semibold">{stage.name}</h3>
-            <p className="mt-1 font-mono text-xs text-muted-foreground">
-              {stage.code}
-            </p>
-          </div>
-        </div>
-        <StageStatus active={stage.isActive} t={t} />
-      </div>
-      <p className="mt-4 min-h-10 text-sm leading-5 text-muted-foreground">
-        {stage.description || t(translations.stages.notSet)}
-      </p>
-      <div className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-muted/30 p-3 text-sm">
-        <div>
-          <p className="text-xs text-muted-foreground">
-            {t(translations.stages.durationHours)}
-          </p>
-          <p className="mt-1 font-semibold">
-            {stage.defaultDurationHours} {t(translations.stages.hoursShort)}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">
-            {t(translations.stages.defaultPrice)}
-          </p>
-          <p className="mt-1 font-semibold">
-            {formatMoney(stage.defaultPrice, stage.currency, locale)}
-          </p>
-        </div>
-      </div>
-      <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-border/60 px-3 py-2">
-        <span className="text-xs font-medium text-muted-foreground">
-          {t(translations.stages.rewardEligible)}
-        </span>
-        <StageRewardStatus
-          eligible={stage.isRewardEligible !== false}
-          t={t}
-        />
-      </div>
-      <div className="mt-4 flex justify-end gap-1 border-t border-border/60 pt-3">
-        <Button
-          onClick={() => onEdit(stage)}
-          size="sm"
-          type="button"
-          variant="outline"
-        >
-          <Edit3 aria-hidden="true" />
-          {t(translations.stages.edit)}
-        </Button>
-        <Button
-          onClick={() =>
-            stage.isActive ? onDeactivate(stage) : onToggle(stage)
-          }
-          size="sm"
-          type="button"
-          variant="ghost"
-        >
-          <Power aria-hidden="true" />
-          {stage.isActive
-            ? t(translations.stages.deactivate)
-            : t(translations.stages.activate)}
-        </Button>
-      </div>
-    </article>
+    !search ||
+    stage.name.toLocaleLowerCase().includes(search) ||
+    stage.code.toLocaleLowerCase().includes(search)
   );
 }
 
@@ -479,52 +77,81 @@ function StageListSkeleton() {
 export default function StagesPage() {
   const { i18n, t } = useTranslation();
   const { activeWorkspaceId: workspaceId } = useWorkspaceStore();
-  const [page, setPage] = useState(0);
-  const [dialogMode, setDialogMode] = useState<'create' | 'edit' | null>(null);
-  const [editingStage, setEditingStage] = useState<Stage | null>(null);
-  const [stageToDeactivate, setStageToDeactivate] = useState<Stage | null>(
-    null,
-  );
-  const stagesQuery = useStagesQuery(workspaceId, page, PAGE_SIZE);
+  const hasSidePanel = useMediaQuery(SIDE_PANEL_QUERY);
+  const [searchText, setSearchText] = useState('');
+  const [filter, setFilter] = useState<StatusFilter>('ALL');
+  const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const isFormDirty = useRef(false);
+  const stagesQuery = useAllStagesQuery(workspaceId);
   const createMutation = useCreateStageMutation(workspaceId);
   const updateMutation = useUpdateStageMutation(workspaceId);
   const statusMutation = useUpdateStageStatusMutation(workspaceId);
+  const reorderMutation = useReorderStagesMutation(workspaceId);
   const isFormPending = createMutation.isPending || updateMutation.isPending;
-  const stagePage = stagesQuery.data;
-  const pageCount = stagePage?.pageCount ?? 1;
-  const locale = i18n.language;
 
-  const pageSummary = useMemo(
+  const stages = useMemo(() => stagesQuery.data ?? [], [stagesQuery.data]);
+  const normalizedSearch = searchText.trim().toLocaleLowerCase();
+  const visibleStages = useMemo(
     () =>
-      t(translations.stages.pageSummary, {
-        count: stagePage?.items.length ?? 0,
-        current: (stagePage?.page ?? page) + 1,
-        total: pageCount,
-      }),
-    [page, pageCount, stagePage?.items.length, stagePage?.page, t],
+      stages.filter((stage) => matchesFilter(stage, filter, normalizedSearch)),
+    [filter, normalizedSearch, stages],
   );
+  const selectedStage =
+    stages.find((stage) => stage.id === selectedStageId) ?? null;
+  const isReorderable = filter === 'ALL' && !normalizedSearch;
+  const activeTotal = stages.filter((stage) => stage.isActive).length;
+  const isFormVisible = isCreating || selectedStage !== null;
+  const formTitle = isCreating
+    ? t(translations.stages.add)
+    : t(translations.stages.edit);
+
+  const trackFormDirty = useCallback((isDirty: boolean): void => {
+    isFormDirty.current = isDirty;
+  }, []);
+
+  function canLeaveForm(): boolean {
+    return (
+      !isFormDirty.current || window.confirm(t(translations.stages.unsaved))
+    );
+  }
 
   function openCreate(): void {
-    setEditingStage(null);
-    setDialogMode('create');
+    if (!canLeaveForm()) return;
+    setIsCreating(true);
+    setSelectedStageId(null);
+    setIsSheetOpen(true);
   }
 
-  function openEdit(stage: Stage): void {
-    setEditingStage(stage);
-    setDialogMode('edit');
+  function selectStage(stage: Stage): void {
+    if (stage.id !== selectedStageId && !canLeaveForm()) return;
+    setIsCreating(false);
+    setSelectedStageId(stage.id);
+    setIsSheetOpen(true);
   }
 
-  function closeForm(): void {
-    if (!isFormPending) setDialogMode(null);
+  function cancelForm(): void {
+    isFormDirty.current = false;
+    if (isCreating) setIsCreating(false);
+    if (!hasSidePanel) setIsSheetOpen(false);
   }
 
-  function saveStage(payload: StagePayload): void {
-    if (editingStage) {
+  function clearFilters(): void {
+    setSearchText('');
+    setFilter('ALL');
+  }
+
+  function saveStage(values: Omit<StagePayload, 'displayOrder'>): void {
+    if (selectedStage && !isCreating) {
       updateMutation.mutate(
-        { payload, stageId: editingStage.id },
+        {
+          payload: { ...values, displayOrder: selectedStage.displayOrder },
+          stageId: selectedStage.id,
+        },
         {
           onSuccess: () => {
-            setDialogMode(null);
+            if (!hasSidePanel) setIsSheetOpen(false);
             toast.success(t(translations.stages.updateSuccess));
           },
           onError: (error) => toast.error(formatError(error)),
@@ -532,27 +159,50 @@ export default function StagesPage() {
       );
       return;
     }
-    createMutation.mutate(payload, {
-      onSuccess: () => {
-        setDialogMode(null);
-        setPage(0);
-        toast.success(t(translations.stages.createSuccess));
-      },
-      onError: (error) => toast.error(formatError(error)),
-    });
-  }
-
-  function toggleStage(stage: Stage, isActive: boolean): void {
-    statusMutation.mutate(
-      { isActive, stageId: stage.id },
+    createMutation.mutate(
+      { ...values, displayOrder: getNextDisplayOrder(stages) },
       {
-        onSuccess: () => {
-          setStageToDeactivate(null);
-          toast.success(t(translations.stages.statusSuccess));
+        onSuccess: (stage) => {
+          isFormDirty.current = false;
+          setIsCreating(false);
+          setSelectedStageId(stage.id);
+          if (!hasSidePanel) setIsSheetOpen(false);
+          toast.success(t(translations.stages.createSuccess));
         },
         onError: (error) => toast.error(formatError(error)),
       },
     );
+  }
+
+  function changeStatus(stage: Stage, isActive: boolean): void {
+    statusMutation.mutate(
+      { isActive, stageId: stage.id },
+      {
+        onSuccess: () => {
+          toast.success(
+            t(
+              isActive
+                ? translations.stages.activatedToast
+                : translations.stages.deactivatedToast,
+              { name: stage.name },
+            ),
+            {
+              action: {
+                label: t(translations.stages.undo),
+                onClick: () => changeStatus(stage, !isActive),
+              },
+            },
+          );
+        },
+        onError: (error) => toast.error(formatError(error)),
+      },
+    );
+  }
+
+  function reorderStage(stage: Stage, offset: number): void {
+    reorderMutation.mutate(moveStage(stages, stage.id, offset), {
+      onError: (error) => toast.error(formatError(error)),
+    });
   }
 
   if (!workspaceId) {
@@ -599,22 +249,27 @@ export default function StagesPage() {
     );
   }
 
-  const items = stagePage?.items ?? [];
+  const form = (
+    <StageForm
+      isPending={isFormPending}
+      key={isCreating ? 'new' : selectedStage?.id}
+      language={i18n.language}
+      onCancel={cancelForm}
+      onDirtyChange={trackFormDirty}
+      onSubmit={saveStage}
+      stage={isCreating ? null : selectedStage}
+    />
+  );
+
   return (
-    <section className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <section className="space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="max-w-2xl">
           <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
             {t(translations.stages.title)}
           </h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
             {t(translations.stages.description)}
-          </p>
-          <p className="mt-3 text-sm font-semibold text-link">
-            {t(translations.stages.totalSummary, {
-              active: stagePage?.activeTotal ?? 0,
-              total: stagePage?.total ?? 0,
-            })}
           </p>
         </div>
         <Button className="shadow-[var(--control-shadow)]" onClick={openCreate}>
@@ -623,21 +278,62 @@ export default function StagesPage() {
         </Button>
       </div>
 
-      <Card className="border-border/70 shadow-[var(--soft-shadow)]">
-        <CardHeader className="flex flex-row items-center justify-between gap-3 border-b border-border/60 bg-muted/20">
-          <div>
-            <CardTitle className="text-base">
-              {t(translations.stages.title)}
-            </CardTitle>
-            <CardDescription className="mt-1">{pageSummary}</CardDescription>
-          </div>
-          <MoreHorizontal
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative min-w-56 flex-1 sm:max-w-sm">
+          <Search
             aria-hidden="true"
-            className="size-5 text-muted-foreground"
+            className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
           />
-        </CardHeader>
-        <CardContent className="p-0">
-          {items.length === 0 ? (
+          <Input
+            aria-label={t(translations.stages.search)}
+            className="pl-9"
+            onChange={(event) => setSearchText(event.target.value)}
+            placeholder={t(translations.stages.search)}
+            type="search"
+            value={searchText}
+          />
+        </div>
+        <div
+          aria-label={t(translations.stages.status)}
+          className="flex gap-0.5 rounded-xl bg-secondary p-1"
+          role="group"
+        >
+          {STATUS_FILTERS.map((value) => (
+            <Button
+              aria-pressed={filter === value}
+              className={
+                filter === value
+                  ? 'bg-card font-bold shadow-sm hover:bg-card'
+                  : 'text-muted-foreground'
+              }
+              key={value}
+              onClick={() => setFilter(value)}
+              size="sm"
+              type="button"
+              variant="ghost"
+            >
+              {value === 'ALL'
+                ? t(translations.stages.all)
+                : value === 'ACTIVE'
+                  ? t(translations.stages.active)
+                  : t(translations.stages.inactive)}
+            </Button>
+          ))}
+        </div>
+        <p
+          aria-live="polite"
+          className="text-sm font-semibold text-muted-foreground sm:ml-auto"
+        >
+          {t(translations.stages.totalSummary, {
+            active: activeTotal,
+            total: stages.length,
+          })}
+        </p>
+      </div>
+
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_21rem]">
+        <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-[var(--soft-shadow)]">
+          {stages.length === 0 ? (
             <Empty className="min-h-72 border-0">
               <EmptyHeader>
                 <EmptyMedia variant="icon">
@@ -653,150 +349,95 @@ export default function StagesPage() {
                 {t(translations.stages.add)}
               </Button>
             </Empty>
+          ) : visibleStages.length === 0 ? (
+            <Empty className="min-h-72 border-0">
+              <EmptyHeader>
+                <EmptyTitle>{t(translations.stages.noResults)}</EmptyTitle>
+                <EmptyDescription>
+                  {t(translations.stages.noResultsDescription)}
+                </EmptyDescription>
+              </EmptyHeader>
+              <Button onClick={clearFilters} variant="outline">
+                {t(translations.stages.clearFilters)}
+              </Button>
+            </Empty>
           ) : (
-            <>
-              <div className="hidden md:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>
-                        {t(translations.stages.displayOrder)}
-                      </TableHead>
-                      <TableHead>{t(translations.stages.name)}</TableHead>
-                      <TableHead>
-                        {t(translations.stages.descriptionField)}
-                      </TableHead>
-                      <TableHead>
-                        {t(translations.stages.durationHours)}
-                      </TableHead>
-                      <TableHead>
-                        {t(translations.stages.defaultPrice)}
-                      </TableHead>
-                      <TableHead>{t(translations.stages.rewardEligible)}</TableHead>
-                      <TableHead>{t(translations.stages.status)}</TableHead>
-                      <TableHead className="text-right">
-                        {t(translations.stages.actions)}
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {items.map((stage) => (
-                      <StageRow
-                        key={stage.id}
-                        locale={locale}
-                        onDeactivate={setStageToDeactivate}
-                        onEdit={openEdit}
-                        onToggle={(item) => toggleStage(item, true)}
-                        stage={stage}
-                        t={t}
-                      />
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              <div className="space-y-3 p-4 md:hidden">
-                {items.map((stage) => (
-                  <StageCard
+            <ol aria-label={t(translations.stages.title)}>
+              {visibleStages.map((stage) => {
+                const position = stages.indexOf(stage);
+                return (
+                  <StageRow
+                    canMoveDown={
+                      position < stages.length - 1 && !reorderMutation.isPending
+                    }
+                    canMoveUp={position > 0 && !reorderMutation.isPending}
+                    isReorderable={isReorderable}
+                    isSelected={!isCreating && stage.id === selectedStageId}
+                    isStatusPending={statusMutation.isPending}
                     key={stage.id}
-                    locale={locale}
-                    onDeactivate={setStageToDeactivate}
-                    onEdit={openEdit}
-                    onToggle={(item) => toggleStage(item, true)}
+                    onMove={reorderStage}
+                    onSelect={selectStage}
+                    onToggle={(item) => changeStatus(item, !item.isActive)}
+                    position={position + 1}
                     stage={stage}
-                    t={t}
                   />
-                ))}
-              </div>
-            </>
+                );
+              })}
+            </ol>
           )}
-        </CardContent>
-        {items.length > 0 ? (
-          <div className="flex items-center justify-between gap-3 border-t border-border/60 px-4 py-3 sm:px-6">
-            <Button
-              disabled={
-                (stagePage?.page ?? page) === 0 || stagesQuery.isFetching
-              }
-              onClick={() => setPage((current) => Math.max(0, current - 1))}
-              size="sm"
-              variant="outline"
-            >
-              {t(translations.stages.previousPage)}
-            </Button>
-            <span className="text-xs text-muted-foreground">{pageSummary}</span>
-            <Button
-              disabled={
-                (stagePage?.page ?? page) >= pageCount - 1 ||
-                stagesQuery.isFetching
-              }
-              onClick={() =>
-                setPage((current) => Math.min(pageCount - 1, current + 1))
-              }
-              size="sm"
-              variant="outline"
-            >
-              {t(translations.stages.nextPage)}
-            </Button>
-          </div>
-        ) : null}
-      </Card>
+        </div>
 
-      <Dialog
-        onOpenChange={(open) => !open && closeForm()}
-        open={dialogMode !== null}
-      >
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              {dialogMode === 'edit'
-                ? t(translations.stages.edit)
-                : t(translations.stages.add)}
-            </DialogTitle>
-            <DialogDescription>
-              {t(translations.stages.description)}
-            </DialogDescription>
-          </DialogHeader>
-          <StageForm
-            editingStage={editingStage}
-            isPending={isFormPending}
-            language={locale}
-            onCancel={closeForm}
-            onSubmit={saveStage}
-            t={t}
-          />
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog
-        onOpenChange={(open) => {
-          if (!open && !statusMutation.isPending) setStageToDeactivate(null);
-        }}
-        open={stageToDeactivate !== null}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t(translations.stages.confirmDeactivate)}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t(translations.stages.confirmDeactivateDescription)}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={statusMutation.isPending}>
-              {t(translations.stages.cancel)}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              disabled={statusMutation.isPending}
-              onClick={() => {
-                if (stageToDeactivate) toggleStage(stageToDeactivate, false);
-              }}
-              variant="destructive"
+        {hasSidePanel ? (
+          <aside
+            aria-label={formTitle}
+            className="grid gap-4 rounded-2xl border border-border/70 bg-card p-5 shadow-[var(--soft-shadow)]"
+          >
+            {isFormVisible ? (
+              <>
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="text-lg leading-tight font-extrabold">
+                    {formTitle}
+                  </h3>
+                  {!isCreating && selectedStage ? (
+                    <span className="min-w-0 truncate rounded-lg bg-muted px-2 py-0.5 font-mono text-xs font-semibold text-muted-foreground">
+                      {selectedStage.code}
+                    </span>
+                  ) : null}
+                </div>
+                {form}
+              </>
+            ) : (
+              <p className="text-sm leading-6 text-muted-foreground">
+                {t(translations.stages.selectStage)}
+              </p>
+            )}
+          </aside>
+        ) : (
+          <Sheet
+            onOpenChange={(open) => {
+              if (!open && !canLeaveForm()) return;
+              setIsSheetOpen(open);
+              if (!open) setIsCreating(false);
+            }}
+            open={isSheetOpen && isFormVisible}
+          >
+            <SheetContent
+              className="w-[min(92vw,24rem)] overflow-y-auto"
+              side="right"
             >
-              {t(translations.stages.deactivate)}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              <SheetHeader>
+                <SheetTitle>{formTitle}</SheetTitle>
+                <SheetDescription>
+                  {selectedStage && !isCreating
+                    ? selectedStage.code
+                    : t(translations.stages.description)}
+                </SheetDescription>
+              </SheetHeader>
+              <div className="px-4 pb-6">{form}</div>
+            </SheetContent>
+          </Sheet>
+        )}
+      </div>
     </section>
   );
 }

@@ -105,11 +105,13 @@ describe('DashboardPage', () => {
     expect(markup).toContain('Việc cần xử lý');
     expect(markup).toContain('Chapter 1');
     expect(markup).toContain('Story 1');
-    expect(markup).toContain('Tóm tắt');
+    expect(markup).toContain('Đã quá hạn');
+    expect(markup).toContain('Gia hạn chờ duyệt');
     expect(markup).toContain('Tiến độ theo công đoạn');
+    expect(markup).toContain('Hoàn thành theo ngày');
+    // The most urgent item (overdue) is selected by default.
+    expect(markup).toContain('Mở task để xử lý');
     expect(markup).toContain('/stories/story-1?q=Chapter+1');
-    expect(markup).toContain('/deadline-extensions');
-    expect(markup).toContain('/payroll');
   });
 
   it('renders loading, retry, and empty action states', async () => {
@@ -153,5 +155,26 @@ describe('DashboardPage', () => {
       </MemoryRouter>,
     );
     expect(emptyMarkup).toContain('Workspace đang ổn');
+  });
+
+  it('links nonzero KPI counts to full queues when the action preview omits them', async () => {
+    await i18n.changeLanguage('vi');
+    vi.mocked(useWorkspaceStore).mockReturnValue({
+      activeWorkspaceId: 'workspace-1',
+    } as never);
+    vi.mocked(useDashboardQuery).mockReturnValue({
+      data: dashboard,
+      isError: false,
+      isFetching: false,
+      isLoading: false,
+      refetch: vi.fn(),
+    } as never);
+
+    const markup = renderToStaticMarkup(
+      <MemoryRouter><DashboardPage /></MemoryRouter>,
+    );
+
+    expect(markup).toMatch(/<a\b[^>]*href="\/payroll"[^>]*>[\s\S]*?Chờ thanh toán[\s\S]*?<\/a>/);
+    expect(markup).toMatch(/<a\b[^>]*href="\/tasks\?status=BLOCKED"[^>]*>[\s\S]*?<\/a>/);
   });
 });

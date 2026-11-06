@@ -875,11 +875,14 @@ export default function StatisticsPage() {
               {t(translations.statistics.viewTotal)}
             </Button>
             <Button
-              disabled={exportMutation.isPending || statisticsQuery.isLoading}
+              disabled={statisticsQuery.isLoading}
+              loading={exportMutation.isPending}
               onClick={handleExport}
               size="lg"
             >
-              <FileSpreadsheet aria-hidden="true" />
+              {exportMutation.isPending ? null : (
+                <FileSpreadsheet aria-hidden="true" />
+              )}
               {exportMutation.isPending
                 ? t(translations.statistics.exporting)
                 : t(translations.statistics.export)}

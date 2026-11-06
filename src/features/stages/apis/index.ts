@@ -1,5 +1,6 @@
 export {
   createStage,
+  getAllStages,
   getStages,
   updateStage,
   updateStageStatus,

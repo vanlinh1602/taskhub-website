@@ -3,8 +3,9 @@ export {
   type UpdateStageInput,
   type UpdateStageStatusInput,
   useCreateStageMutation,
+  useReorderStagesMutation,
   useUpdateStageMutation,
   useUpdateStageStatusMutation,
 } from './mutations';
-export { useStagesQuery } from './queries';
+export { useAllStagesQuery, useStagesQuery } from './queries';
 export { stagesQueryKeys } from './queryKeys';

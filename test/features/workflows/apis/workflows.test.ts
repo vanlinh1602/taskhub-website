@@ -60,6 +60,19 @@ describe('workflow APIs', () => {
     );
   });
 
+  it('sends the search term to filter across all template pages', async () => {
+    const get = vi.spyOn(backendService, 'get').mockResolvedValue({
+      kind: 'ok',
+      data: { items: [], page: 0, pageCount: 1, total: 0 },
+    } as never);
+
+    await getWorkflowTemplates('workspace', ['ACTIVE'], 0, 25, 'Review & edit');
+
+    expect(get).toHaveBeenCalledWith(
+      '/api/story-workflow/workspace/workflow-templates?page=0&pageSize=25&status=ACTIVE&search=Review+%26+edit',
+    );
+  });
+
   it('uses the encoded delete endpoint for drafts', async () => {
     const remove = vi
       .spyOn(backendService, 'delete')

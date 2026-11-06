@@ -11,6 +11,7 @@ import { tasksQueryKeys } from '@/features/tasks/hooks';
 
 import { createStage, updateStage, updateStageStatus } from '../apis';
 import type { Stage, StagePayload } from '../types';
+import { createStagePayload, renumberStages } from '../utils/order';
 import { stagesQueryKeys } from './queryKeys';
 
 export async function invalidateStageRelatedQueries(
@@ -71,6 +72,45 @@ export function useUpdateStageStatusMutation(
     mutationFn: ({ stageId, isActive }) =>
       updateStageStatus(workspaceId, stageId, isActive),
     onSuccess: () => invalidateStageRelatedQueries(queryClient, workspaceId),
+  });
+}
+
+interface ReorderStagesContext {
+  readonly previousStages: readonly Stage[] | undefined;
+}
+
+export function useReorderStagesMutation(
+  workspaceId: string,
+): UseMutationResult<void, Error, readonly Stage[], ReorderStagesContext> {
+  const queryClient = useQueryClient();
+  const queryKey = stagesQueryKeys.all(workspaceId);
+  return useMutation({
+    mutationFn: async (orderedStages) => {
+      await Promise.all(
+        orderedStages.flatMap((stage, index) =>
+          stage.displayOrder === index + 1
+            ? []
+            : [
+                updateStage(
+                  workspaceId,
+                  stage.id,
+                  createStagePayload(stage, index + 1),
+                ),
+              ],
+        ),
+      );
+    },
+    onMutate: async (orderedStages) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previousStages =
+        queryClient.getQueryData<readonly Stage[]>(queryKey);
+      queryClient.setQueryData(queryKey, renumberStages(orderedStages));
+      return { previousStages };
+    },
+    onError: (_error, _orderedStages, context) => {
+      queryClient.setQueryData(queryKey, context?.previousStages);
+    },
+    onSettled: () => invalidateStageRelatedQueries(queryClient, workspaceId),
   });
 }
 

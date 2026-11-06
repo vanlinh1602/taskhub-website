@@ -1,19 +1,17 @@
 import {
-  Check,
   ChevronLeft,
   ChevronRight,
-  Edit3,
-  MoreHorizontal,
   Plus,
-  Trash2,
+  Search,
   Workflow,
   XCircle,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 
+import { FetchingBadge } from '@/components/fetching-overlay';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,13 +23,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -40,14 +32,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
   Empty,
   EmptyDescription,
@@ -58,14 +42,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   useCreateWorkflowMutation,
   useDeactivateWorkflowMutation,
@@ -83,13 +59,45 @@ import { useWorkspaceStore } from '@/features/workspace/hooks';
 import { translations } from '@/locales/translations';
 import formatError from '@/utils/formatError';
 
+import WorkflowRow, { type WorkflowActionKind } from './WorkflowRow';
+
 const ALL_STATUSES: readonly WorkflowTemplateStatus[] = [
   'DRAFT',
   'ACTIVE',
   'INACTIVE',
 ];
-type FilterStatus = WorkflowTemplateStatus | 'ALL';
-type ActionKind = 'publish' | 'deactivate' | 'restore' | 'delete';
+const FILTERS = ['ALL', 'ACTIVE', 'DRAFT', 'INACTIVE'] as const;
+type FilterStatus = (typeof FILTERS)[number];
+
+const FILTER_LABELS = {
+  ACTIVE: translations.workflows.active,
+  ALL: translations.workflows.all,
+  DRAFT: translations.workflows.draft,
+  INACTIVE: translations.workflows.inactive,
+} as const;
+
+const ACTION_COPY = {
+  deactivate: {
+    confirm: translations.workflows.deactivate,
+    description: translations.workflows.deactivateDescription,
+    title: translations.workflows.deactivateTitle,
+  },
+  delete: {
+    confirm: translations.workflows.delete,
+    description: translations.workflows.deleteDescription,
+    title: translations.workflows.deleteTitle,
+  },
+  publish: {
+    confirm: translations.workflows.publish,
+    description: translations.workflows.publishDescription,
+    title: translations.workflows.publishTitle,
+  },
+  restore: {
+    confirm: translations.workflows.restore,
+    description: translations.workflows.restoreDescription,
+    title: translations.workflows.restoreTitle,
+  },
+} as const;
 
 function isForbiddenError(error: unknown): boolean {
   const message = formatError(error).toLocaleLowerCase();
@@ -100,153 +108,18 @@ function isForbiddenError(error: unknown): boolean {
   );
 }
 
-function formatDate(value: string, locale: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.valueOf())) return value;
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date);
-}
-
-function statusLabel(
-  status: WorkflowTemplateStatus,
-  t: ReturnType<typeof useTranslation>['t'],
-): string {
-  if (status === 'DRAFT') return t(translations.workflows.draft);
-  if (status === 'ACTIVE') return t(translations.workflows.active);
-  return t(translations.workflows.inactive);
-}
-
-function StatusBadge({
-  status,
-  t,
-}: {
-  readonly status: WorkflowTemplateStatus;
-  readonly t: ReturnType<typeof useTranslation>['t'];
-}) {
-  const tone =
-    status === 'ACTIVE'
-      ? 'bg-primary/10 text-link'
-      : status === 'DRAFT'
-        ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
-        : 'bg-muted text-muted-foreground';
-  return (
-    <span
-      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${tone}`}
-    >
-      {statusLabel(status, t)}
-    </span>
-  );
-}
-
-function WorkflowActions({
-  isPending,
-  workflow,
-  onAction,
-  onDefault,
-  onEdit,
-  t,
-}: {
-  readonly isPending: boolean;
-  readonly workflow: WorkflowTemplateSummary;
-  readonly onAction: (
-    kind: ActionKind,
-    workflow: WorkflowTemplateSummary,
-  ) => void;
-  readonly onDefault: (workflow: WorkflowTemplateSummary) => void;
-  readonly onEdit: (workflow: WorkflowTemplateSummary) => void;
-  readonly t: ReturnType<typeof useTranslation>['t'];
-}) {
-  function requestAction(kind: ActionKind): void {
-    onAction(kind, workflow);
-  }
-
-  return (
-    <div className="flex items-center justify-end gap-1">
-      <Button
-        aria-label={`${t(translations.workflows.edit)}: ${workflow.name}`}
-        onClick={() => onEdit(workflow)}
-        size="sm"
-        type="button"
-        variant="ghost"
-      >
-        <Edit3 aria-hidden="true" />
-        <span className="hidden sm:inline">{t(translations.workflows.edit)}</span>
-      </Button>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            aria-label={`${t(translations.workflows.actions)}: ${workflow.name}`}
-            disabled={isPending}
-            size="icon-sm"
-            type="button"
-            variant="ghost"
-          >
-            <MoreHorizontal aria-hidden="true" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuLabel>{t(translations.workflows.actions)}</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {workflow.status === 'ACTIVE' ? (
-            <DropdownMenuItem onSelect={() => onDefault(workflow)}>
-              {workflow.isDefault ? (
-                <XCircle aria-hidden="true" />
-              ) : (
-                <Check aria-hidden="true" />
-              )}
-              {workflow.isDefault
-                ? t(translations.workflows.clearDefault)
-                : t(translations.workflows.setDefault)}
-            </DropdownMenuItem>
-          ) : null}
-          {workflow.status === 'DRAFT' ? (
-            <DropdownMenuItem onSelect={() => requestAction('publish')}>
-              <Workflow aria-hidden="true" />
-              {t(translations.workflows.publish)}
-            </DropdownMenuItem>
-          ) : null}
-          {workflow.status === 'ACTIVE' ? (
-            <DropdownMenuItem onSelect={() => requestAction('deactivate')}>
-              <XCircle aria-hidden="true" />
-              {t(translations.workflows.deactivate)}
-            </DropdownMenuItem>
-          ) : null}
-          {workflow.status === 'INACTIVE' ? (
-            <DropdownMenuItem onSelect={() => requestAction('restore')}>
-              <Check aria-hidden="true" />
-              {t(translations.workflows.restore)}
-            </DropdownMenuItem>
-          ) : null}
-          {workflow.status === 'DRAFT' ? (
-            <DropdownMenuItem
-              className="text-destructive data-[highlighted]:bg-destructive/10 data-[highlighted]:text-destructive"
-              onSelect={() => requestAction('delete')}
-            >
-              <Trash2 aria-hidden="true" />
-              {t(translations.workflows.delete)}
-            </DropdownMenuItem>
-          ) : null}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
-  );
-}
-
 function CreateWorkflowDialog({
   isPending,
   onCancel,
   onSubmit,
   open,
-  t,
 }: {
   readonly isPending: boolean;
   readonly onCancel: () => void;
   readonly onSubmit: (name: string) => void;
   readonly open: boolean;
-  readonly t: ReturnType<typeof useTranslation>['t'];
 }) {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -295,7 +168,7 @@ function CreateWorkflowDialog({
             <Button onClick={onCancel} type="button" variant="outline">
               {t(translations.workflows.cancel)}
             </Button>
-            <Button disabled={isPending} type="submit">
+            <Button loading={isPending} type="submit">
               {t(translations.workflows.create)}
             </Button>
           </DialogFooter>
@@ -309,7 +182,7 @@ function LoadingState({ label }: { readonly label: string }) {
   return (
     <div className="grid gap-3" aria-busy="true" aria-label={label} role="status">
       {[1, 2, 3].map((item) => (
-        <Skeleton className="h-20 rounded-2xl" key={item} />
+        <Skeleton className="h-24 rounded-2xl" key={item} />
       ))}
     </div>
   );
@@ -320,14 +193,16 @@ export default function WorkflowsPage() {
   const navigate = useNavigate();
   const workspaceId = useWorkspaceStore((state) => state.activeWorkspaceId);
   const [filter, setFilter] = useState<FilterStatus>('ALL');
+  const [searchText, setSearchText] = useState('');
   const [page, setPage] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<{
-    readonly kind: ActionKind;
+    readonly kind: WorkflowActionKind;
     readonly workflow: WorkflowTemplateSummary;
   } | null>(null);
   const statuses = filter === 'ALL' ? ALL_STATUSES : [filter];
-  const query = useWorkflowTemplatesQuery(workspaceId, statuses, page);
+  const normalizedSearch = searchText.trim().toLocaleLowerCase();
+  const query = useWorkflowTemplatesQuery(workspaceId, statuses, page, normalizedSearch);
   const createMutation = useCreateWorkflowMutation(workspaceId);
   const publishMutation = usePublishWorkflowMutation(workspaceId);
   const deactivateMutation = useDeactivateWorkflowMutation(workspaceId);
@@ -340,6 +215,19 @@ export default function WorkflowsPage() {
     restoreMutation.isPending ||
     deleteMutation.isPending ||
     defaultMutation.isPending;
+
+  const visibleWorkflows = useMemo(
+    () =>
+      (query.data?.items ?? [])
+        .filter((workflow) =>
+          workflow.name.toLocaleLowerCase().includes(normalizedSearch),
+        )
+        .sort(
+          (first, second) =>
+            Number(second.isDefault) - Number(first.isDefault),
+        ),
+    [normalizedSearch, query.data?.items],
+  );
 
   function handleError(error: unknown): void {
     toast.error(formatError(error));
@@ -394,27 +282,7 @@ export default function WorkflowsPage() {
     }
   }
 
-  const actionCopy = pendingAction
-    ? pendingAction.kind === 'publish'
-      ? {
-          title: t(translations.workflows.publishTitle),
-          description: t(translations.workflows.publishDescription),
-        }
-      : pendingAction.kind === 'deactivate'
-        ? {
-            title: t(translations.workflows.deactivateTitle),
-            description: t(translations.workflows.deactivateDescription),
-          }
-        : pendingAction.kind === 'restore'
-          ? {
-              title: t(translations.workflows.restoreTitle),
-              description: t(translations.workflows.restoreDescription),
-            }
-          : {
-              title: t(translations.workflows.deleteTitle),
-              description: t(translations.workflows.deleteDescription),
-            }
-    : null;
+  const actionCopy = pendingAction ? ACTION_COPY[pendingAction.kind] : null;
 
   if (!workspaceId) {
     return (
@@ -446,8 +314,8 @@ export default function WorkflowsPage() {
   }
 
   return (
-    <section className="flex min-h-96 flex-col gap-6">
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+    <section className="flex min-h-96 flex-col gap-5">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
             {t(translations.workflows.title)}
@@ -467,43 +335,51 @@ export default function WorkflowsPage() {
         </Button>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-card/70 p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div
-          className="flex flex-wrap items-center gap-2"
-          role="group"
           aria-label={t(translations.workflows.status)}
+          className="flex flex-wrap gap-0.5 rounded-xl bg-secondary p-1"
+          role="group"
         >
-          <span className="mr-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-            {t(translations.workflows.status)}
-          </span>
-          {(['ALL', ...ALL_STATUSES] as const).map((value) => {
-            const selected = filter === value;
-            const label =
-              value === 'ALL'
-                ? t(translations.workflows.all)
-                : statusLabel(value, t);
-            return (
-              <Button
-                aria-pressed={selected}
-                key={value}
-                onClick={() => {
-                  setFilter(value);
-                  setPage(0);
-                }}
-                size="sm"
-                type="button"
-                variant={selected ? 'default' : 'outline'}
-              >
-                {label}
-              </Button>
-            );
-          })}
+          {FILTERS.map((value) => (
+            <Button
+              aria-pressed={filter === value}
+              className={
+                filter === value
+                  ? 'bg-card font-bold shadow-sm hover:bg-card'
+                  : 'text-muted-foreground'
+              }
+              key={value}
+              onClick={() => {
+                setFilter(value);
+                setPage(0);
+              }}
+              size="sm"
+              type="button"
+              variant="ghost"
+            >
+              {t(FILTER_LABELS[value])}
+            </Button>
+          ))}
         </div>
-        {query.data ? (
-          <span className="text-xs text-muted-foreground" aria-live="polite">
-            {query.data.total} · {query.data.page + 1} / {query.data.pageCount}
-          </span>
-        ) : null}
+        <div className="relative min-w-56 flex-1 sm:max-w-xs">
+          <Search
+            aria-hidden="true"
+            className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input
+            aria-label={t(translations.workflows.search)}
+            className="pl-9"
+            onChange={(event) => {
+              setSearchText(event.target.value);
+              setPage(0);
+            }}
+            maxLength={100}
+            placeholder={t(translations.workflows.search)}
+            type="search"
+            value={searchText}
+          />
+        </div>
       </div>
 
       {query.isPending ? (
@@ -528,7 +404,7 @@ export default function WorkflowsPage() {
           </CardContent>
         </Card>
       ) : null}
-      {query.data && query.data.items.length === 0 ? (
+      {query.data && query.data.items.length === 0 && !normalizedSearch ? (
         <Empty className="min-h-80 border bg-card/50">
           <EmptyHeader>
             <EmptyMedia variant="icon">
@@ -545,164 +421,74 @@ export default function WorkflowsPage() {
           </Button>
         </Empty>
       ) : null}
-      {query.data && query.data.items.length > 0 ? (
-        <>
-          <Card
-            aria-busy={query.isFetching}
-            className="hidden overflow-hidden border-border/70 shadow-[var(--soft-shadow)] md:block"
-          >
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t(translations.workflows.name)}</TableHead>
-                  <TableHead>{t(translations.workflows.status)}</TableHead>
-                  <TableHead>{t(translations.workflows.default)}</TableHead>
-                  <TableHead>{t(translations.workflows.stageCount)}</TableHead>
-                  <TableHead>{t(translations.workflows.updatedAt)}</TableHead>
-                  <TableHead>
-                    <span className="sr-only">
-                      {t(translations.workflows.actions)}
-                    </span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {query.data.items.map((workflow) => (
-                  <TableRow key={workflow.id}>
-                    <TableCell>
-                      <div className="min-w-48">
-                        <p className="font-semibold">{workflow.name}</p>
-                        <p className="mt-1 font-mono text-xs text-muted-foreground">
-                          #{workflow.id} ·{' '}
-                          {t(translations.workflows.version, {
-                            version: workflow.configurationVersion,
-                          })}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={workflow.status} t={t} />
-                    </TableCell>
-                    <TableCell>
-                      {workflow.isDefault ? (
-                        <span className="inline-flex items-center gap-1 text-sm font-medium text-link">
-                          <Check aria-hidden="true" className="size-4" />
-                          {t(translations.workflows.yes)}
-                        </span>
-                      ) : (
-                        t(translations.workflows.no)
-                      )}
-                    </TableCell>
-                    <TableCell>{workflow.stageCount}</TableCell>
-                    <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
-                      {formatDate(workflow.updatedAt, i18n.language)}
-                    </TableCell>
-                    <TableCell>
-                      <WorkflowActions
-                        isPending={isActionPending}
-                        workflow={workflow}
-                        onAction={(kind, item) =>
-                          setPendingAction({ kind, workflow: item })
-                        }
-                        onDefault={(item) => void handleDefault(item)}
-                        onEdit={(item) => navigate(`/workflows/${item.id}`)}
-                        t={t}
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
-          <div className="grid gap-3 md:hidden">
-            {query.data.items.map((workflow) => (
-              <Card
-                aria-busy={isActionPending}
-                className="border-border/70 shadow-[var(--soft-shadow)]"
-                key={workflow.id}
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <CardTitle className="truncate text-base">
-                        {workflow.name}
-                      </CardTitle>
-                      <CardDescription className="mt-1 font-mono">
-                        #{workflow.id}
-                      </CardDescription>
-                    </div>
-                    <StatusBadge status={workflow.status} t={t} />
-                  </div>
-                </CardHeader>
-                <CardContent className="grid gap-3">
-                  <div className="grid grid-cols-2 gap-3 rounded-xl bg-muted/30 p-3 text-sm">
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        {t(translations.workflows.stageCount)}
-                      </p>
-                      <p className="mt-1 font-semibold">
-                        {workflow.stageCount}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        {t(translations.workflows.updatedAt)}
-                      </p>
-                      <p className="mt-1 font-semibold">
-                        {formatDate(workflow.updatedAt, i18n.language)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between border-t border-border/60 pt-3">
-                    <span className="text-sm text-muted-foreground">
-                      {workflow.isDefault
-                        ? t(translations.workflows.defaultShort)
-                        : t(translations.workflows.no)}
-                    </span>
-                    <WorkflowActions
-                      isPending={isActionPending}
-                      workflow={workflow}
-                      onAction={(kind, item) =>
-                        setPendingAction({ kind, workflow: item })
-                      }
-                      onDefault={(item) => void handleDefault(item)}
-                      onEdit={(item) => navigate(`/workflows/${item.id}`)}
-                      t={t}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
-            <span>
-              {query.data.page + 1} / {query.data.pageCount} ·{' '}
-              {query.data.total}
-            </span>
-            <div className="flex gap-2">
+      {query.data && (query.data.items.length > 0 || normalizedSearch) ? (
+        <div
+          aria-busy={query.isFetching}
+          className={`relative rounded-2xl border border-border/70 bg-card shadow-[var(--soft-shadow)] transition-opacity ${query.isFetching && !query.isPending ? 'opacity-60' : ''}`}
+        >
+          <FetchingBadge active={query.isFetching && !query.isPending} />
+          {visibleWorkflows.length > 0 ? (
+            <ul aria-label={t(translations.workflows.title)}>
+              {visibleWorkflows.map((workflow) => (
+                <WorkflowRow
+                  isPending={isActionPending}
+                  key={workflow.id}
+                  locale={i18n.language}
+                  onAction={(kind, item) =>
+                    setPendingAction({ kind, workflow: item })
+                  }
+                  onDefault={(item) => void handleDefault(item)}
+                  workflow={workflow}
+                />
+              ))}
+            </ul>
+          ) : (
+            <Empty className="min-h-64 border-0">
+              <EmptyHeader>
+                <EmptyTitle>{t(translations.workflows.noResults)}</EmptyTitle>
+                <EmptyDescription>
+                  {t(translations.workflows.noResultsDescription)}
+                </EmptyDescription>
+              </EmptyHeader>
               <Button
-                disabled={query.data.page <= 0}
-                onClick={() => setPage((current) => Math.max(0, current - 1))}
-                size="sm"
+                onClick={() => setSearchText('')}
                 type="button"
                 variant="outline"
               >
-                <ChevronLeft aria-hidden="true" />
-                {t(translations.stages.previousPage)}
+                {t(translations.workflows.clearSearch)}
               </Button>
-              <Button
-                disabled={query.data.page >= query.data.pageCount - 1}
-                onClick={() => setPage((current) => current + 1)}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                {t(translations.stages.nextPage)}
-                <ChevronRight aria-hidden="true" />
-              </Button>
-            </div>
+            </Empty>
+          )}
+        </div>
+      ) : null}
+      {query.data && query.data.pageCount > 1 ? (
+        <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
+          <span>
+            {query.data.page + 1} / {query.data.pageCount} · {query.data.total}
+          </span>
+          <div className="flex gap-2">
+            <Button
+              disabled={query.data.page <= 0}
+              onClick={() => setPage((current) => Math.max(0, current - 1))}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              <ChevronLeft aria-hidden="true" />
+              {t(translations.stages.previousPage)}
+            </Button>
+            <Button
+              disabled={query.data.page >= query.data.pageCount - 1}
+              onClick={() => setPage((current) => current + 1)}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              {t(translations.stages.nextPage)}
+              <ChevronRight aria-hidden="true" />
+            </Button>
           </div>
-        </>
+        </div>
       ) : null}
 
       <CreateWorkflowDialog
@@ -710,7 +496,6 @@ export default function WorkflowsPage() {
         onCancel={() => setCreateOpen(false)}
         onSubmit={(name) => void handleCreate(name)}
         open={createOpen}
-        t={t}
       />
       <AlertDialog
         open={Boolean(pendingAction)}
@@ -718,9 +503,11 @@ export default function WorkflowsPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{actionCopy?.title}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {actionCopy ? t(actionCopy.title) : null}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              {actionCopy?.description}
+              {actionCopy ? t(actionCopy.description) : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -733,8 +520,11 @@ export default function WorkflowsPage() {
                 event.preventDefault();
                 void confirmAction();
               }}
+              variant={
+                pendingAction?.kind === 'delete' ? 'destructive' : 'default'
+              }
             >
-              {t(translations.workflows.confirm)}
+              {actionCopy ? t(actionCopy.confirm) : null}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

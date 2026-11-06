@@ -1,40 +1,17 @@
-import '@xyflow/react/dist/style.css';
-
-import {
-  addEdge,
-  applyEdgeChanges,
-  applyNodeChanges,
-  Background,
-  type Connection,
-  Controls,
-  type Edge,
-  type EdgeChange,
-  Handle,
-  MarkerType,
-  MiniMap,
-  type Node,
-  type NodeChange,
-  type NodeProps,
-  Position,
-  ReactFlow,
-} from '@xyflow/react';
 import {
   ArrowLeft,
-  Check,
-  CircleAlert,
-  GitBranch,
+  MoreHorizontal,
   Plus,
   Save,
-  Trash2,
+  Undo2,
   Workflow,
   XCircle,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useReducer, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 
-import MoneyInput from '@/components/MoneyInput';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,14 +23,13 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Empty,
   EmptyDescription,
@@ -62,7 +38,6 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Sheet,
   SheetContent,
@@ -80,23 +55,50 @@ import {
   useWorkflowStageCatalogQuery,
   useWorkflowTemplateQuery,
 } from '@/features/workflows/hooks';
-import type { WorkflowTemplateStatus } from '@/features/workflows/types';
+import {
+  initialWorkflowEditorState,
+  reduceWorkflowEditor,
+} from '@/features/workflows/utils/editorState';
 import {
   configurationToGraph,
+  createWorkflowEdge,
+  createWorkflowNode,
+  getTerminalNodeIds,
+  getWorkflowTotals,
+  removeWorkflowNode,
   serializeWorkflowGraph,
   topologicalLayers,
-  type WorkflowGraphEdge,
-  type WorkflowGraphNode,
   type WorkflowGraphNodeData,
   type WorkflowGraphValidationError,
 } from '@/features/workflows/utils/graph';
 import { useWorkspaceStore } from '@/features/workspace/hooks';
+import { useMediaQuery } from '@/hooks/use-media-query';
 import { translations } from '@/locales/translations';
 import formatError from '@/utils/formatError';
 import { formatMoney } from '@/utils/money';
 
-type FlowNode = Node<WorkflowGraphNodeData, 'workflow'>;
-type FlowEdge = Edge;
+import WorkflowStatusBadge from '../WorkflowStatusBadge';
+import StageInspector from './StageInspector';
+import WorkflowFlow from './WorkflowFlow';
+
+const SIDE_PANEL_QUERY = '(min-width: 1280px)';
+
+type ConfirmKind = 'deactivate' | 'publish' | 'save';
+
+const CONFIRM_COPY = {
+  deactivate: {
+    description: translations.workflows.deactivateDescription,
+    title: translations.workflows.deactivateTitle,
+  },
+  publish: {
+    description: translations.workflows.publishDescription,
+    title: translations.workflows.publishTitle,
+  },
+  save: {
+    description: translations.workflows.activeSaveDescription,
+    title: translations.workflows.activeSaveTitle,
+  },
+} as const;
 
 function isForbiddenError(error: unknown): boolean {
   const message = formatError(error).toLocaleLowerCase();
@@ -107,72 +109,17 @@ function isForbiddenError(error: unknown): boolean {
   );
 }
 
-function effectiveDuration(data: WorkflowGraphNodeData): number {
-  return (
-    data.durationHoursOverride ?? data.stageDefinition.defaultDurationHours
-  );
-}
-
-function effectivePrice(data: WorkflowGraphNodeData): string {
-  return data.priceOverride ?? data.stageDefinition.defaultPrice;
-}
-
-function WorkflowNode({ data, selected }: NodeProps<FlowNode>) {
-  const { i18n } = useTranslation();
-
-  return (
-    <div
-      className={`relative min-w-52 rounded-2xl border bg-card px-4 py-3 shadow-sm transition ${selected ? 'border-primary ring-2 ring-primary/20' : 'border-border/80'}`}
-    >
-      <Handle
-        className="!size-2.5 !border-2 !border-background !bg-primary"
-        position={Position.Left}
-        type="target"
-      />
-      <Handle
-        className="!size-2.5 !border-2 !border-background !bg-primary"
-        position={Position.Right}
-        type="source"
-      />
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">
-            {data.stageDefinition.name}
-          </p>
-          <p className="mt-1 font-mono text-[11px] text-muted-foreground">
-            {data.stageDefinition.code}
-          </p>
-        </div>
-        {!data.stageDefinition.isActive ? (
-          <XCircle
-            aria-label="Inactive"
-            className="size-4 shrink-0 text-amber-600"
-          />
-        ) : null}
-      </div>
-      <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-muted-foreground">
-        <span>{effectiveDuration(data)}h</span>
-        <span className="text-right">
-          {formatMoney(
-            effectivePrice(data),
-            data.stageDefinition.currency,
-            i18n.language,
-          )}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-const nodeTypes = { workflow: WorkflowNode };
-
-function statusLabel(
-  status: WorkflowTemplateStatus,
-  t: ReturnType<typeof useTranslation>['t'],
-): string {
-  if (status === 'DRAFT') return t(translations.workflows.draft);
-  if (status === 'ACTIVE') return t(translations.workflows.active);
-  return t(translations.workflows.inactive);
+function applyNodeData(
+  data: WorkflowGraphNodeData,
+  patch: Partial<WorkflowGraphNodeData>,
+): WorkflowGraphNodeData {
+  const next = { ...data, ...patch };
+  return {
+    ...next,
+    effectiveDurationHours:
+      next.durationHoursOverride ?? next.stageDefinition.defaultDurationHours,
+    effectivePrice: next.priceOverride ?? next.stageDefinition.defaultPrice,
+  };
 }
 
 function validationMessage(
@@ -190,172 +137,14 @@ function validationMessage(
   return t(translations.workflows.validationDuplicateNode);
 }
 
-function InspectorContent({
-  idPrefix,
-  language,
-  node,
-  onChange,
-  onRemove,
-  t,
-}: {
-  readonly idPrefix: string;
-  readonly language: string;
-  readonly node: FlowNode | undefined;
-  readonly onChange: (patch: Partial<WorkflowGraphNodeData>) => void;
-  readonly onRemove: () => void;
-  readonly t: ReturnType<typeof useTranslation>['t'];
-}) {
-  if (!node) {
-    return (
-      <p className="text-sm leading-6 text-muted-foreground">
-        {t(translations.workflows.selectNode)}
-      </p>
-    );
-  }
-  const { data } = node;
-  const durationOverrideId = `${idPrefix}-workflow-duration-override`;
-  const durationInputId = `${idPrefix}-workflow-duration`;
-  const priceOverrideId = `${idPrefix}-workflow-price-override`;
-  const priceInputId = `${idPrefix}-workflow-price`;
-  return (
-    <div className="grid gap-5">
-      <div>
-        <p className="text-base font-semibold">{data.stageDefinition.name}</p>
-        <p className="mt-1 font-mono text-xs text-muted-foreground">
-          {data.stageDefinition.code}
-        </p>
-      </div>
-      {!data.stageDefinition.isActive ? (
-        <p className="rounded-xl bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-800 dark:text-amber-200">
-          {t(translations.workflows.inactiveStage)}
-        </p>
-      ) : null}
-      <div className="grid gap-3 rounded-xl bg-muted/30 p-3 text-sm">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-muted-foreground">
-            {t(translations.workflows.duration)}
-          </span>
-          <span className="font-semibold">
-            {effectiveDuration(data)} {t(translations.workflows.hours)}
-          </span>
-        </div>
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-muted-foreground">
-            {t(translations.workflows.price)}
-          </span>
-          <span className="font-semibold">
-            {formatMoney(
-              effectivePrice(data),
-              data.stageDefinition.currency,
-              language,
-            )}
-          </span>
-        </div>
-      </div>
-      <div className="grid gap-4">
-        <div className="flex items-start gap-3 rounded-xl border border-border/70 p-3 transition-colors has-[:focus-visible]:border-primary/50 has-[:hover]:bg-muted/30">
-          <Checkbox
-            checked={data.durationOverrideEnabled === true}
-            id={durationOverrideId}
-            onCheckedChange={(checked) =>
-              onChange({
-                durationHoursOverride: checked
-                  ? (data.durationHoursOverride ??
-                    data.stageDefinition.defaultDurationHours)
-                  : null,
-                durationOverrideEnabled: checked === true,
-              })
-            }
-          />
-          <div className="grid gap-1">
-            <Label htmlFor={durationOverrideId}>
-              {t(translations.workflows.overrideDuration)}
-            </Label>
-            <p className="text-xs text-muted-foreground">
-              {t(translations.workflows.catalogDefault)}
-            </p>
-          </div>
-        </div>
-        {data.durationOverrideEnabled ? (
-          <div className="grid gap-2 pl-7">
-            <Label htmlFor={durationInputId}>
-              {t(translations.workflows.durationInput)}
-            </Label>
-            <Input
-              id={durationInputId}
-              min={1}
-              onChange={(event) =>
-                onChange({
-                  durationHoursOverride: event.target.value
-                    ? Number(event.target.value)
-                    : null,
-                })
-              }
-              type="number"
-              value={data.durationHoursOverride ?? ''}
-            />
-          </div>
-        ) : null}
-        <div className="flex items-start gap-3 rounded-xl border border-border/70 p-3 transition-colors has-[:focus-visible]:border-primary/50 has-[:hover]:bg-muted/30">
-          <Checkbox
-            checked={data.priceOverrideEnabled === true}
-            id={priceOverrideId}
-            onCheckedChange={(checked) =>
-              onChange({
-                priceOverride: checked
-                  ? (data.priceOverride ?? data.stageDefinition.defaultPrice)
-                  : null,
-                priceOverrideEnabled: checked === true,
-              })
-            }
-          />
-          <div className="grid gap-1">
-            <Label htmlFor={priceOverrideId}>
-              {t(translations.workflows.overridePrice)}
-            </Label>
-            <p className="text-xs text-muted-foreground">
-              {t(translations.workflows.catalogDefault)}
-            </p>
-          </div>
-        </div>
-        {data.priceOverrideEnabled ? (
-          <div className="grid gap-2 pl-7">
-            <Label htmlFor={priceInputId}>
-              {t(translations.workflows.priceInput)}
-            </Label>
-            <MoneyInput
-              id={priceInputId}
-              language={language}
-              onValueChange={(value) =>
-                onChange({ priceOverride: value || null })
-              }
-              value={data.priceOverride ?? ''}
-            />
-          </div>
-        ) : null}
-      </div>
-      <Button
-        className="w-full"
-        onClick={onRemove}
-        type="button"
-        variant="outline"
-      >
-        <Trash2 aria-hidden="true" />
-        {t(translations.workflows.removeStage)}
-      </Button>
-    </div>
-  );
-}
-
 function ErrorState({
   message,
   onRetry,
-  t,
 }: {
   readonly message: string;
   readonly onRetry: () => void;
-  readonly t: ReturnType<typeof useTranslation>['t'];
 }) {
+  const { t } = useTranslation();
   return (
     <Card>
       <CardHeader>
@@ -371,11 +160,34 @@ function ErrorState({
   );
 }
 
+function EmptyState({
+  description,
+  icon,
+  title,
+}: {
+  readonly description: string;
+  readonly icon: React.ReactNode;
+  readonly title: string;
+}) {
+  return (
+    <Empty className="min-h-96 border bg-card/50">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">{icon}</EmptyMedia>
+        <EmptyTitle>{title}</EmptyTitle>
+        {description ? (
+          <EmptyDescription>{description}</EmptyDescription>
+        ) : null}
+      </EmptyHeader>
+    </Empty>
+  );
+}
+
 export default function WorkflowEditorPage() {
   const { i18n, t } = useTranslation();
   const navigate = useNavigate();
   const { workflowId = '' } = useParams<{ workflowId: string }>();
   const workspaceId = useWorkspaceStore((state) => state.activeWorkspaceId);
+  const hasSidePanel = useMediaQuery(SIDE_PANEL_QUERY);
   const detailQuery = useWorkflowTemplateQuery(workspaceId, workflowId);
   const catalogQuery = useWorkflowStageCatalogQuery(workspaceId);
   const saveMutation = useSaveWorkflowMutation(workspaceId);
@@ -383,25 +195,19 @@ export default function WorkflowEditorPage() {
   const restoreMutation = useRestoreWorkflowMutation(workspaceId);
   const deactivateMutation = useDeactivateWorkflowMutation(workspaceId);
   const defaultMutation = useSetDefaultWorkflowMutation(workspaceId);
+  const [editor, dispatch] = useReducer(
+    reduceWorkflowEditor,
+    initialWorkflowEditorState,
+  );
   const [name, setName] = useState('');
-  const [nodes, setNodes] = useState<FlowNode[]>([]);
-  const [edges, setEdges] = useState<FlowEdge[]>([]);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [initializedKey, setInitializedKey] = useState('');
-  const [isDirty, setIsDirty] = useState(false);
   const [editorError, setEditorError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<
     readonly WorkflowGraphValidationError[]
   >([]);
-  const [saveConfirmOpen, setSaveConfirmOpen] = useState(false);
-  const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
-  const [removeNodeId, setRemoveNodeId] = useState<string | null>(null);
-  const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
-
-  function openMobileInspector(): void {
-    if (window.matchMedia('(max-width: 1023px)').matches)
-      setMobileInspectorOpen(true);
-  }
+  const [confirmKind, setConfirmKind] = useState<ConfirmKind | null>(null);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const { edges, history, isDirty, nodes, selectedNodeId } = editor;
 
   useEffect(() => {
     const configuration = detailQuery.data;
@@ -410,146 +216,135 @@ export default function WorkflowEditorPage() {
     if (initializedKey === nextKey) return;
     const graph = configurationToGraph(configuration);
     setName(configuration.template.name);
-    setNodes(graph.nodes.map((node) => ({ ...node, type: 'workflow' })));
-    setEdges(
-      graph.edges.map((edge) => ({
-        ...edge,
-        type: 'smoothstep',
-        markerEnd: { type: MarkerType.ArrowClosed },
-      })),
-    );
+    dispatch({ type: 'load', edges: graph.edges, nodes: graph.nodes });
     setInitializedKey(nextKey);
-    setIsDirty(false);
     setEditorError(null);
     setValidationErrors([]);
   }, [detailQuery.data, initializedKey]);
 
   const selectedNode = nodes.find((node) => node.id === selectedNodeId);
-  const presentStageIds = useMemo(
-    () => new Set(nodes.map((node) => node.id)),
-    [nodes],
-  );
-  const catalogStages = catalogQuery.data ?? [];
-  const availableStages = catalogStages.filter(
-    (stage) => stage.isActive && !presentStageIds.has(String(stage.id)),
-  );
-  const graphNodes = nodes as readonly WorkflowGraphNode[];
-  const graphEdges = edges as readonly WorkflowGraphEdge[];
-  const layers = useMemo(
-    () => topologicalLayers(graphNodes, graphEdges),
-    [graphEdges, graphNodes],
-  );
-
-  const handleNodesChange = useCallback((changes: NodeChange<FlowNode>[]) => {
-    setNodes((current) => applyNodeChanges(changes, current));
-    if (changes.some((change) => change.type === 'remove')) {
-      setEdges((current) =>
-        current.filter((edge) =>
-          changes.every(
-            (change) =>
-              change.type !== 'remove' ||
-              (change.id !== edge.source && change.id !== edge.target),
-          ),
-        ),
-      );
-      setIsDirty(true);
-    }
-  }, []);
-  const handleEdgesChange = useCallback((changes: EdgeChange[]) => {
-    setEdges((current) => applyEdgeChanges(changes, current));
-    if (changes.some((change) => change.type === 'remove')) setIsDirty(true);
-  }, []);
-  const handleConnect = useCallback((connection: Connection) => {
-    if (!connection.source || !connection.target) return;
-    setEdges((current) =>
-      addEdge(
-        {
-          ...connection,
-          type: 'smoothstep',
-          markerEnd: { type: MarkerType.ArrowClosed },
-        },
-        current,
+  const availableStages = useMemo(
+    () =>
+      (catalogQuery.data ?? []).filter(
+        (stage) =>
+          stage.isActive &&
+          !nodes.some((node) => node.id === String(stage.id)),
       ),
-    );
-    setIsDirty(true);
+    [catalogQuery.data, nodes],
+  );
+  const stepCount = useMemo(
+    () => topologicalLayers(nodes, edges).length,
+    [edges, nodes],
+  );
+  const totals = useMemo(() => getWorkflowTotals(nodes, edges), [edges, nodes]);
+  const currency = nodes[0]?.data.stageDefinition.currency ?? '';
+
+  function clearErrors(): void {
     setEditorError(null);
     setValidationErrors([]);
-  }, []);
+  }
 
-  function updateSelectedNode(patch: Partial<WorkflowGraphNodeData>): void {
-    if (!selectedNodeId) return;
-    setNodes((current) =>
-      current.map((node) => {
-        if (node.id !== selectedNodeId) return node;
-        const data = { ...node.data, ...patch };
-        return {
-          ...node,
-          data: {
-            ...data,
-            effectiveDurationHours: effectiveDuration(data),
-            effectivePrice: effectivePrice(data),
-          },
-        };
-      }),
-    );
-    setIsDirty(true);
-    setValidationErrors([]);
+  function selectNode(nodeId: string): void {
+    dispatch({ type: 'select', nodeId });
+    setIsSheetOpen(true);
   }
 
   function addStage(stageId: string): void {
-    const stage = catalogStages.find((item) => String(item.id) === stageId);
-    if (!stage || presentStageIds.has(stageId)) return;
-    setNodes((current) => [
-      ...current,
-      {
-        id: stageId,
-        position: { x: 80, y: current.length * 150 },
-        type: 'workflow',
-        data: {
-          stageDefinitionId: stageId,
-          stageDefinition: stage,
-          durationHoursOverride: null,
-          durationOverrideEnabled: false,
-          priceOverride: null,
-          priceOverrideEnabled: false,
-          effectiveDurationHours: stage.defaultDurationHours,
-          effectivePrice: stage.defaultPrice,
-        },
-      },
-    ]);
-    setSelectedNodeId(stageId);
-    openMobileInspector();
-    setIsDirty(true);
-    setEditorError(null);
-    toast.success(t(translations.workflows.stageAdded));
+    const stage = availableStages.find((item) => String(item.id) === stageId);
+    if (!stage) return;
+    const node = createWorkflowNode(stage);
+    const sources = selectedNodeId
+      ? [selectedNodeId]
+      : getTerminalNodeIds(nodes, edges);
+    dispatch({
+      type: 'change',
+      edges: [
+        ...edges,
+        ...sources.map((source) => createWorkflowEdge(source, node.id)),
+      ],
+      nodes: [...nodes, node],
+      selectedNodeId: node.id,
+    });
+    clearErrors();
   }
 
   function removeSelectedNode(): void {
-    if (!selectedNodeId) return;
-    if (
-      edges.some(
-        (edge) =>
-          edge.source === selectedNodeId || edge.target === selectedNodeId,
-      )
-    ) {
-      setRemoveNodeId(selectedNodeId);
-      return;
-    }
-    removeNode(selectedNodeId);
+    if (!selectedNode) return;
+    dispatch({
+      type: 'change',
+      ...removeWorkflowNode(nodes, edges, selectedNode.id),
+      selectedNodeId: null,
+    });
+    setIsSheetOpen(false);
+    clearErrors();
+    toast.success(
+      t(translations.workflows.stageRemoved, {
+        name: selectedNode.data.stageDefinition.name,
+      }),
+      {
+        action: {
+          label: t(translations.workflows.undo),
+          onClick: () => dispatch({ type: 'undo' }),
+        },
+      },
+    );
   }
 
-  function removeNode(nodeId: string): void {
-    setNodes((current) => current.filter((node) => node.id !== nodeId));
-    setEdges((current) =>
-      current.filter(
-        (edge) => edge.source !== nodeId && edge.target !== nodeId,
+  function changePrerequisite(sourceId: string, isChecked: boolean): void {
+    if (!selectedNodeId) return;
+    const edge = createWorkflowEdge(sourceId, selectedNodeId);
+    dispatch({
+      type: 'change',
+      edges: isChecked
+        ? [...edges, edge]
+        : edges.filter((item) => item.id !== edge.id),
+    });
+    clearErrors();
+  }
+
+  function patchSelectedNode(
+    patch: Partial<WorkflowGraphNodeData>,
+    mergeKey: string,
+  ): void {
+    if (!selectedNode) return;
+    dispatch({
+      type: 'change',
+      mergeKey: `${mergeKey}:${selectedNode.id}`,
+      nodes: nodes.map((node) =>
+        node.id === selectedNode.id
+          ? { ...node, data: applyNodeData(node.data, patch) }
+          : node,
       ),
+    });
+    clearErrors();
+  }
+
+  function changeDuration(value: string): void {
+    if (!selectedNode) return;
+    const isDefault =
+      Number(value) ===
+      selectedNode.data.stageDefinition.defaultDurationHours;
+    patchSelectedNode(
+      {
+        durationHoursOverride: value && !isDefault ? Number(value) : null,
+        durationOverrideEnabled: !isDefault,
+      },
+      'duration',
     );
-    setSelectedNodeId(null);
-    setRemoveNodeId(null);
-    setMobileInspectorOpen(false);
-    setIsDirty(true);
-    setEditorError(null);
+  }
+
+  function changePrice(value: string): void {
+    if (!selectedNode) return;
+    const isDefault =
+      value !== '' &&
+      Number(value) === Number(selectedNode.data.stageDefinition.defaultPrice);
+    patchSelectedNode(
+      {
+        priceOverride: value && !isDefault ? value : null,
+        priceOverrideEnabled: !isDefault,
+      },
+      'price',
+    );
   }
 
   function validateAndSerialize() {
@@ -582,7 +377,7 @@ export default function WorkflowEditorPage() {
       return null;
     }
     setEditorError(null);
-    const result = serializeWorkflowGraph(name, graphNodes, graphEdges);
+    const result = serializeWorkflowGraph(name, nodes, edges);
     setValidationErrors(result.errors);
     return result.errors.length === 0 ? (result.payload ?? null) : null;
   }
@@ -592,7 +387,6 @@ export default function WorkflowEditorPage() {
     if (!payload) return false;
     try {
       await saveMutation.mutateAsync({ templateId: workflowId, payload });
-      setIsDirty(false);
       toast.success(t(translations.workflows.saveSuccess));
       return true;
     } catch (error) {
@@ -606,13 +400,11 @@ export default function WorkflowEditorPage() {
       setEditorError(t(translations.workflows.invalidName));
       return;
     }
-    if (detailQuery.data?.template.status === 'ACTIVE')
-      setSaveConfirmOpen(true);
+    if (detailQuery.data?.template.status === 'ACTIVE') setConfirmKind('save');
     else void executeSave();
   }
 
-  async function confirmPublish(): Promise<void> {
-    setPublishConfirmOpen(false);
+  async function publish(): Promise<void> {
     if (isDirty && !(await executeSave())) return;
     try {
       await publishMutation.mutateAsync({ templateId: workflowId });
@@ -623,9 +415,7 @@ export default function WorkflowEditorPage() {
     }
   }
 
-  async function handleStatusAction(
-    action: 'restore' | 'deactivate',
-  ): Promise<void> {
+  async function changeStatus(action: 'restore' | 'deactivate'): Promise<void> {
     try {
       if (action === 'restore')
         await restoreMutation.mutateAsync({ templateId: workflowId });
@@ -637,7 +427,7 @@ export default function WorkflowEditorPage() {
     }
   }
 
-  async function handleDefault(): Promise<void> {
+  async function changeDefault(): Promise<void> {
     try {
       await defaultMutation.mutateAsync(
         detailQuery.data?.isDefault ? null : workflowId,
@@ -647,6 +437,14 @@ export default function WorkflowEditorPage() {
     } catch (error) {
       toast.error(formatError(error));
     }
+  }
+
+  function runConfirmedAction(): void {
+    const kind = confirmKind;
+    setConfirmKind(null);
+    if (kind === 'save') void executeSave();
+    if (kind === 'publish') void publish();
+    if (kind === 'deactivate') void changeStatus('deactivate');
   }
 
   function goBack(): void {
@@ -665,7 +463,7 @@ export default function WorkflowEditorPage() {
   if (detailQuery.isPending)
     return (
       <div className="grid gap-4">
-        <Skeleton className="h-24 rounded-2xl" />
+        <Skeleton className="h-14 rounded-2xl" />
         <Skeleton className="h-[520px] rounded-2xl" />
       </div>
     );
@@ -686,7 +484,6 @@ export default function WorkflowEditorPage() {
             : t(translations.workflows.error)
         }
         onRetry={() => void detailQuery.refetch()}
-        t={t}
       />
     );
 
@@ -698,135 +495,168 @@ export default function WorkflowEditorPage() {
     restoreMutation.isPending ||
     deactivateMutation.isPending ||
     defaultMutation.isPending;
+  const confirmCopy = confirmKind ? CONFIRM_COPY[confirmKind] : null;
+  const selectedStageName = selectedNode?.data.stageDefinition.name;
+  const stats = [
+    { label: t(translations.workflows.stageCount), value: nodes.length },
+    { label: t(translations.workflows.steps), value: stepCount },
+    {
+      label: t(translations.workflows.minimumDuration),
+      value: `${totals.minimumHours} ${t(translations.workflows.hours)}`,
+    },
+    {
+      label: t(translations.workflows.totalPrice),
+      value: formatMoney(totals.totalPrice, currency, i18n.language),
+    },
+  ];
 
-  function renderInspector(idPrefix: string): React.ReactNode {
-    return (
-      <InspectorContent
-        idPrefix={idPrefix}
-        language={i18n.language}
-        node={selectedNode}
-        onChange={updateSelectedNode}
-        onRemove={removeSelectedNode}
-        t={t}
-      />
-    );
-  }
+  const inspector = selectedNode ? (
+    <StageInspector
+      edges={edges}
+      key={selectedNode.id}
+      language={i18n.language}
+      node={selectedNode}
+      nodes={nodes}
+      onDurationChange={changeDuration}
+      onPrerequisiteChange={changePrerequisite}
+      onPriceChange={changePrice}
+      onRemove={removeSelectedNode}
+      onResetDuration={() =>
+        patchSelectedNode(
+          { durationHoursOverride: null, durationOverrideEnabled: false },
+          'duration',
+        )
+      }
+      onResetPrice={() =>
+        patchSelectedNode(
+          { priceOverride: null, priceOverrideEnabled: false },
+          'price',
+        )
+      }
+    />
+  ) : null;
 
   return (
-    <section className="flex min-h-0 flex-col gap-5">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="flex items-start gap-3">
-          <Button
-            aria-label={t(translations.workflows.back)}
-            onClick={goBack}
-            size="icon"
-            type="button"
-            variant="ghost"
-          >
-            <ArrowLeft aria-hidden="true" />
-          </Button>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="sr-only">
-                {t(translations.workflows.editorTitle)}
-              </h2>
-              <Input
-                aria-label={t(translations.workflows.name)}
-                className="h-11 max-w-lg min-w-0 border-transparent bg-transparent px-2 text-2xl font-extrabold tracking-tight shadow-none hover:bg-card/60 focus-visible:border-input focus-visible:bg-card sm:text-3xl"
-                maxLength={100}
-                onChange={(event) => {
-                  setName(event.target.value);
-                  setEditorError(null);
-                  setIsDirty(true);
-                }}
-                value={name}
-              />
-              <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold">
-                {statusLabel(status, t)}
-              </span>
-              {configuration.isDefault ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-link">
-                  <Check aria-hidden="true" className="size-3.5" />
-                  {t(translations.workflows.defaultShort)}
-                </span>
-              ) : null}
-            </div>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-              {t(translations.workflows.editorDescription)} ·{' '}
-              {t(translations.workflows.version, {
-                version: configuration.template.configurationVersion,
-              })}
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2 lg:justify-end">
-          {status === 'ACTIVE' ? (
-            <Button
-              disabled={isActionPending}
-              onClick={() => void handleDefault()}
-              type="button"
-              variant="outline"
-            >
-              {configuration.isDefault
-                ? t(translations.workflows.clearDefault)
-                : t(translations.workflows.setDefault)}
-            </Button>
+    <section className="flex min-h-0 flex-col gap-4">
+      <h2 className="sr-only">{t(translations.workflows.editorTitle)}</h2>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5">
+        <Button
+          aria-label={t(translations.workflows.back)}
+          onClick={goBack}
+          size="icon-lg"
+          type="button"
+          variant="ghost"
+        >
+          <ArrowLeft aria-hidden="true" />
+        </Button>
+        <div className="flex min-w-0 flex-[999_1_20rem] flex-wrap items-center gap-2">
+          <Input
+            aria-label={t(translations.workflows.name)}
+            className="h-11 max-w-md min-w-0 flex-1 border-transparent bg-transparent px-2 text-xl font-extrabold tracking-tight shadow-none hover:bg-card/60 focus-visible:border-input focus-visible:bg-card sm:text-2xl"
+            maxLength={100}
+            onChange={(event) => {
+              setName(event.target.value);
+              setEditorError(null);
+              dispatch({ type: 'mark-dirty' });
+            }}
+            value={name}
+          />
+          <WorkflowStatusBadge status={status} />
+          {configuration.isDefault ? (
+            <span className="rounded-full bg-positive-surface px-2 py-0.5 text-xs font-semibold text-positive">
+              {t(translations.workflows.defaultShort)}
+            </span>
           ) : null}
-          {status === 'ACTIVE' ? (
+          <span className="text-xs whitespace-nowrap text-muted-foreground">
+            {t(translations.workflows.version, {
+              version: configuration.template.configurationVersion,
+            })}
+          </span>
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <span
+            aria-live="polite"
+            className={
+              isDirty
+                ? 'text-[0.8125rem] font-semibold text-amber-700 dark:text-amber-300'
+                : 'text-[0.8125rem] font-semibold text-muted-foreground'
+            }
+          >
+            {isDirty
+              ? t(translations.workflows.unsavedShort)
+              : t(translations.workflows.saved)}
+          </span>
+          <Button
+            disabled={history.length === 0}
+            onClick={() => dispatch({ type: 'undo' })}
+            type="button"
+            variant="outline"
+          >
+            <Undo2 aria-hidden="true" />
+            {t(translations.workflows.undo)}
+          </Button>
+          {status === 'DRAFT' ? (
             <Button
-              disabled={isActionPending}
-              onClick={() => void handleStatusAction('deactivate')}
+              disabled={isActionPending || nodes.length === 0}
+              onClick={() => setConfirmKind('publish')}
               type="button"
               variant="outline"
             >
-              <XCircle aria-hidden="true" />
-              {t(translations.workflows.deactivate)}
+              {t(translations.workflows.publish)}
             </Button>
           ) : null}
           {status === 'INACTIVE' ? (
             <Button
               disabled={isActionPending}
-              onClick={() => void handleStatusAction('restore')}
+              onClick={() => void changeStatus('restore')}
               type="button"
               variant="outline"
             >
-              <Check aria-hidden="true" />
               {t(translations.workflows.restore)}
             </Button>
           ) : null}
-          {status === 'DRAFT' ? (
-            <Button
-              disabled={isActionPending}
-              onClick={() => setPublishConfirmOpen(true)}
-              type="button"
-              variant="outline"
-            >
-              <GitBranch aria-hidden="true" />
-              {t(translations.workflows.publish)}
-            </Button>
-          ) : null}
           <Button
-            className="w-full sm:w-auto"
-            disabled={saveMutation.isPending || isActionPending}
+            disabled={!isDirty || isActionPending}
+            loading={saveMutation.isPending}
             onClick={requestSave}
             type="button"
           >
-            <Save aria-hidden="true" />
+            {saveMutation.isPending ? null : <Save aria-hidden="true" />}
             {status === 'DRAFT'
               ? t(translations.workflows.save)
               : t(translations.workflows.saveChanges)}
           </Button>
+          {status === 'ACTIVE' ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  aria-label={t(translations.workflows.actions)}
+                  disabled={isActionPending}
+                  size="icon-lg"
+                  type="button"
+                  variant="ghost"
+                >
+                  <MoreHorizontal aria-hidden="true" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => void changeDefault()}>
+                  {configuration.isDefault
+                    ? t(translations.workflows.clearDefault)
+                    : t(translations.workflows.setDefault)}
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setConfirmKind('deactivate')}>
+                  {t(translations.workflows.deactivate)}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
         </div>
       </div>
-      {isDirty ? (
-        <p className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-300">
-          <CircleAlert aria-hidden="true" className="size-4" />
-          {t(translations.workflows.unsaved)}
-        </p>
-      ) : null}
+
       {editorError || validationErrors.length > 0 ? (
         <div
-          className="grid gap-1 rounded-2xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+          className="grid gap-1 rounded-xl bg-destructive/10 px-4 py-2.5 text-sm font-medium text-destructive"
           role="alert"
         >
           {editorError ? <p>{editorError}</p> : null}
@@ -836,273 +666,104 @@ export default function WorkflowEditorPage() {
         </div>
       ) : null}
 
-      <div className="grid min-h-0 gap-4 lg:grid-cols-[15rem_minmax(0,1fr)_18rem]">
-        <aside className="hidden self-start rounded-2xl border border-border/70 bg-card p-4 shadow-sm lg:sticky lg:top-24 lg:block">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h3 className="font-semibold tracking-tight">
-                {t(translations.workflows.palette)}
-              </h3>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                {t(translations.workflows.paletteDescription)}
+      <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1fr)_19rem]">
+        <div className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-[var(--soft-shadow)]">
+          <div className="grid gap-2 border-b border-border/70 px-4 py-3">
+            <p className="text-[0.8125rem] text-muted-foreground">
+              {selectedStageName
+                ? t(translations.workflows.addAfter, {
+                    name: selectedStageName,
+                  })
+                : t(translations.workflows.addToEnd)}
+            </p>
+            {availableStages.length > 0 ? (
+              <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto">
+                {availableStages.map((stage) => (
+                  <Button
+                    aria-label={`${t(translations.workflows.addStage)}: ${stage.name}`}
+                    key={stage.id}
+                    onClick={() => addStage(String(stage.id))}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    <Plus aria-hidden="true" />
+                    {stage.name}
+                  </Button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[0.8125rem] font-medium">
+                {t(translations.workflows.noStagesDescription)}
               </p>
-            </div>
-            <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-semibold text-link">
-              {availableStages.length}
-            </span>
+            )}
           </div>
-          <div className="mt-4 grid max-h-[32rem] gap-2 overflow-y-auto pr-1">
-            {availableStages.map((stage) => (
-              <Button
-                className="h-auto justify-start px-3 py-2 text-left"
-                key={stage.id}
-                onClick={() => addStage(String(stage.id))}
-                type="button"
-                variant="outline"
-              >
-                <Plus aria-hidden="true" className="shrink-0" />
-                <span className="min-w-0">
-                  <span className="block truncate text-sm">{stage.name}</span>
-                  <span className="block font-mono text-[11px] text-muted-foreground">
-                    {stage.code}
-                  </span>
-                </span>
-              </Button>
+          <div className="flex min-h-[28rem] flex-1 overflow-x-auto bg-background bg-[radial-gradient(var(--border)_1px,transparent_1px)] bg-[size:22px_22px] p-4">
+            <WorkflowFlow
+              edges={edges}
+              nodes={nodes}
+              onSelect={selectNode}
+              selectedNodeId={selectedNodeId}
+            />
+          </div>
+          <dl className="flex flex-wrap gap-x-8 gap-y-2 border-t border-border/70 px-5 py-3">
+            {stats.map((stat) => (
+              <div className="flex items-baseline gap-1.5" key={stat.label}>
+                <dt className="text-[0.8125rem] text-muted-foreground">
+                  {stat.label}
+                </dt>
+                <dd className="font-bold">{stat.value}</dd>
+              </div>
             ))}
-            {availableStages.length === 0 ? (
-              <div className="rounded-xl bg-muted/40 px-3 py-3 text-xs leading-5 text-muted-foreground">
-                <p className="font-medium text-foreground">
-                  {t(translations.workflows.noStages)}
-                </p>
-                <p className="mt-1">
-                  {t(translations.workflows.noStagesDescription)}
-                </p>
-              </div>
-            ) : null}
-          </div>
-        </aside>
-        <div className="grid min-h-0 min-w-0 gap-3">
-          <Card className="lg:hidden">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <CardTitle className="text-base">
-                    {t(translations.workflows.palette)}
-                  </CardTitle>
-                  <CardDescription>
-                    {t(translations.workflows.paletteDescription)}
-                  </CardDescription>
-                </div>
-                <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-semibold text-link">
-                  {availableStages.length}
-                </span>
-              </div>
-            </CardHeader>
-            <CardContent className="flex gap-2 overflow-x-auto pb-4">
-              {availableStages.map((stage) => (
-                <Button
-                  className="h-auto shrink-0 px-3 py-2"
-                  key={stage.id}
-                  onClick={() => addStage(String(stage.id))}
-                  type="button"
-                  variant="outline"
-                >
-                  <Plus aria-hidden="true" />
-                  {stage.name}
-                </Button>
-              ))}
-              {availableStages.length === 0 ? (
-                <div className="text-sm text-muted-foreground">
-                  <p className="font-medium text-foreground">
-                    {t(translations.workflows.noStages)}
-                  </p>
-                  <p className="mt-1">
-                    {t(translations.workflows.noStagesDescription)}
-                  </p>
-                </div>
-              ) : null}
-            </CardContent>
-          </Card>
-          <Card className="overflow-hidden border-border/70 shadow-[var(--soft-shadow)]">
-            <CardHeader className="border-b border-border/60 bg-muted/20 py-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <GitBranch aria-hidden="true" className="size-4 text-link" />
-                {t(translations.workflows.canvas)}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div
-                className="h-[34rem] min-h-[34rem] w-full bg-[radial-gradient(circle_at_top,var(--canvas-glow-primary),transparent_45%)]"
-                aria-label={t(translations.workflows.canvas)}
-                role="region"
-              >
-                <ReactFlow
-                  deleteKeyCode={null}
-                  fitView
-                  nodes={nodes}
-                  nodeTypes={nodeTypes}
-                  onConnect={handleConnect}
-                  onEdgesChange={handleEdgesChange}
-                  onNodeClick={(_, node) => {
-                    setSelectedNodeId(node.id);
-                    openMobileInspector();
-                  }}
-                  onNodesChange={handleNodesChange}
-                  edges={edges}
-                  nodesConnectable
-                  nodesDraggable
-                  panOnDrag
-                  selectionOnDrag={false}
-                  zoomOnScroll
-                >
-                  <Background gap={24} size={1} />
-                  <Controls />
-                  <MiniMap pannable zoomable />
-                </ReactFlow>
-              </div>
-            </CardContent>
-          </Card>
-          <p className="text-xs leading-5 text-muted-foreground lg:hidden">
-            {t(translations.workflows.mobileGraphHint)}
-          </p>
-          <Card className="border-border/70 shadow-sm">
-            <CardHeader className="border-b border-border/60 pb-3">
-              <CardTitle className="text-base">
-                {t(translations.workflows.steps)}
-              </CardTitle>
-              <CardDescription>
-                {t(translations.workflows.dependencies)}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-3">
-              {layers.length === 0 && nodes.length > 0 ? (
-                <p className="text-sm text-destructive">
-                  {t(translations.workflows.validationCycle)}
-                </p>
-              ) : null}
-              {layers.map((layer, layerIndex) => (
-                <div
-                  className="rounded-xl bg-muted/20 p-3"
-                  key={`step-${layerIndex}`}
-                >
-                  <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                    {t(translations.workflows.steps)} {layerIndex + 1}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {layer.map((nodeId) => {
-                      const node = nodes.find((item) => item.id === nodeId);
-                      if (!node) return null;
-                      const prerequisites = edges
-                        .filter((edge) => edge.target === nodeId)
-                        .map(
-                          (edge) =>
-                            nodes.find((item) => item.id === edge.source)?.data
-                              .stageDefinition.name,
-                        )
-                        .filter(Boolean);
-                      return (
-                        <button
-                          className="rounded-lg bg-card px-2.5 py-1.5 text-left text-sm ring-1 ring-border/70 transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-primary/60"
-                          key={nodeId}
-                          onClick={() => {
-                            setSelectedNodeId(nodeId);
-                            openMobileInspector();
-                          }}
-                          type="button"
-                        >
-                          <span className="font-medium">
-                            {node.data.stageDefinition.name}
-                          </span>
-                          <span className="ml-2 text-xs text-muted-foreground">
-                            {prerequisites.length > 0
-                              ? `← ${prerequisites.join(', ')}`
-                              : t(translations.workflows.noDependencies)}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-              {nodes.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  {t(translations.workflows.validationEmpty)}
-                </p>
-              ) : null}
-            </CardContent>
-          </Card>
+          </dl>
         </div>
-        <aside className="hidden self-start lg:sticky lg:top-24 lg:block">
-          <Card className="border-border/70 shadow-sm">
-            <CardHeader className="border-b border-border/60 pb-3">
-              <CardTitle className="text-base">
-                {t(translations.workflows.inspector)}
-              </CardTitle>
-              <CardDescription>
-                {selectedNode?.data.stageDefinition.name ??
-                  t(translations.workflows.selectNode)}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-4">
-              {renderInspector('desktop')}
-            </CardContent>
-          </Card>
-        </aside>
+
+        {hasSidePanel ? (
+          <aside
+            aria-label={t(translations.workflows.inspector)}
+            className="rounded-2xl border border-border/70 bg-card p-4"
+          >
+            {inspector ?? (
+              <div className="grid gap-2">
+                <h3 className="font-extrabold">
+                  {t(translations.workflows.inspector)}
+                </h3>
+                <p className="text-sm leading-6 text-muted-foreground">
+                  {t(translations.workflows.selectNode)}
+                </p>
+              </div>
+            )}
+          </aside>
+        ) : (
+          <Sheet
+            onOpenChange={setIsSheetOpen}
+            open={isSheetOpen && Boolean(selectedNode)}
+          >
+            <SheetContent
+              className="w-[min(92vw,24rem)] overflow-y-auto"
+              side="right"
+            >
+              <SheetHeader>
+                <SheetTitle>{t(translations.workflows.inspector)}</SheetTitle>
+                <SheetDescription>{selectedStageName}</SheetDescription>
+              </SheetHeader>
+              <div className="px-4 pb-6">{inspector}</div>
+            </SheetContent>
+          </Sheet>
+        )}
       </div>
 
-      <Sheet open={mobileInspectorOpen} onOpenChange={setMobileInspectorOpen}>
-        <SheetContent
-          className="w-[min(92vw,24rem)] overflow-y-auto lg:hidden"
-          side="right"
-        >
-          <SheetHeader>
-            <SheetTitle>{t(translations.workflows.inspector)}</SheetTitle>
-            <SheetDescription>
-              {selectedNode?.data.stageDefinition.name ??
-                t(translations.workflows.selectNode)}
-            </SheetDescription>
-          </SheetHeader>
-          <div className="px-4 pb-6">{renderInspector('mobile')}</div>
-        </SheetContent>
-      </Sheet>
-      <AlertDialog open={saveConfirmOpen} onOpenChange={setSaveConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t(translations.workflows.activeSaveTitle)}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t(translations.workflows.activeSaveDescription)}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>
-              {t(translations.workflows.cancel)}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              disabled={saveMutation.isPending}
-              onClick={(event) => {
-                event.preventDefault();
-                setSaveConfirmOpen(false);
-                void executeSave();
-              }}
-            >
-              {t(translations.workflows.confirm)}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
       <AlertDialog
-        open={publishConfirmOpen}
-        onOpenChange={setPublishConfirmOpen}
+        open={confirmKind !== null}
+        onOpenChange={(open) => !open && setConfirmKind(null)}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {t(translations.workflows.publishTitle)}
+              {confirmCopy ? t(confirmCopy.title) : null}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {t(translations.workflows.publishDescription)}
+              {confirmCopy ? t(confirmCopy.description) : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1110,36 +771,8 @@ export default function WorkflowEditorPage() {
               {t(translations.workflows.cancel)}
             </AlertDialogCancel>
             <AlertDialogAction
-              disabled={publishMutation.isPending || saveMutation.isPending}
-              onClick={(event) => {
-                event.preventDefault();
-                void confirmPublish();
-              }}
-            >
-              {t(translations.workflows.confirm)}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      <AlertDialog
-        open={Boolean(removeNodeId)}
-        onOpenChange={(open) => !open && setRemoveNodeId(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t(translations.workflows.removeStageTitle)}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t(translations.workflows.removeStageDescription)}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>
-              {t(translations.workflows.cancel)}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => removeNodeId && removeNode(removeNodeId)}
+              disabled={isActionPending}
+              onClick={runConfirmedAction}
             >
               {t(translations.workflows.confirm)}
             </AlertDialogAction>
@@ -1147,27 +780,5 @@ export default function WorkflowEditorPage() {
         </AlertDialogContent>
       </AlertDialog>
     </section>
-  );
-}
-
-function EmptyState({
-  description,
-  icon,
-  title,
-}: {
-  readonly description: string;
-  readonly icon: React.ReactNode;
-  readonly title: string;
-}) {
-  return (
-    <Empty className="min-h-96 border bg-card/50">
-      <EmptyHeader>
-        <EmptyMedia variant="icon">{icon}</EmptyMedia>
-        <EmptyTitle>{title}</EmptyTitle>
-        {description ? (
-          <EmptyDescription>{description}</EmptyDescription>
-        ) : null}
-      </EmptyHeader>
-    </Empty>
   );
 }

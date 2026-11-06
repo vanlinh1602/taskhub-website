@@ -12,6 +12,7 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
+import { FetchingBadge } from '@/components/fetching-overlay';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -797,6 +798,7 @@ export default function TasksPage() {
     sortBy !== DEFAULT_TASK_LIST_VIEW.sortBy ||
     sortOrder !== DEFAULT_TASK_LIST_VIEW.sortOrder ||
     page > DEFAULT_TASK_LIST_VIEW.page;
+  const taskRefreshing = taskQuery.isFetching && !taskQuery.isLoading;
   const hasTaskError = taskQuery.isError || filterOptionsQuery.isError;
   const isForbidden = isForbiddenError(
     taskQuery.error ?? filterOptionsQuery.error,
@@ -1058,7 +1060,11 @@ export default function TasksPage() {
           </div>
         )}
 
-        <CardContent className="p-0" aria-busy={taskQuery.isFetching}>
+        <CardContent
+          className={`relative p-0 transition-opacity ${taskRefreshing ? 'opacity-60' : ''}`}
+          aria-busy={taskQuery.isFetching}
+        >
+          <FetchingBadge active={taskRefreshing} />
           {!workspaceId ? (
             <Empty className="min-h-72 rounded-none border-0">
               <EmptyHeader>

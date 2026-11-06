@@ -1,10 +1,12 @@
 export const workflowQueryKeys = {
-  all: (workspaceId: string) => ['workflows', workspaceId] as const,
+  listRoot: (workspaceId: string) =>
+    ['workflows', 'list', workspaceId] as const,
   list: (
     workspaceId: string,
     statuses: readonly string[],
     page: number,
     pageSize: number,
+    search = '',
   ) =>
     [
       'workflows',
@@ -13,6 +15,7 @@ export const workflowQueryKeys = {
       statuses.join(','),
       page,
       pageSize,
+      search,
     ] as const,
   detail: (workspaceId: string, templateId: string) =>
     ['workflows', 'detail', workspaceId, templateId] as const,

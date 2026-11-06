@@ -11,7 +11,6 @@ import {
 function node(id: string): WorkflowGraphNode {
   return {
     id,
-    position: { x: 0, y: 0 },
     data: {
       durationHoursOverride: null,
       effectiveDurationHours: 24,

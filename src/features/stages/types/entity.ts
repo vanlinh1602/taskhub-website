@@ -26,7 +26,6 @@ export interface StageFormValues {
   readonly description: string;
   readonly defaultPrice: string;
   readonly durationHours: string;
-  readonly displayOrder: string;
   readonly isRewardEligible: boolean;
 }
 

@@ -8,11 +8,16 @@ import {
 import { adminQueryKeys } from '@/features/admin/hooks';
 import { payrollQueryKeys } from '@/features/payroll/hooks';
 import { statisticsQueryKeys } from '@/features/statistics/hooks';
-import { createStory, renameStory } from '@/features/stories/apis';
+import {
+  createStory,
+  renameStory,
+  updateStoryPriority,
+} from '@/features/stories/apis';
 import type {
   CreateStoryInput,
   RenameStoryInput,
   Story,
+  UpdateStoryPriorityInput,
 } from '@/features/stories/types';
 import { tasksQueryKeys } from '@/features/tasks/hooks';
 
@@ -84,6 +89,26 @@ export function useRenameStoryMutation(
       renameStory(workspaceId, storyId, input),
     onSuccess: async () => {
       await invalidateStoryRenameQueries(queryClient, workspaceId, storyId);
+    },
+  });
+}
+
+export function useUpdateStoryPriorityMutation(
+  workspaceId: string,
+  storyId: string,
+): UseMutationResult<Story, Error, UpdateStoryPriorityInput, unknown> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: UpdateStoryPriorityInput) =>
+      updateStoryPriority(workspaceId, storyId, input),
+    onSuccess: async () => {
+      await Promise.all([
+        invalidateStoryListQueries(queryClient),
+        queryClient.invalidateQueries({
+          queryKey: storiesQueryKeys.detail(workspaceId, storyId),
+        }),
+      ]);
     },
   });
 }

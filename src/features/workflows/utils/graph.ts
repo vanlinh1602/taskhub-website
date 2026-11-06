@@ -18,7 +18,6 @@ export interface WorkflowGraphNodeData extends Record<string, unknown> {
 
 export interface WorkflowGraphNode {
   readonly id: string;
-  readonly position: { readonly x: number; readonly y: number };
   readonly data: WorkflowGraphNodeData;
 }
 
@@ -48,8 +47,10 @@ export interface WorkflowGraphSerializationResult {
   readonly layers: readonly string[][];
 }
 
-const LAYER_X = 80;
-const LAYER_Y = 180;
+export interface WorkflowGraphTotals {
+  readonly minimumHours: number;
+  readonly totalPrice: number;
+}
 
 export function configurationToGraph(
   configuration: WorkflowTemplateConfiguration,
@@ -57,12 +58,8 @@ export function configurationToGraph(
   readonly nodes: readonly WorkflowGraphNode[];
   readonly edges: readonly WorkflowGraphEdge[];
 } {
-  const nodes = configuration.stages.map((stage, index) => ({
+  const nodes = configuration.stages.map((stage) => ({
     id: String(stage.stageDefinitionId),
-    position: {
-      x: stage.stepIndex * LAYER_X,
-      y: (index % 4) * LAYER_Y,
-    },
     data: {
       stageDefinitionId: String(stage.stageDefinitionId),
       stageDefinition: stage.stageDefinition,
@@ -80,6 +77,116 @@ export function configurationToGraph(
     target: String(dependency.dependentStageDefinitionId),
   }));
   return { nodes, edges };
+}
+
+export function createWorkflowNode(stage: Stage): WorkflowGraphNode {
+  const id = String(stage.id);
+  return {
+    id,
+    data: {
+      stageDefinitionId: id,
+      stageDefinition: stage,
+      durationHoursOverride: null,
+      durationOverrideEnabled: false,
+      priceOverride: null,
+      priceOverrideEnabled: false,
+      effectiveDurationHours: stage.defaultDurationHours,
+      effectivePrice: stage.defaultPrice,
+    },
+  };
+}
+
+export function createWorkflowEdge(
+  source: string,
+  target: string,
+): WorkflowGraphEdge {
+  return { id: `${source}->${target}`, source, target };
+}
+
+export function getTerminalNodeIds(
+  nodes: readonly WorkflowGraphNode[],
+  edges: readonly WorkflowGraphEdge[],
+): readonly string[] {
+  return nodes
+    .filter((node) => !edges.some((edge) => edge.source === node.id))
+    .map((node) => node.id);
+}
+
+export function getDescendantIds(
+  edges: readonly WorkflowGraphEdge[],
+  nodeId: string,
+): ReadonlySet<string> {
+  const descendants = new Set<string>();
+  const pending = [nodeId];
+  while (pending.length > 0) {
+    const current = pending.pop();
+    edges
+      .filter((edge) => edge.source === current)
+      .forEach((edge) => {
+        if (descendants.has(edge.target)) return;
+        descendants.add(edge.target);
+        pending.push(edge.target);
+      });
+  }
+  return descendants;
+}
+
+export function removeWorkflowNode(
+  nodes: readonly WorkflowGraphNode[],
+  edges: readonly WorkflowGraphEdge[],
+  nodeId: string,
+): {
+  readonly nodes: readonly WorkflowGraphNode[];
+  readonly edges: readonly WorkflowGraphEdge[];
+} {
+  const sources = edges
+    .filter((edge) => edge.target === nodeId)
+    .map((edge) => edge.source);
+  const targets = edges
+    .filter((edge) => edge.source === nodeId)
+    .map((edge) => edge.target);
+  const remaining = edges.filter(
+    (edge) => edge.source !== nodeId && edge.target !== nodeId,
+  );
+  const existing = new Set(remaining.map((edge) => edge.id));
+  const bridges = sources
+    .flatMap((source) =>
+      targets.map((target) => createWorkflowEdge(source, target)),
+    )
+    .filter((edge) => !existing.has(edge.id));
+  return {
+    nodes: nodes.filter((node) => node.id !== nodeId),
+    edges: [...remaining, ...bridges],
+  };
+}
+
+export function getWorkflowTotals(
+  nodes: readonly WorkflowGraphNode[],
+  edges: readonly WorkflowGraphEdge[],
+): WorkflowGraphTotals {
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  const finishHours = new Map<string, number>();
+  topologicalLayers(nodes, edges)
+    .flat()
+    .forEach((id) => {
+      const earliestStart = Math.max(
+        0,
+        ...edges
+          .filter((edge) => edge.target === id)
+          .map((edge) => finishHours.get(edge.source) ?? 0),
+      );
+      finishHours.set(
+        id,
+        earliestStart + (nodeById.get(id)?.data.effectiveDurationHours ?? 0),
+      );
+    });
+  return {
+    minimumHours: Math.max(0, ...finishHours.values()),
+    totalPrice: nodes.reduce(
+      (total, node) => total + (Number(node.data.effectivePrice) || 0),
+      0,
+    ),
+  };
 }
 
 export function validateWorkflowGraph(

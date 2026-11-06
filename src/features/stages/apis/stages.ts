@@ -32,6 +32,19 @@ export async function getStages(
   return throwApiError(response);
 }
 
+export async function getAllStages(
+  workspaceId: string,
+): Promise<readonly Stage[]> {
+  const firstPage = await getStages(workspaceId, 0);
+  if (firstPage.pageCount <= 1) return firstPage.items;
+  const remainingPages = await Promise.all(
+    Array.from({ length: firstPage.pageCount - 1 }, (_, index) =>
+      getStages(workspaceId, index + 1),
+    ),
+  );
+  return [...firstPage.items, ...remainingPages.flatMap((page) => page.items)];
+}
+
 export async function createStage(
   workspaceId: string,
   payload: StagePayload,

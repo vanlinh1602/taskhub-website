@@ -11,6 +11,7 @@ import { type FormEvent, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
+import { FetchingBadge } from '@/components/fetching-overlay';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -732,9 +733,12 @@ export default function DeadlineExtensionsPage() {
 
       <Card className="overflow-hidden border-border/70 py-0 shadow-[var(--soft-shadow)]">
         <CardContent
-          className="space-y-4 px-0 pt-2 pb-4"
+          className={`relative space-y-4 px-0 pt-2 pb-4 transition-opacity ${requestsQuery.isFetching && !requestsQuery.isLoading ? 'opacity-60' : ''}`}
           aria-busy={requestsQuery.isFetching}
         >
+          <FetchingBadge
+            active={requestsQuery.isFetching && !requestsQuery.isLoading}
+          />
           <div
             aria-label={t(translations.management.deadlineExtensions.title)}
             className="flex gap-1 overflow-x-auto border-b border-border/60 px-4"

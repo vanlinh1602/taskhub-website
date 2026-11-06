@@ -1,1 +1,6 @@
-{ "appName": "Taskory Hub", "loading": "Đang tải Taskory Hub..." }
+{
+  "appName": "Taskory Hub",
+  "loading": "Đang tải Taskory Hub...",
+  "loadingData": "Đang tải dữ liệu...",
+  "updatingData": "Đang cập nhật dữ liệu..."
+}

@@ -1,1 +1,6 @@
-{ "appName": "Taskory Hub", "loading": "Loading Taskory Hub..." }
+{
+  "appName": "Taskory Hub",
+  "loading": "Loading Taskory Hub...",
+  "loadingData": "Loading data...",
+  "updatingData": "Updating data..."
+}

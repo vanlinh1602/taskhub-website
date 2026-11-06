@@ -27,7 +27,7 @@ export async function invalidateWorkflowQueries(
 ): Promise<void> {
   const keys = [
     queryClient.invalidateQueries({
-      queryKey: workflowQueryKeys.all(workspaceId),
+      queryKey: workflowQueryKeys.listRoot(workspaceId),
     }),
   ];
   if (templateId) {

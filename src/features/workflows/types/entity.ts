@@ -7,6 +7,7 @@ export interface WorkflowTemplateSummary {
   readonly name: string;
   readonly status: WorkflowTemplateStatus;
   readonly stageCount: number;
+  readonly steps?: readonly (readonly string[])[];
   readonly isDefault: boolean;
   readonly configurationVersion: number;
   readonly createdAt: string;

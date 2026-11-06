@@ -31,12 +31,14 @@ export async function getWorkflowTemplates(
   statuses: readonly WorkflowTemplateStatus[],
   page = 0,
   pageSize = MAX_PAGE_SIZE,
+  search = '',
 ): Promise<WorkflowTemplatePage> {
   const params = new URLSearchParams({
     page: String(page),
     pageSize: String(Math.min(pageSize, MAX_PAGE_SIZE)),
   });
   statuses.forEach((status) => params.append('status', status));
+  if (search.trim()) params.set('search', search.trim());
   const response = await backendService.get<WorkflowTemplatePage>(
     `${workflowTemplatesPath(workspaceId)}?${params.toString()}`,
   );

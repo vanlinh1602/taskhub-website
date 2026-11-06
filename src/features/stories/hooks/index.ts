@@ -3,6 +3,7 @@ export {
   invalidateStoryRenameQueries,
   useCreateStoryMutation,
   useRenameStoryMutation,
+  useUpdateStoryPriorityMutation,
 } from './mutations';
 export {
   createStoriesQueryOptions,
