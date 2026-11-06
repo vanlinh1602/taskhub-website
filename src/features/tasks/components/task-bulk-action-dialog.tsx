@@ -166,7 +166,7 @@ export default function TaskBulkActionDialog({
 
   function submit(): void {
     if (!mode || eligibleTasks.length === 0 || !hasRequiredInput) return;
-    const taskIds = eligibleTasks.map((task) => task.id);
+    const taskIds = eligibleTasks.map((task) => String(task.id));
     const callbacks = {
       onError: (error: Error) => toast.error(formatError(error)),
       onSuccess: finish,

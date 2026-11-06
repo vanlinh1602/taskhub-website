@@ -3,6 +3,8 @@
   "bankQr": "QR ngân hàng",
   "bankQrConfigured": "Đã cấu hình",
   "bankQrNotConfigured": "Chưa cấu hình",
+  "viewBankQr": "Xem QR",
+  "bankQrError": "Không thể tải QR ngân hàng.",
   "bankQrFile": "File: {{fileName}}",
   "activateMember": "Kích hoạt lại trong workspace này",
   "activateMemberDescription": "Chỉ đổi trạng thái thành viên thành đang hoạt động trong workspace này. Vai trò Discord, công đoạn và quyền Drive cần được cấp lại riêng.",

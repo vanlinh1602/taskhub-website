@@ -22,13 +22,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -46,14 +40,6 @@ import {
 } from '@/components/ui/empty';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -186,35 +172,9 @@ function RequesterValue({
   );
 }
 
-function TaskContext({
-  request,
-}: {
-  readonly request: DeadlineExtensionRequest;
-}) {
-  return (
-    <div className="min-w-0">
-      <p className="truncate font-semibold" title={request.storyTitle}>
-        {request.storyTitle}
-      </p>
-      <p
-        className="truncate text-sm text-muted-foreground"
-        title={request.chapterName}
-      >
-        {request.chapterName}
-      </p>
-      <p
-        className="truncate text-xs text-muted-foreground"
-        title={request.stageName}
-      >
-        {request.stageName}
-      </p>
-    </div>
-  );
-}
-
 function LoadingRequests({ label }: { readonly label: string }) {
   return (
-    <div aria-label={label} className="space-y-3" role="status">
+    <div aria-label={label} className="space-y-3 px-4" role="status">
       {Array.from({ length: 6 }, (_, index) => (
         <Skeleton className="h-16 w-full" key={index} />
       ))}
@@ -224,20 +184,24 @@ function LoadingRequests({ label }: { readonly label: string }) {
 
 function RequestTable({
   dateFormatter,
+  onApprove,
+  onReject,
   onSelect,
   requests,
   t,
 }: {
   readonly dateFormatter: Intl.DateTimeFormat;
+  readonly onApprove: (request: DeadlineExtensionRequest) => void;
+  readonly onReject: (request: DeadlineExtensionRequest) => void;
   readonly onSelect: (request: DeadlineExtensionRequest) => void;
   readonly requests: readonly DeadlineExtensionRequest[];
   readonly t: ReturnType<typeof useTranslation>['t'];
 }) {
   return (
     <div className="hidden overflow-x-auto lg:block">
-      <Table className="min-w-[1040px]">
+      <Table className="min-w-[860px]">
         <TableHeader>
-          <TableRow className="border-border/60 hover:bg-transparent">
+          <TableRow className="border-border/60 bg-muted/35 hover:bg-transparent">
             <TableHead>
               {t(translations.management.deadlineExtensions.requester)}
             </TableHead>
@@ -248,65 +212,91 @@ function RequestTable({
               {t(translations.management.deadlineExtensions.requestedHours)}
             </TableHead>
             <TableHead>
-              {t(translations.management.deadlineExtensions.currentDeadline)}
-            </TableHead>
-            <TableHead>
-              {t(translations.management.deadlineExtensions.projectedDeadline)}
-            </TableHead>
-            <TableHead>
-              {t(translations.management.deadlineExtensions.status)}
+              {t(translations.management.deadlineExtensions.newDeadline)}
             </TableHead>
             <TableHead className="text-right">
-              {t(translations.management.deadlineExtensions.viewDetails)}
+              {t(translations.management.deadlineExtensions.status)}
             </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {requests.map((request) => (
-            <TableRow key={request.id}>
+            <TableRow
+              className="cursor-pointer"
+              key={request.id}
+              onClick={() => onSelect(request)}
+            >
               <TableCell>
                 <RequesterValue request={request} t={t} />
               </TableCell>
-              <TableCell className="max-w-64">
-                <TaskContext request={request} />
-                <p className="mt-1 font-mono text-xs text-muted-foreground">
-                  {t(translations.management.deadlineExtensions.task)} #
-                  {request.taskId}
+              <TableCell className="max-w-72">
+                <p
+                  className="truncate font-semibold"
+                  title={request.storyTitle}
+                >
+                  {request.storyTitle}
+                </p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {request.chapterName} · {request.stageName}
                 </p>
               </TableCell>
-              <TableCell className="font-semibold">
+              <TableCell className="font-bold text-link">
+                +
                 {t(translations.management.deadlineExtensions.hours, {
                   count: request.requestedHours,
                 })}
               </TableCell>
               <TableCell>
-                <DateValue
-                  formatter={dateFormatter}
-                  t={t}
-                  value={request.dueAt}
-                />
-              </TableCell>
-              <TableCell>
-                <DateValue
-                  formatter={dateFormatter}
-                  t={t}
-                  value={
-                    request.projectedDueAt ??
-                    (request.status === 'APPROVED' ? request.dueAt : null)
-                  }
-                />
-              </TableCell>
-              <TableCell>
-                <StatusBadge status={request.status} t={t} />
+                <div className="text-xs text-muted-foreground line-through">
+                  <DateValue
+                    formatter={dateFormatter}
+                    t={t}
+                    value={request.dueAt}
+                  />
+                </div>
+                <div className="font-semibold">
+                  <DateValue
+                    formatter={dateFormatter}
+                    t={t}
+                    value={
+                      request.projectedDueAt ??
+                      (request.status === 'APPROVED' ? request.dueAt : null)
+                    }
+                  />
+                </div>
               </TableCell>
               <TableCell className="text-right">
-                <Button
-                  onClick={() => onSelect(request)}
-                  size="sm"
-                  variant="outline"
-                >
-                  {t(translations.management.deadlineExtensions.viewDetails)}
-                </Button>
+                {request.status === 'PENDING' ? (
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      aria-label={t(
+                        translations.management.deadlineExtensions.reject,
+                      )}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onReject(request);
+                      }}
+                      size="icon"
+                      title={t(
+                        translations.management.deadlineExtensions.reject,
+                      )}
+                      variant="outline"
+                    >
+                      <X aria-hidden="true" className="text-destructive" />
+                    </Button>
+                    <Button
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onApprove(request);
+                      }}
+                    >
+                      <Check aria-hidden="true" />
+                      {t(translations.management.deadlineExtensions.approve)}
+                    </Button>
+                  </div>
+                ) : (
+                  <StatusBadge status={request.status} t={t} />
+                )}
               </TableCell>
             </TableRow>
           ))}
@@ -328,7 +318,7 @@ function RequestCardList({
   readonly t: ReturnType<typeof useTranslation>['t'];
 }) {
   return (
-    <div className="grid gap-3 lg:hidden">
+    <div className="grid gap-3 px-4 lg:hidden">
       {requests.map((request) => (
         <article
           className="rounded-xl border border-border/70 bg-card p-4 shadow-sm"
@@ -429,21 +419,21 @@ function RequestDetails({
 
   return (
     <>
-      <SheetHeader className="border-b border-border/60 pb-5">
+      <DialogHeader className="border-b border-border/60 pb-4">
         <div className="flex items-center gap-2">
           <StatusBadge status={request.status} t={t} />
           <span className="font-mono text-xs text-muted-foreground">
             #{request.id}
           </span>
         </div>
-        <SheetTitle className="mt-1">
+        <DialogTitle className="mt-1">
           {t(translations.management.deadlineExtensions.details)}
-        </SheetTitle>
-        <SheetDescription>
+        </DialogTitle>
+        <DialogDescription>
           {request.storyTitle} · {request.chapterName} · {request.stageName}
-        </SheetDescription>
-      </SheetHeader>
-      <div className="flex-1 space-y-6 overflow-y-auto px-4 pb-6">
+        </DialogDescription>
+      </DialogHeader>
+      <div className="max-h-[60vh] space-y-6 overflow-y-auto pr-1">
         <section className="space-y-3">
           <h3 className="text-sm font-semibold">
             {t(translations.management.deadlineExtensions.requester)}
@@ -604,7 +594,7 @@ function RequestDetails({
         ) : null}
       </div>
       {isPending ? (
-        <SheetFooter className="border-t border-border/60 sm:flex-row sm:justify-end">
+        <DialogFooter>
           <Button onClick={() => onReject(request)} variant="destructive">
             <X aria-hidden="true" />
             {t(translations.management.deadlineExtensions.reject)}
@@ -613,7 +603,7 @@ function RequestDetails({
             <Check aria-hidden="true" />
             {t(translations.management.deadlineExtensions.approve)}
           </Button>
-        </SheetFooter>
+        </DialogFooter>
       ) : null}
     </>
   );
@@ -699,6 +689,11 @@ export default function DeadlineExtensionsPage() {
     );
   }
 
+  function openReject(request: DeadlineExtensionRequest): void {
+    setRejectionReason('');
+    setRejectTarget(request);
+  }
+
   function closeRejectDialog(open: boolean): void {
     if (!open && !rejectMutation.isPending) {
       setRejectTarget(null);
@@ -708,61 +703,41 @@ export default function DeadlineExtensionsPage() {
 
   return (
     <section className="space-y-6">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div className="max-w-3xl">
-          <p className="text-sm font-semibold text-link">
-            {t(translations.management.eyebrow)}
-          </p>
-          <h2 className="mt-1 text-3xl font-extrabold tracking-tight sm:text-4xl">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-baseline gap-x-3">
+          <h2 className="text-2xl font-extrabold tracking-tight">
             {t(translations.management.deadlineExtensions.title)}
           </h2>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            {t(translations.management.deadlineExtensions.description)}
-          </p>
-        </div>
-        <div className="rounded-xl border border-primary/15 bg-primary/5 px-4 py-3 text-sm">
-          <span className="block text-xs text-muted-foreground">
-            {getStatusLabel(status, t)}
-          </span>
-          <strong className="text-lg text-link">
+          <p className="text-sm text-muted-foreground">
+            {getStatusLabel(status, t)} ·{' '}
             {t(translations.management.deadlineExtensions.count, {
               count: requestsQuery.data?.total ?? 0,
             })}
-          </strong>
+          </p>
+        </div>
+        <div className="relative w-full sm:w-80">
+          <Search
+            aria-hidden="true"
+            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input
+            aria-label={t(translations.management.deadlineExtensions.search)}
+            className="pl-9"
+            onChange={(event) => handleSearch(event.target.value)}
+            placeholder={t(translations.management.deadlineExtensions.search)}
+            value={search}
+          />
         </div>
       </div>
 
-      <Card className="overflow-hidden border-border/70 shadow-[var(--soft-shadow)]">
-        <CardHeader className="gap-4 border-b border-border/60 lg:flex lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <CardTitle>
-              {t(translations.management.deadlineExtensions.title)}
-            </CardTitle>
-            <CardDescription className="mt-1">
-              {t(translations.management.deadlineExtensions.description)}
-            </CardDescription>
-          </div>
-          <div className="relative w-full lg:max-w-md">
-            <Search
-              aria-hidden="true"
-              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input
-              aria-label={t(translations.management.deadlineExtensions.search)}
-              className="pl-9"
-              onChange={(event) => handleSearch(event.target.value)}
-              placeholder={t(translations.management.deadlineExtensions.search)}
-              value={search}
-            />
-          </div>
-        </CardHeader>
+      <Card className="overflow-hidden border-border/70 py-0 shadow-[var(--soft-shadow)]">
         <CardContent
-          className="space-y-5 pt-5"
+          className="space-y-4 px-0 pt-2 pb-4"
           aria-busy={requestsQuery.isFetching}
         >
           <div
             aria-label={t(translations.management.deadlineExtensions.title)}
-            className="flex gap-1 overflow-x-auto border-b border-border/60"
+            className="flex gap-1 overflow-x-auto border-b border-border/60 px-4"
             role="tablist"
           >
             {STATUS_FILTERS.map((filter) => (
@@ -846,6 +821,8 @@ export default function DeadlineExtensionsPage() {
             <>
               <RequestTable
                 dateFormatter={dateFormatter}
+                onApprove={setApproveTarget}
+                onReject={openReject}
                 onSelect={setSelectedRequest}
                 requests={requests}
                 t={t}
@@ -856,7 +833,7 @@ export default function DeadlineExtensionsPage() {
                 requests={requests}
                 t={t}
               />
-              <div className="flex flex-col gap-3 border-t border-border/60 pt-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-3 border-t border-border/60 px-4 pt-4 text-sm sm:flex-row sm:items-center sm:justify-between">
                 <span className="text-muted-foreground">
                   {t(translations.management.deadlineExtensions.pageSummary, {
                     count: requestsQuery.data?.total ?? 0,
@@ -892,27 +869,24 @@ export default function DeadlineExtensionsPage() {
         </CardContent>
       </Card>
 
-      <Sheet
+      <Dialog
         onOpenChange={(open) => {
           if (!open) setSelectedRequest(null);
         }}
         open={selectedRequest !== null}
       >
-        <SheetContent className="w-full overflow-hidden sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] sm:max-w-xl">
           {selectedRequest ? (
             <RequestDetails
               dateFormatter={dateFormatter}
               onApprove={setApproveTarget}
-              onReject={(request) => {
-                setRejectionReason('');
-                setRejectTarget(request);
-              }}
+              onReject={openReject}
               request={selectedRequest}
               t={t}
             />
           ) : null}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog
         onOpenChange={(open) => {

@@ -3,6 +3,8 @@
   "bankQr": "Bank QR",
   "bankQrConfigured": "Configured",
   "bankQrNotConfigured": "Not configured",
+  "viewBankQr": "View QR",
+  "bankQrError": "Unable to load the bank QR.",
   "bankQrFile": "File: {{fileName}}",
   "activateMember": "Reactivate in this workspace",
   "activateMemberDescription": "This only changes the member status in this workspace. Discord roles, stages, and Drive access must be granted separately.",

@@ -6,6 +6,7 @@ import {
   Layers3,
   Mail,
   MoreHorizontal,
+  QrCode,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -14,7 +15,7 @@ import {
   UsersRound,
   UserX,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
@@ -31,6 +32,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -45,14 +53,6 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty';
 import { Input } from '@/components/ui/input';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -74,6 +74,7 @@ import {
 } from '@/features/members/hooks';
 import type { Member, MemberRemovalResult, MemberStatus } from '@/features/members/types';
 import { filterMembers } from '@/features/members/utils';
+import { usePayrollBankQrQuery } from '@/features/payroll/hooks';
 import { useWorkspaceStore } from '@/features/workspace/hooks';
 import { translations } from '@/locales/translations';
 import formatError from '@/utils/formatError';
@@ -211,6 +212,7 @@ function StageList({
 interface MemberActionProps {
   readonly member: Member;
   readonly onView: (member: Member) => void;
+  readonly onViewQr: (member: Member) => void;
   readonly onRemove: (member: Member) => void;
   readonly onRetryRevocation: (member: Member) => void;
   readonly retrying: boolean;
@@ -243,9 +245,11 @@ function MemberStatusCell({
 
 function BankQrIndicator({
   member,
+  onViewQr,
   t,
 }: {
   readonly member: Member;
+  readonly onViewQr: (member: Member) => void;
   readonly t: ReturnType<typeof useTranslation>['t'];
 }) {
   const configured = member.bankQr.configured;
@@ -253,14 +257,27 @@ function BankQrIndicator({
     <span
       className={`inline-flex items-center gap-1.5 text-sm ${configured ? 'text-foreground' : 'text-muted-foreground'}`}
     >
-      {configured ? (
-        <Check aria-hidden="true" className="size-4 text-link" />
-      ) : (
-        <CreditCard aria-hidden="true" className="size-4" />
+      {configured ? null : (
+        <>
+          <CreditCard aria-hidden="true" className="size-4" />
+          {t(translations.members.bankQrNotConfigured)}
+        </>
       )}
-      {configured
-        ? t(translations.members.bankQrConfigured)
-        : t(translations.members.bankQrNotConfigured)}
+      {configured ? (
+        <Button
+          className="h-7 px-2"
+          onClick={(event) => {
+            event.stopPropagation();
+            onViewQr(member);
+          }}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          <QrCode aria-hidden="true" />
+          {t(translations.members.viewBankQr)}
+        </Button>
+      ) : null}
     </span>
   );
 }
@@ -327,7 +344,10 @@ function MemberIdentity({
       <div className="min-w-0">
         <button
           className="block max-w-full truncate rounded text-left font-semibold hover:text-link focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-          onClick={() => onView(member)}
+          onClick={(event) => {
+            event.stopPropagation();
+            onView(member);
+          }}
           type="button"
         >
           {member.displayName}
@@ -341,9 +361,12 @@ function MemberIdentity({
 }
 
 function MemberRow(props: MemberActionProps & { readonly emptyLabel: string }) {
-  const { member, emptyLabel, onView, t } = props;
+  const { member, emptyLabel, onView, onViewQr, t } = props;
   return (
-    <TableRow className="border-border/60 hover:bg-muted/30">
+    <TableRow
+      className="cursor-pointer border-border/60 hover:bg-muted/30"
+      onClick={() => onView(member)}
+    >
       <TableCell className="max-w-72 px-4 py-3">
         <MemberIdentity emptyLabel={emptyLabel} member={member} onView={onView} />
       </TableCell>
@@ -354,9 +377,12 @@ function MemberRow(props: MemberActionProps & { readonly emptyLabel: string }) {
         <MemberStatusCell member={member} t={t} />
       </TableCell>
       <TableCell className="px-4 py-3">
-        <BankQrIndicator member={member} t={t} />
+        <BankQrIndicator member={member} onViewQr={onViewQr} t={t} />
       </TableCell>
-      <TableCell className="w-12 px-4 py-3 text-right">
+      <TableCell
+        className="w-12 px-4 py-3 text-right"
+        onClick={(event) => event.stopPropagation()}
+      >
         <MemberActionsMenu {...props} />
       </TableCell>
     </TableRow>
@@ -364,17 +390,22 @@ function MemberRow(props: MemberActionProps & { readonly emptyLabel: string }) {
 }
 
 function MemberCard(props: MemberActionProps & { readonly emptyLabel: string }) {
-  const { member, emptyLabel, onView, t } = props;
+  const { member, emptyLabel, onView, onViewQr, t } = props;
   return (
-    <article className="rounded-2xl border border-border/70 bg-card p-4">
+    <article
+      className="cursor-pointer rounded-2xl border border-border/70 bg-card p-4 transition-colors hover:bg-muted/30"
+      onClick={() => onView(member)}
+    >
       <div className="flex items-start justify-between gap-2">
         <MemberIdentity emptyLabel={emptyLabel} member={member} onView={onView} />
-        <MemberActionsMenu {...props} />
+        <div onClick={(event) => event.stopPropagation()}>
+          <MemberActionsMenu {...props} />
+        </div>
       </div>
       <div className="mt-3 space-y-3">
         <MemberStatusCell member={member} t={t} />
         <StageList compact emptyLabel={emptyLabel} member={member} />
-        <BankQrIndicator member={member} t={t} />
+        <BankQrIndicator member={member} onViewQr={onViewQr} t={t} />
       </div>
     </article>
   );
@@ -422,6 +453,26 @@ function LoadingMembers({ label }: { readonly label: string }) {
   );
 }
 
+function InfoItem({
+  icon: Icon,
+  label,
+  children,
+}: {
+  readonly icon: typeof Mail;
+  readonly label: string;
+  readonly children: ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-3 rounded-xl bg-muted/30 p-3">
+      <Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <div className="mt-0.5 text-sm font-medium break-words">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 function MemberDetails({
   member,
   workspaceId,
@@ -444,102 +495,57 @@ function MemberDetails({
   readonly t: ReturnType<typeof useTranslation>['t'];
 }) {
   const taskClaimEnabled = member.status === 'ACTIVE';
+  const showRevocation = member.status === 'LEFT' || Boolean(member.revocationStatus);
 
   return (
     <>
-      <SheetHeader className="border-b border-border/60 pb-5">
-        <div className="flex items-center gap-3 pr-8">
-          <MemberAvatar member={member} />
-          <div className="min-w-0">
-            <SheetTitle className="truncate text-lg">{member.displayName}</SheetTitle>
-            <SheetDescription className="mt-1 truncate">
+      <DialogHeader className="border-b border-border/60 bg-muted/20 px-6 pt-6 pb-5 text-left">
+        <div className="flex items-center gap-4 pr-8">
+          <div className="[&>div]:size-14 [&>div]:rounded-2xl [&>div]:text-xl">
+            <MemberAvatar member={member} />
+          </div>
+          <div className="min-w-0 space-y-1.5">
+            <DialogTitle className="truncate text-xl">{member.displayName}</DialogTitle>
+            <DialogDescription className="truncate">
               {member.username ? `@${member.username}` : member.discordUserId}
-            </SheetDescription>
+            </DialogDescription>
+            <MemberStatusCell member={member} t={t} />
           </div>
         </div>
-      </SheetHeader>
+      </DialogHeader>
 
-      <div className="space-y-6 px-4 pb-4">
-        <section className="space-y-3">
-          <h3 className="text-sm font-semibold">{t(translations.members.discordMember)}</h3>
-          <dl className="grid gap-3 rounded-xl border border-border/70 bg-muted/20 p-4 text-sm">
-            <div className="grid grid-cols-[7rem_1fr] gap-3">
-              <dt className="text-muted-foreground">{t(translations.members.displayName)}</dt>
-              <dd className="text-right font-medium break-words">{member.displayName}</dd>
-            </div>
-            <div className="grid grid-cols-[7rem_1fr] gap-3">
-              <dt className="text-muted-foreground">{t(translations.members.memberId)}</dt>
-              <dd className="text-right font-mono text-xs break-all">{member.discordUserId}</dd>
-            </div>
-          </dl>
-        </section>
-
-        <section className="space-y-3">
-          <h3 className="text-sm font-semibold">{t(translations.members.revocation)}</h3>
-          <div className="space-y-3 rounded-xl border border-border/70 bg-muted/20 p-4">
-            <p className="text-xs text-muted-foreground">
-              {t(translations.members.revocationScope, { workspaceId })}
-            </p>
-            {member.revocationStatus === 'PENDING' ? (
-              <div className="space-y-2" role="status">
-                <p className="text-sm leading-5 text-destructive">
-                  {t(translations.members.cleanupPending)}
-                </p>
-                <p className="text-xs leading-5 text-muted-foreground">
-                  {t(translations.members.revocationCounts, {
-                    drive: member.pendingDriveGrantCount ?? 0,
-                  })}
-                </p>
-                {member.revocationError ? (
-                  <p className="text-xs break-words text-muted-foreground">
-                    {t(translations.members.revocationError, {
-                      error: member.revocationError,
-                    })}
-                  </p>
-                ) : null}
-              </div>
-            ) : member.revocationStatus === 'COMPLETE' ? (
-              <p className="text-sm leading-5 text-muted-foreground">
-                {t(translations.members.cleanupComplete)}
+      <div className="max-h-[60vh] space-y-4 overflow-y-auto px-6 py-5">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <InfoItem icon={Mail} label={t(translations.members.email)}>
+            <span className="break-all">{member.gmail ?? t(translations.members.noEmail)}</span>
+          </InfoItem>
+          <InfoItem icon={UserRound} label={t(translations.members.memberId)}>
+            <span className="font-mono text-xs break-all">{member.discordUserId}</span>
+          </InfoItem>
+          <InfoItem icon={CalendarDays} label={t(translations.members.joinedAt)}>
+            {formatMemberDate(member.joinedAt, dateFormatter)}
+          </InfoItem>
+          <InfoItem icon={CreditCard} label={t(translations.members.qrDetails)}>
+            {member.bankQr.configured
+              ? t(translations.members.bankQrConfigured)
+              : t(translations.members.bankQrNotConfigured)}
+            {member.bankQr.configured && member.bankQr.fileName ? (
+              <p className="mt-0.5 text-xs font-normal text-muted-foreground">
+                {t(translations.members.bankQrFile, { fileName: member.bankQr.fileName })}
               </p>
             ) : null}
-            {member.status === 'LEFT' || member.revocationStatus === 'PENDING' ? (
-              <div className="flex flex-col gap-2 sm:flex-row">
-                {member.revocationStatus === 'PENDING' ? (
-                  <Button
-                    disabled={memberActionPending}
-                    onClick={() => onRetryRevocation(member)}
-                    size="sm"
-                    variant="outline"
-                  >
-                    <RefreshCw aria-hidden="true" />
-                    {t(translations.members.retryRevocation)}
-                  </Button>
-                ) : null}
-                {member.status === 'LEFT' ? (
-                  <Button
-                    disabled={memberActionPending}
-                    onClick={() => onActivate(member)}
-                    size="sm"
-                  >
-                    <ShieldCheck aria-hidden="true" />
-                    {t(translations.members.activateMember)}
-                  </Button>
-                ) : null}
-              </div>
-            ) : null}
-            {member.status === 'LEFT' ? (
-              <p className="text-xs leading-5 text-muted-foreground">
-                {t(translations.members.activateMemberDescription)}
-              </p>
-            ) : null}
+          </InfoItem>
+        </div>
+
+        <InfoItem icon={Layers3} label={t(translations.members.stages)}>
+          <div className="pt-1">
+            <StageList emptyLabel={t(translations.members.noStages)} member={member} />
           </div>
-        </section>
+        </InfoItem>
 
-        <section className="space-y-3">
-          <h3 className="text-sm font-semibold">{t(translations.members.taskClaim)}</h3>
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-border/70 p-4">
-            <StatusPill status={member.status} t={t} />
+        <section className="space-y-2 rounded-xl border border-border/70 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-sm font-semibold">{t(translations.members.taskClaim)}</h3>
             {member.status === 'LEFT' ? (
               <span className="text-right text-xs text-muted-foreground">
                 {t(translations.members.leftReadOnly)}
@@ -562,55 +568,68 @@ function MemberDetails({
           </p>
         </section>
 
-        <section className="space-y-3">
-          <h3 className="text-sm font-semibold">{t(translations.members.email)}</h3>
-          <div className="flex items-start gap-3 rounded-xl border border-border/70 p-4 text-sm">
-            <Mail aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-            <span className="break-all">{member.gmail ?? t(translations.members.noEmail)}</span>
-          </div>
-        </section>
-
-        <section className="space-y-3">
-          <h3 className="text-sm font-semibold">{t(translations.members.stages)}</h3>
-          <div className="flex items-start gap-3 rounded-xl border border-border/70 p-4">
-            <Layers3 aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-            <StageList emptyLabel={t(translations.members.noStages)} member={member} />
-          </div>
-        </section>
-
-        <section className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl border border-border/70 p-4">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <CalendarDays aria-hidden="true" className="size-4" />
-              {t(translations.members.joinedAt)}
+        {showRevocation ? (
+          <section className="space-y-3 rounded-xl border border-border/70 p-4">
+            <div>
+              <h3 className="text-sm font-semibold">{t(translations.members.revocation)}</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t(translations.members.revocationScope, { workspaceId })}
+              </p>
             </div>
-            <p className="mt-2 text-sm font-medium">{formatMemberDate(member.joinedAt, dateFormatter)}</p>
-          </div>
-          <div className="rounded-xl border border-border/70 p-4">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <CreditCard aria-hidden="true" className="size-4" />
-              {t(translations.members.qrDetails)}
-            </div>
-            <p className="mt-2 text-sm font-medium">
-              {member.bankQr.configured
-                ? t(translations.members.bankQrConfigured)
-                : t(translations.members.bankQrNotConfigured)}
-            </p>
-            {member.bankQr.configured && member.bankQr.fileName ? (
-              <p className="mt-1 text-xs break-words text-muted-foreground">
-                {t(translations.members.bankQrFile, { fileName: member.bankQr.fileName })}
+            {member.revocationStatus === 'PENDING' ? (
+              <div className="space-y-1.5" role="status">
+                <p className="text-sm leading-5 text-destructive">
+                  {t(translations.members.cleanupPending)}
+                </p>
+                <p className="text-xs leading-5 text-muted-foreground">
+                  {t(translations.members.revocationCounts, {
+                    drive: member.pendingDriveGrantCount ?? 0,
+                  })}
+                </p>
+                {member.revocationError ? (
+                  <p className="text-xs break-words text-muted-foreground">
+                    {t(translations.members.revocationError, {
+                      error: member.revocationError,
+                    })}
+                  </p>
+                ) : null}
+              </div>
+            ) : member.revocationStatus === 'COMPLETE' ? (
+              <p className="text-sm leading-5 text-muted-foreground">
+                {t(translations.members.cleanupComplete)}
               </p>
             ) : null}
-          </div>
-        </section>
+            <div className="flex flex-wrap gap-2">
+              {member.revocationStatus === 'PENDING' ? (
+                <Button
+                  disabled={memberActionPending}
+                  onClick={() => onRetryRevocation(member)}
+                  size="sm"
+                  variant="outline"
+                >
+                  <RefreshCw aria-hidden="true" />
+                  {t(translations.members.retryRevocation)}
+                </Button>
+              ) : null}
+              {member.status === 'LEFT' ? (
+                <Button
+                  disabled={memberActionPending}
+                  onClick={() => onActivate(member)}
+                  size="sm"
+                >
+                  <ShieldCheck aria-hidden="true" />
+                  {t(translations.members.activateMember)}
+                </Button>
+              ) : null}
+            </div>
+            {member.status === 'LEFT' ? (
+              <p className="text-xs leading-5 text-muted-foreground">
+                {t(translations.members.activateMemberDescription)}
+              </p>
+            ) : null}
+          </section>
+        ) : null}
       </div>
-
-      <SheetFooter className="border-t border-border/60">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <ShieldCheck aria-hidden="true" className="size-4" />
-          {t(translations.members.description)}
-        </div>
-      </SheetFooter>
     </>
   );
 }
@@ -621,6 +640,22 @@ export default function MembersPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [qrMember, setQrMember] = useState<Member | null>(null);
+  const qrQuery = usePayrollBankQrQuery(
+    workspaceId,
+    qrMember?.discordUserId ?? '',
+    qrMember !== null,
+  );
+  const [qrUrl, setQrUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!qrQuery.data) {
+      setQrUrl(null);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(qrQuery.data);
+    setQrUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [qrQuery.data]);
   const [pendingAction, setPendingAction] = useState<PendingTaskClaimAction | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<PendingMemberRemoval | null>(null);
   const membersQuery = useMembersQuery(workspaceId);
@@ -934,6 +969,7 @@ export default function MembersPage() {
                         onRemove={requestMemberRemoval}
                         onRetryRevocation={retryRevocation}
                         onView={setSelectedMember}
+                        onViewQr={setQrMember}
                         retryDisabled={memberActionPending}
                         retrying={retryingId === member.discordUserId}
                         t={t}
@@ -951,6 +987,7 @@ export default function MembersPage() {
                     onRemove={requestMemberRemoval}
                     onRetryRevocation={retryRevocation}
                     onView={setSelectedMember}
+                        onViewQr={setQrMember}
                     retryDisabled={memberActionPending}
                     retrying={retryingId === member.discordUserId}
                     t={t}
@@ -962,13 +999,13 @@ export default function MembersPage() {
         </CardContent>
       </Card>
 
-      <Sheet
+      <Dialog
         onOpenChange={(open) => {
           if (!open) setSelectedMember(null);
         }}
         open={selectedMember !== null}
       >
-        <SheetContent className="w-full overflow-y-auto sm:max-w-md">
+        <DialogContent className="gap-0 p-0 sm:max-w-xl">
           {selectedMember ? (
             <MemberDetails
               dateFormatter={dateFormatter}
@@ -998,8 +1035,42 @@ export default function MembersPage() {
               t={t}
             />
           ) : null}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        onOpenChange={(open) => {
+          if (!open) setQrMember(null);
+        }}
+        open={qrMember !== null}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t(translations.members.bankQr)}</DialogTitle>
+            <DialogDescription>{qrMember?.displayName}</DialogDescription>
+          </DialogHeader>
+          {qrQuery.isLoading ? (
+            <Skeleton className="mx-auto h-64 w-64 rounded-xl" />
+          ) : qrQuery.isError ? (
+            <p className="rounded-xl bg-destructive/5 px-3 py-2 text-sm text-destructive">
+              {t(translations.members.bankQrError)}
+            </p>
+          ) : qrUrl ? (
+            <div className="flex justify-center rounded-xl border border-border/70 bg-white p-3">
+              <img
+                alt={t(translations.members.bankQr)}
+                className="max-h-80 w-auto object-contain"
+                src={qrUrl}
+              />
+            </div>
+          ) : null}
+          {qrMember?.bankQr.fileName ? (
+            <p className="text-center text-xs break-words text-muted-foreground">
+              {qrMember.bankQr.fileName}
+            </p>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog
         onOpenChange={(open) => {

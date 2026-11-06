@@ -1,7 +1,7 @@
 import {
   Check,
   CircleAlert,
-  Cloud,
+  Copy,
   FolderOpen,
   MessageSquare,
   ShieldCheck,
@@ -54,6 +54,8 @@ import type {
 import { translations } from '@/locales/translations';
 import formatError from '@/utils/formatError';
 
+const TOTAL_SETTINGS = 9;
+
 interface WorkspaceFormValues {
   readonly timezone: string;
   readonly currency: string;
@@ -82,49 +84,59 @@ function isUnavailableError(error: unknown): boolean {
 
 function SettingGroup({
   children,
+  count,
   description,
-  icon,
+  id,
   title,
+  total,
 }: {
   readonly children: React.ReactNode;
+  readonly count: number;
   readonly description: string;
-  readonly icon: React.ReactNode;
+  readonly id: string;
   readonly title: string;
+  readonly total: number;
 }) {
   return (
-    <section className="border-t border-border/70 pt-6 first:border-t-0 first:pt-0 sm:pt-8">
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,11rem)_minmax(0,1fr)] sm:gap-6">
-        <div className="flex items-center gap-2.5 text-xs font-bold tracking-[0.12em] text-muted-foreground uppercase sm:items-start sm:pt-1">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-link">
-            {icon}
-          </span>
-          <span>{title}</span>
+    <section
+      aria-labelledby={`${id}-title`}
+      className="scroll-mt-24 overflow-hidden rounded-2xl border border-border/70 bg-card shadow-[var(--soft-shadow)]"
+      id={id}
+    >
+      <header className="flex items-start justify-between gap-3 px-5 pt-5 pb-3 sm:px-6">
+        <div className="min-w-0">
+          <h2 className="text-base font-bold" id={`${id}-title`}>
+            {title}
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">
+            {description}
+          </p>
         </div>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-          {description}
-        </p>
-      </div>
-      <div className="mt-5 sm:ml-[calc(11rem+1.5rem)]">{children}</div>
+        <span
+          className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${count === total ? 'bg-primary/10 text-link' : 'bg-muted text-muted-foreground'}`}
+        >
+          {count === total ? (
+            <Check aria-hidden="true" className="size-3.5" />
+          ) : null}
+          {count}/{total}
+        </span>
+      </header>
+      {children}
     </section>
   );
 }
 
-function ConfiguredBadge({
-  configured,
-  label,
-}: {
-  readonly configured: boolean;
-  readonly label: string;
-}) {
+function StatusDot({ configured }: { readonly configured: boolean }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${configured ? 'bg-primary/10 text-link' : 'bg-muted text-muted-foreground'}`}
-    >
-      {configured ? <Check aria-hidden="true" className="size-3.5" /> : null}
-      {label}
-    </span>
+      aria-hidden="true"
+      className={`size-2 shrink-0 rounded-full ${configured ? 'bg-link' : 'bg-muted-foreground/35'}`}
+    />
   );
 }
+
+const rowClassName =
+  'grid gap-3 border-t border-border/60 px-5 py-4 sm:px-6 md:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] md:items-center md:gap-6';
 
 function SettingsError({
   error,
@@ -209,10 +221,13 @@ function WorkspaceDetailsSection({
   }
 
   return (
-    <form className="space-y-5" onSubmit={submit}>
-      <div className="grid gap-4 sm:grid-cols-2">
+    <form
+      className="space-y-4 border-t border-border/60 px-5 py-4 sm:px-6"
+      onSubmit={submit}
+    >
+      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_10rem]">
         <label
-          className="space-y-2 text-sm font-medium"
+          className="space-y-1.5 text-sm font-semibold"
           htmlFor="workspace-timezone"
         >
           <span>{t(translations.workspaceSettings.timezone)}</span>
@@ -229,7 +244,7 @@ function WorkspaceDetailsSection({
           />
         </label>
         <label
-          className="space-y-2 text-sm font-medium"
+          className="space-y-1.5 text-sm font-semibold"
           htmlFor="workspace-currency"
         >
           <span>{t(translations.workspaceSettings.currency)}</span>
@@ -246,11 +261,11 @@ function WorkspaceDetailsSection({
           />
         </label>
       </div>
-      <div className="flex flex-col gap-3 border-t border-border/60 pt-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs text-muted-foreground">
-          {isDirty
-            ? t(translations.workspaceSettings.unsavedChanges)
-            : t(translations.workspaceSettings.workspaceDescription)}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p
+          className={`text-xs ${isDirty ? 'font-semibold text-link' : 'text-muted-foreground'}`}
+        >
+          {isDirty ? t(translations.workspaceSettings.unsavedChanges) : null}
         </p>
         <Button disabled={!isDirty || updateMutation.isPending} type="submit">
           {t(translations.workspaceSettings.saveWorkspace)}
@@ -299,58 +314,48 @@ function RoleSection({
     : null;
 
   return (
-    <div className="grid gap-3 border-b border-border/60 py-4 first:pt-0 last:border-b-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-      <div className="space-y-2">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold">{roleLabel}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {selectedRole?.name ??
-                roleId ??
-                t(translations.workspaceSettings.notConfigured)}
-              {roleId
-                ? ` · ${t(translations.workspaceSettings.roleId)}: ${roleId}`
-                : ''}
-            </p>
-          </div>
-          <ConfiguredBadge
-            configured={Boolean(roleId)}
-            label={
-              roleId
-                ? t(translations.workspaceSettings.configured)
-                : t(translations.workspaceSettings.notConfigured)
-            }
+    <div className={rowClassName}>
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <StatusDot configured={Boolean(roleId)} />
+          <p className="text-sm font-semibold">{roleLabel}</p>
+        </div>
+        <p className="mt-1 truncate pl-4 text-xs text-muted-foreground">
+          {roleId
+            ? `${selectedRole?.name ?? roleId} · ${t(translations.workspaceSettings.roleId)}: ${roleId}`
+            : t(translations.workspaceSettings.notConfigured)}
+        </p>
+      </div>
+      <div className="flex min-w-0 items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <SelectSearch
+            disabled={pending || roleOptions.length === 0}
+            noOptionsText={t(translations.workspaceSettings.noOptions)}
+            onChange={(option) => {
+              if (option) onUpdate(role, option.value);
+            }}
+            options={selectOptions}
+            placeholder={t(translations.workspaceSettings.selectRole)}
+            searchPlaceholder={t(translations.workspaceSettings.searchRole)}
+            usePortal
+            value={selectedOption}
           />
         </div>
-        <SelectSearch
-          disabled={pending || roleOptions.length === 0}
-          noOptionsText={t(translations.workspaceSettings.noOptions)}
-          onChange={(option) => {
-            if (option) onUpdate(role, option.value);
-          }}
-          options={selectOptions}
-          placeholder={t(translations.workspaceSettings.selectRole)}
-          searchPlaceholder={t(translations.workspaceSettings.searchRole)}
-          usePortal
-          value={selectedOption}
-        />
+        {roleId ? (
+          <Button
+            aria-label={`${t(translations.workspaceSettings.remove)} ${roleLabel}`}
+            className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            disabled={pending}
+            onClick={() => onRemove(role)}
+            size="icon"
+            title={t(translations.workspaceSettings.remove)}
+            type="button"
+            variant="ghost"
+          >
+            <Trash2 aria-hidden="true" />
+          </Button>
+        ) : null}
       </div>
-      {roleId ? (
-        <Button
-          aria-label={`${t(translations.workspaceSettings.remove)} ${roleLabel}`}
-          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-          disabled={pending}
-          onClick={() => onRemove(role)}
-          size="sm"
-          type="button"
-          variant="ghost"
-        >
-          <Trash2 aria-hidden="true" />
-          <span className="hidden sm:inline">
-            {t(translations.workspaceSettings.remove)}
-          </span>
-        </Button>
-      ) : null}
     </div>
   );
 }
@@ -375,27 +380,32 @@ function FolderSection({
   const isDirty = value.trim() !== (folderId ?? '');
 
   return (
-    <div className="grid gap-3 border-b border-border/60 py-4 first:pt-0 last:border-b-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+    <div className={rowClassName}>
       <label
-        className="space-y-2 text-sm font-medium"
+        className="flex items-center gap-2 text-sm font-semibold"
         htmlFor={`workspace-folder-${folder}`}
       >
+        <StatusDot configured={Boolean(folderId)} />
         <span>{label}</span>
+      </label>
+      <div className="flex min-w-0 items-center gap-2">
         <Input
+          className="min-w-0 flex-1 font-mono text-[13px]"
           id={`workspace-folder-${folder}`}
           onChange={(event) => setValue(event.target.value)}
           placeholder={t(translations.workspaceSettings.folderId)}
           value={value}
         />
-      </label>
-      <Button
-        disabled={!value.trim() || !isDirty || pending}
-        onClick={() => onSave(folder, value.trim())}
-        type="button"
-      >
-        <FolderOpen aria-hidden="true" />
-        {t(translations.workspaceSettings.saveFolder)}
-      </Button>
+        <Button
+          className="shrink-0"
+          disabled={!value.trim() || !isDirty || pending}
+          onClick={() => onSave(folder, value.trim())}
+          type="button"
+          variant={isDirty ? 'default' : 'outline'}
+        >
+          {t(translations.workspaceSettings.save)}
+        </Button>
+      </div>
     </div>
   );
 }
@@ -434,29 +444,19 @@ function ChannelSection({
     : null;
 
   return (
-    <div className="grid gap-3 border-b border-border/60 py-4 first:pt-0 last:border-b-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-      <div className="space-y-2">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold">{label}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {selectedChannel?.name ??
-                channelId ??
-                t(translations.workspaceSettings.notConfigured)}
-              {channelId
-                ? ` · ${t(translations.workspaceSettings.channelId)}: ${channelId}`
-                : ''}
-            </p>
-          </div>
-          <ConfiguredBadge
-            configured={Boolean(channelId)}
-            label={
-              channelId
-                ? t(translations.workspaceSettings.configured)
-                : t(translations.workspaceSettings.notConfigured)
-            }
-          />
+    <div className={rowClassName}>
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <StatusDot configured={Boolean(channelId)} />
+          <p className="text-sm font-semibold">{label}</p>
         </div>
+        <p className="mt-1 truncate pl-4 text-xs text-muted-foreground">
+          {channelId
+            ? `${selectedChannel?.name ?? channelId} · ${t(translations.workspaceSettings.channelId)}: ${channelId}`
+            : t(translations.workspaceSettings.notConfigured)}
+        </p>
+      </div>
+      <div className="min-w-0">
         <SelectSearch
           disabled={pending || options.length === 0}
           noOptionsText={t(translations.workspaceSettings.noOptions)}
@@ -487,172 +487,126 @@ function ConfigurationSummary({
   readonly isActive: boolean;
   readonly t: ReturnType<typeof useTranslation>['t'];
 }) {
-  const progress = Math.round((configuredCount / 9) * 100);
+  const progress = Math.round((configuredCount / TOTAL_SETTINGS) * 100);
+
+  async function copyGuildId(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(workspaceId);
+      toast.success(t(translations.workspaceSettings.saved));
+    } catch {
+      toast.error(t(translations.workspaceSettings.error));
+    }
+  }
 
   return (
-    <div className="relative overflow-hidden rounded-[1.75rem] border border-border/70 bg-card shadow-[var(--soft-shadow)]">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -top-24 -right-20 size-64 rounded-full bg-primary/10 blur-3xl"
-      />
-      <div className="relative grid gap-8 p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-link">
-              {t(translations.workspaceSettings.serverStatus)}
-            </span>
-            <ConfiguredBadge
-              configured={configuredCount === 9}
-              label={`${configuredCount}/9 ${t(translations.workspaceSettings.configured).toLocaleLowerCase()}`}
-            />
-          </div>
-          <h2 className="mt-4 truncate text-3xl font-extrabold tracking-tight sm:text-4xl">
+    <header className="flex flex-col gap-5 rounded-2xl border border-border/70 bg-card p-5 shadow-[var(--soft-shadow)] sm:p-6 md:flex-row md:items-center md:justify-between">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <h2 className="truncate text-xl font-extrabold tracking-tight sm:text-2xl">
             {workspaceName}
           </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            {t(translations.workspaceSettings.description)}
-          </p>
-
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            <div className="min-w-0 rounded-2xl border border-border/60 bg-background/55 px-4 py-3">
-              <p className="text-xs font-medium text-muted-foreground">
-                {t(translations.workspaceSettings.discordGuildId)}
-              </p>
-              <p className="mt-1 truncate font-mono text-xs font-semibold">
-                {workspaceId}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-border/60 bg-background/55 px-4 py-3">
-              <p className="text-xs font-medium text-muted-foreground">
-                {t(translations.workspaceSettings.nameReadOnly)}
-              </p>
-              <p className="mt-1 truncate text-sm font-semibold">
-                {workspaceName}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-[1.25rem] border border-border/70 bg-background/60 p-5 backdrop-blur-sm">
-          <div className="flex items-end justify-between gap-3">
-            <div>
-              <p className="text-xs font-bold tracking-[0.12em] text-muted-foreground uppercase">
-                {t(translations.workspaceSettings.configurationProgress)}
-              </p>
-              <p className="mt-2 text-4xl font-extrabold tracking-tight">
-                {configuredCount}
-                <span className="text-lg font-semibold text-muted-foreground">
-                  /9
-                </span>
-              </p>
-            </div>
-            <span className="text-sm font-semibold text-link">{progress}%</span>
-          </div>
-          <div
-            aria-label={`${progress}%`}
-            aria-valuemax={100}
-            aria-valuemin={0}
-            aria-valuenow={progress}
-            className="mt-4 h-2 overflow-hidden rounded-full bg-muted"
-            role="progressbar"
-          >
-            <div
-              className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <p className="mt-3 text-xs leading-5 text-muted-foreground">
-            {t(translations.workspaceSettings.configuredSummary, {
-              count: configuredCount,
-            })}
-          </p>
-          <div className="mt-4 flex items-center gap-2 border-t border-border/60 pt-3 text-xs font-semibold">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-link">
             <span
               aria-hidden="true"
-              className={`size-2 rounded-full ${isActive ? 'bg-primary' : 'bg-muted-foreground'}`}
+              className={`size-1.5 rounded-full ${isActive ? 'bg-link' : 'bg-muted-foreground'}`}
             />
             {isActive
               ? t(translations.workspaceSettings.activeWorkspace)
               : t(translations.workspaceSettings.notConfigured)}
-          </div>
+          </span>
+        </div>
+        <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2 text-sm text-muted-foreground">
+          <span>{t(translations.workspaceSettings.discordGuildId)}</span>
+          <code className="truncate rounded-md bg-muted px-2 py-0.5 font-mono text-xs text-foreground">
+            {workspaceId}
+          </code>
+          <Button
+            aria-label={t(translations.workspaceSettings.discordGuildId)}
+            onClick={() => void copyGuildId()}
+            size="icon-sm"
+            title={t(translations.workspaceSettings.discordGuildId)}
+            type="button"
+            variant="ghost"
+          >
+            <Copy aria-hidden="true" />
+          </Button>
         </div>
       </div>
-    </div>
+
+      <div className="w-full shrink-0 md:w-72">
+        <div className="flex items-baseline justify-between gap-3 text-sm text-muted-foreground">
+          <span>{t(translations.workspaceSettings.configurationProgress)}</span>
+          <span className="text-base font-bold text-foreground">
+            {configuredCount}
+            <span className="text-sm font-medium text-muted-foreground">
+              /{TOTAL_SETTINGS}
+            </span>
+          </span>
+        </div>
+        <div
+          aria-label={`${progress}%`}
+          aria-valuemax={100}
+          aria-valuemin={0}
+          aria-valuenow={progress}
+          className="mt-2 h-2 overflow-hidden rounded-full bg-muted"
+          role="progressbar"
+        >
+          <div
+            className="h-full rounded-full bg-link transition-[width] duration-300 ease-out"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+    </header>
   );
 }
 
-function ConfigurationMap({
-  counts,
-  t,
+function SectionNav({
+  items,
 }: {
-  readonly counts: readonly {
+  readonly items: readonly {
+    readonly count: number;
+    readonly href: string;
     readonly icon: React.ReactNode;
     readonly label: string;
-    readonly value: string;
-    readonly progress: number;
+    readonly total: number;
   }[];
-  readonly t: ReturnType<typeof useTranslation>['t'];
 }) {
   return (
-    <aside className="self-start lg:sticky lg:top-24">
-      <div className="rounded-[1.25rem] border border-border/70 bg-card/75 p-5 shadow-[var(--soft-shadow)]">
-        <div className="flex items-start gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground">
-            <Cloud aria-hidden="true" className="size-4.5" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold">
-              {t(translations.workspaceSettings.configurationMap)}
-            </h3>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              {t(translations.workspaceSettings.configurationMapDescription)}
-            </p>
-          </div>
-        </div>
-        <div className="mt-6 space-y-5">
-          {counts.map((item) => (
-            <div className="flex items-start gap-3" key={item.label}>
-              <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                {item.icon}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="truncate text-sm font-semibold">{item.label}</p>
-                  <span
-                    className={`text-xs font-semibold ${item.progress > 0 ? 'text-link' : 'text-muted-foreground'}`}
-                  >
-                    {item.value}
-                  </span>
-                </div>
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className={`h-full rounded-full transition-[width] duration-300 ${item.progress > 0 ? 'bg-primary' : 'bg-muted-foreground/30'}`}
-                    style={{ width: `${item.progress}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </aside>
+    <nav
+      aria-label="Settings sections"
+      className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 lg:sticky lg:top-24 lg:mx-0 lg:w-56 lg:shrink-0 lg:flex-col lg:self-start lg:overflow-visible lg:px-0 lg:pb-0"
+    >
+      {items.map((item) => (
+        <a
+          className="flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          href={item.href}
+          key={item.href}
+        >
+          <span className="text-muted-foreground">{item.icon}</span>
+          <span className="flex-1">{item.label}</span>
+          <span
+            className={`text-xs font-semibold ${item.count === item.total ? 'text-link' : 'text-muted-foreground'}`}
+          >
+            {item.count}/{item.total}
+          </span>
+        </a>
+      ))}
+    </nav>
   );
 }
 
 function LoadingSettings() {
   return (
-    <div className="space-y-10" aria-busy="true">
-      <Skeleton className="h-52 w-full rounded-[1.75rem]" />
-      <div className="grid gap-10 rounded-[1.75rem] border border-border/60 bg-card/45 p-5 shadow-[var(--soft-shadow)] sm:p-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-14">
-        <div className="space-y-10">
+    <div className="space-y-6" aria-busy="true">
+      <Skeleton className="h-28 w-full rounded-2xl" />
+      <div className="flex flex-col gap-6 lg:flex-row">
+        <Skeleton className="hidden h-48 w-56 rounded-2xl lg:block" />
+        <div className="min-w-0 flex-1 space-y-5">
           {Array.from({ length: 4 }, (_, index) => (
-            <div className="space-y-5 border-t border-border/60 pt-7" key={index}>
-              <Skeleton className="h-8 w-48" />
-              <Skeleton className="h-28 w-full rounded-2xl" />
-            </div>
+            <Skeleton className="h-52 w-full rounded-2xl" key={index} />
           ))}
         </div>
-        <Skeleton className="h-56 rounded-2xl" />
       </div>
     </div>
   );
@@ -793,15 +747,7 @@ export default function WorkspaceSettingsPage() {
 
   return (
     <>
-      {/*
-        THESIS: Turn workspace settings into a calm operational cockpit instead of four equal cards.
-        OWN-WORLD: One mint status surface, open section rows, quiet borders, and compact progress context.
-        STORY: Users see what is configured, scan the map, then complete the integrations in place.
-        FIRST VIEWPORT: Workspace summary and progress lead; the first editable section begins below with a sticky map on desktop.
-        FORM: Workspace cockpit, dealt surface candidate 5, seed 1bd38f53.
-        FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
-      */}
-      <section className="space-y-10">
+      <section className="space-y-6">
         <ConfigurationSummary
           configuredCount={configuredCount}
           isActive={workspace.isActive}
@@ -810,12 +756,46 @@ export default function WorkspaceSettingsPage() {
           workspaceName={workspace.name}
         />
 
-        <div className="grid gap-10 rounded-[1.75rem] border border-border/60 bg-card/45 p-5 shadow-[var(--soft-shadow)] sm:p-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-14">
-          <div className="min-w-0 space-y-10">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+          <SectionNav
+            items={[
+              {
+                count: workspaceDetailsCount,
+                href: '#workspace-general',
+                icon: <ShieldCheck aria-hidden="true" className="size-4" />,
+                label: t(translations.workspaceSettings.title),
+                total: 2,
+              },
+              {
+                count: roleCount,
+                href: '#workspace-roles',
+                icon: <UsersRound aria-hidden="true" className="size-4" />,
+                label: t(translations.workspaceSettings.roles),
+                total: 3,
+              },
+              {
+                count: folderCount,
+                href: '#workspace-folders',
+                icon: <FolderOpen aria-hidden="true" className="size-4" />,
+                label: t(translations.workspaceSettings.folders),
+                total: 2,
+              },
+              {
+                count: channelCount,
+                href: '#workspace-channels',
+                icon: <MessageSquare aria-hidden="true" className="size-4" />,
+                label: t(translations.workspaceSettings.channels),
+                total: 4,
+              },
+            ]}
+          />
+          <div className="min-w-0 flex-1 space-y-5">
             <SettingGroup
+              count={workspaceDetailsCount}
               description={t(translations.workspaceSettings.workspaceDescription)}
-              icon={<ShieldCheck aria-hidden="true" className="size-5" />}
+              id="workspace-general"
               title={t(translations.workspaceSettings.title)}
+              total={2}
             >
               <WorkspaceDetailsSection
                 currency={workspace.currency}
@@ -825,9 +805,11 @@ export default function WorkspaceSettingsPage() {
             </SettingGroup>
 
             <SettingGroup
+              count={roleCount}
               description={t(translations.workspaceSettings.rolesDescription)}
-              icon={<UsersRound aria-hidden="true" className="size-5" />}
+              id="workspace-roles"
               title={t(translations.workspaceSettings.roles)}
+              total={3}
             >
               <div>
                 <RoleSection
@@ -885,9 +867,11 @@ export default function WorkspaceSettingsPage() {
             </SettingGroup>
 
             <SettingGroup
+              count={folderCount}
               description={t(translations.workspaceSettings.foldersDescription)}
-              icon={<FolderOpen aria-hidden="true" className="size-5" />}
+              id="workspace-folders"
               title={t(translations.workspaceSettings.folders)}
+              total={2}
             >
               <div>
                 <FolderSection
@@ -910,9 +894,11 @@ export default function WorkspaceSettingsPage() {
             </SettingGroup>
 
             <SettingGroup
+              count={channelCount}
               description={t(translations.workspaceSettings.channelsDescription)}
-              icon={<MessageSquare aria-hidden="true" className="size-5" />}
+              id="workspace-channels"
               title={t(translations.workspaceSettings.channels)}
+              total={4}
             >
               <div>
                 <ChannelSection
@@ -959,30 +945,6 @@ export default function WorkspaceSettingsPage() {
               </div>
             </SettingGroup>
           </div>
-
-          <ConfigurationMap
-            counts={[
-              {
-                icon: <ShieldCheck aria-hidden="true" className="size-4" />,
-                label: t(translations.workspaceSettings.title),
-                progress: (workspaceDetailsCount / 2) * 100,
-                value: `${workspaceDetailsCount}/2`,
-              },
-              {
-                icon: <MessageSquare aria-hidden="true" className="size-4" />,
-                label: t(translations.workspaceSettings.discordIntegration),
-                progress: ((roleCount + channelCount) / 7) * 100,
-                value: `${roleCount + channelCount}/7`,
-              },
-              {
-                icon: <FolderOpen aria-hidden="true" className="size-4" />,
-                label: t(translations.workspaceSettings.folders),
-                progress: (folderCount / 2) * 100,
-                value: `${folderCount}/2`,
-              },
-            ]}
-            t={t}
-          />
         </div>
       </section>
 

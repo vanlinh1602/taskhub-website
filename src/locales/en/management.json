@@ -251,6 +251,8 @@
     "difficultyNormal": "Normal",
     "difficultyVeryHard": "Very hard",
     "drive": "Drive",
+    "filterAll": "All",
+    "statusActive": "Active",
     "dueAt": "Due date",
     "deductAmount": "Deduction amount",
     "deductAmountHint": "Enter an amount greater than 0 with up to two decimal places.",

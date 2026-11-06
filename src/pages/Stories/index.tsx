@@ -1,24 +1,18 @@
 import {
   BookOpenText,
   CalendarDays,
+  ChevronRight,
   ExternalLink,
-  FolderOpen,
   Plus,
   Search,
 } from 'lucide-react';
 import { type FormEvent, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -58,7 +52,31 @@ export default function StoriesPage() {
   const { activeWorkspaceId: workspaceId } = useWorkspaceStore();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const navigate = useNavigate();
   const storiesQuery = useStoriesQuery(workspaceId, query);
+  const allStories = useMemo(
+    () => storiesQuery.data ?? [],
+    [storiesQuery.data],
+  );
+  const statusTabs = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const story of allStories) {
+      counts.set(story.status, (counts.get(story.status) ?? 0) + 1);
+    }
+    return [...counts.entries()];
+  }, [allStories]);
+  const stories =
+    statusFilter === 'ALL'
+      ? allStories
+      : allStories.filter((story) => story.status === statusFilter);
+
+  function statusLabel(status: string): string {
+    return status === 'ACTIVE'
+      ? t(translations.management.stories.statusActive)
+      : status;
+  }
+
   const dateFormatter = useMemo(
     () => new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium' }),
     [i18n.language],
@@ -87,101 +105,118 @@ export default function StoriesPage() {
 
   return (
     <section className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="max-w-2xl">
-          <p className="text-sm font-semibold text-link">
-            {t(translations.management.eyebrow)}
-          </p>
-          <h2 className="mt-1 text-3xl font-extrabold tracking-tight sm:text-4xl">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-baseline gap-x-3">
+          <h2 className="text-2xl font-extrabold tracking-tight">
             {t(translations.management.stories.title)}
           </h2>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            {t(translations.management.stories.description)}
+          <p className="text-sm text-muted-foreground">
+            {t(translations.management.stories.libraryDescription, {
+              count: storiesQuery.data?.length ?? 0,
+            })}
           </p>
         </div>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button className="shadow-[var(--control-shadow)]">
-              <Plus />
-              {t(translations.management.stories.createStory)}
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {t(translations.management.stories.createStory)}
-              </DialogTitle>
-            </DialogHeader>
-            <form className="space-y-4" onSubmit={submitCreate}>
-              <div className="space-y-2">
-                <Label htmlFor="story-title">
-                  {t(translations.management.stories.name)}
-                </Label>
-                <Input
-                  id="story-title"
-                  name="title"
-                  placeholder={t(translations.management.stories.name)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="story-alternative-title">
-                  {t(translations.management.stories.alternativeTitle)}
-                </Label>
-                <Input
-                  id="story-alternative-title"
-                  name="alternativeTitle"
-                  placeholder={t(
-                    translations.management.stories.alternativeTitle,
-                  )}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="story-folder-id">
-                  {t(translations.management.stories.folderId)}
-                </Label>
-                <Input
-                  id="story-folder-id"
-                  name="folderId"
-                  placeholder={t(translations.management.stories.folderId)}
-                />
-              </div>
-              <Button
-                className="w-full"
-                disabled={createMutation.isPending}
-                type="submit"
-              >
-                {t(translations.management.stories.save)}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <Card className="overflow-hidden border-border/70 shadow-[var(--soft-shadow)]">
-        <CardHeader className="gap-4 sm:flex sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <CardTitle>{t(translations.management.stories.library)}</CardTitle>
-            <CardDescription>
-              {t(translations.management.stories.libraryDescription, {
-                count: storiesQuery.data?.length ?? 0,
-              })}
-            </CardDescription>
-          </div>
-          <div className="relative w-full sm:max-w-xs">
+        <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto">
+          <div className="relative w-full sm:w-72">
             <Search
               aria-hidden="true"
               className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
             />
             <Input
+              aria-label={t(translations.management.stories.search)}
               className="pl-9"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t(translations.management.stories.search)}
             />
           </div>
-        </CardHeader>
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button className="shadow-[var(--control-shadow)]">
+                <Plus />
+                {t(translations.management.stories.createStory)}
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
+                  {t(translations.management.stories.createStory)}
+                </DialogTitle>
+              </DialogHeader>
+              <form className="space-y-4" onSubmit={submitCreate}>
+                <div className="space-y-2">
+                  <Label htmlFor="story-title">
+                    {t(translations.management.stories.name)}
+                  </Label>
+                  <Input
+                    id="story-title"
+                    name="title"
+                    placeholder={t(translations.management.stories.name)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="story-alternative-title">
+                    {t(translations.management.stories.alternativeTitle)}
+                  </Label>
+                  <Input
+                    id="story-alternative-title"
+                    name="alternativeTitle"
+                    placeholder={t(
+                      translations.management.stories.alternativeTitle,
+                    )}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="story-folder-id">
+                    {t(translations.management.stories.folderId)}
+                  </Label>
+                  <Input
+                    id="story-folder-id"
+                    name="folderId"
+                    placeholder={t(translations.management.stories.folderId)}
+                  />
+                </div>
+                <Button
+                  className="w-full"
+                  disabled={createMutation.isPending}
+                  type="submit"
+                >
+                  {t(translations.management.stories.save)}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      <Card className="overflow-hidden border-border/70 py-0 shadow-[var(--soft-shadow)]">
         <CardContent className="p-0">
+          {statusTabs.length > 1 ? (
+            <div
+              aria-label={t(translations.management.stories.status)}
+              className="flex gap-1 overflow-x-auto border-b border-border/60 px-3 py-2"
+              role="tablist"
+            >
+              {[['ALL', allStories.length] as const, ...statusTabs].map(
+                ([key, count]) => (
+                  <button
+                    aria-selected={statusFilter === key}
+                    className={`inline-flex h-9 shrink-0 items-center rounded-lg px-3.5 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${statusFilter === key ? 'bg-primary/15 text-link' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                    key={key}
+                    onClick={() => setStatusFilter(key)}
+                    role="tab"
+                    type="button"
+                  >
+                    {key === 'ALL'
+                      ? t(translations.management.stories.filterAll)
+                      : statusLabel(key)}{' '}
+                    · {count}
+                  </button>
+                ),
+              )}
+            </div>
+          ) : null}
           {storiesQuery.isLoading ? (
             <div
               aria-label={t(translations.management.stories.loading)}
@@ -220,9 +255,7 @@ export default function StoriesPage() {
                     {t(translations.management.stories.emptyStories)}
                   </EmptyTitle>
                   <EmptyDescription>
-                    {t(
-                      translations.management.stories.emptyStoriesDescription,
-                    )}
+                    {t(translations.management.stories.emptyStoriesDescription)}
                   </EmptyDescription>
                 </EmptyHeader>
                 <EmptyContent>
@@ -234,7 +267,7 @@ export default function StoriesPage() {
               </Empty>
             </div>
           ) : null}
-          {storiesQuery.data && storiesQuery.data.length > 0 ? (
+          {stories.length > 0 ? (
             <Table className="min-w-[760px]">
               <TableHeader className="bg-muted/35">
                 <TableRow className="hover:bg-transparent">
@@ -247,20 +280,24 @@ export default function StoriesPage() {
                   <TableHead className="min-w-36">
                     {t(translations.management.stories.createdAt)}
                   </TableHead>
-                  <TableHead className="w-20 text-center">
-                    {t(translations.management.stories.drive)}
-                  </TableHead>
-                  <TableHead className="w-48 text-right">
+                  <TableHead className="w-28 text-right">
                     {t(translations.management.stories.actions)}
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {storiesQuery.data.map((story) => (
-                  <TableRow className="group align-middle" key={story.id}>
+                {stories.map((story) => (
+                  <TableRow
+                    className="group cursor-pointer align-middle"
+                    key={story.id}
+                    onClick={() =>
+                      void navigate(`/stories/${encodeURIComponent(story.id)}`)
+                    }
+                  >
                     <TableCell>
                       <Link
                         className="flex min-w-0 items-center gap-3 rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                        onClick={(event) => event.stopPropagation()}
                         to={`/stories/${encodeURIComponent(story.id)}`}
                       >
                         <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-link transition-colors group-hover:bg-primary/15">
@@ -281,12 +318,10 @@ export default function StoriesPage() {
                       </Link>
                     </TableCell>
                     <TableCell>
-                      <span className="inline-flex items-center gap-2 text-sm font-medium">
-                        <span
-                          aria-hidden="true"
-                          className={`size-2 rounded-full ${story.status === 'ACTIVE' ? 'bg-primary' : 'bg-muted-foreground/50'}`}
-                        />
-                        {story.status}
+                      <span
+                        className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${story.status === 'ACTIVE' ? 'bg-primary/15 text-link' : 'bg-muted text-muted-foreground'}`}
+                      >
+                        {statusLabel(story.status)}
                       </span>
                     </TableCell>
                     <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
@@ -295,14 +330,15 @@ export default function StoriesPage() {
                         {dateFormatter.format(new Date(story.createdAt))}
                       </span>
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="text-right whitespace-nowrap">
                       <Button
                         asChild
-                        size="icon-sm"
+                        size="icon"
                         title={t(translations.management.stories.drive)}
                         variant="ghost"
                       >
                         <a
+                          onClick={(event) => event.stopPropagation()}
                           href={story.googleDriveUrl}
                           target="_blank"
                           rel="noreferrer"
@@ -311,12 +347,21 @@ export default function StoriesPage() {
                           <ExternalLink aria-hidden="true" />
                         </a>
                       </Button>
-                    </TableCell>
-                    <TableCell className="text-right whitespace-nowrap">
-                      <Button asChild size="sm">
-                        <Link to={`/stories/${encodeURIComponent(story.id)}`}>
-                          <FolderOpen aria-hidden="true" />
-                          {t(translations.management.stories.viewChapters)}
+                      <Button
+                        asChild
+                        className="text-link"
+                        size="icon"
+                        title={t(translations.management.stories.viewChapters)}
+                        variant="ghost"
+                      >
+                        <Link
+                          aria-label={t(
+                            translations.management.stories.viewChapters,
+                          )}
+                          onClick={(event) => event.stopPropagation()}
+                          to={`/stories/${encodeURIComponent(story.id)}`}
+                        >
+                          <ChevronRight aria-hidden="true" />
                         </Link>
                       </Button>
                     </TableCell>
