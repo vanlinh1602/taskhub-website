@@ -5,6 +5,7 @@ import {
   exportStatistics,
   getStatistics,
   getStatisticsSummary,
+  getStoryStatistics,
 } from '@/features/statistics/apis';
 import type { StatisticsFilters } from '@/features/statistics/types';
 import { backendService } from '@/services';
@@ -60,5 +61,17 @@ describe('statistics APIs', () => {
         locale: 'vi',
       }),
     );
+  });
+  it('loads a story with one request and no pagination parameters', async () => {
+    const result = { columns: [], items: [], page: 0, pageCount: 1, total: 0 };
+    const get = vi.spyOn(backendService, 'get').mockResolvedValue({ kind: 'ok', data: result } as never);
+
+    await expect(getStoryStatistics('workspace-1', '10')).resolves.toBe(result);
+
+    expect(get).toHaveBeenCalledTimes(1);
+    const url = String(get.mock.calls[0][0]);
+    expect(url).toContain('storyId=10');
+    expect(url).not.toContain('page=');
+    expect(url).not.toContain('pageSize=');
   });
 });

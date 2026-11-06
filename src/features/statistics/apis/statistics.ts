@@ -64,13 +64,16 @@ export async function getStatistics(
   throw new Error(formatError(response));
 }
 
-const STORY_STATISTICS_PAGE_SIZE = 100;
-
+/**
+ * Loads every chapter of one story in a single request. Omitting `page` and
+ * `pageSize` makes the backend return the complete (already story-scoped) set,
+ * so no per-page fan-out is needed.
+ */
 export async function getStoryStatistics(
   workspaceId: string,
   storyId: string,
 ): Promise<StatisticsResult> {
-  const base: StatisticsFilters = {
+  return getStatistics(workspaceId, {
     from: '2000-01-01',
     to: '2100-12-31',
     dateBasis: 'CREATED',
@@ -80,21 +83,7 @@ export async function getStoryStatistics(
     stageDefinitionId: '',
     status: '',
     paymentStatus: '',
-    page: 0,
-    pageSize: STORY_STATISTICS_PAGE_SIZE,
-  };
-  const first = await getStatistics(workspaceId, base);
-  const rest = await Promise.all(
-    Array.from({ length: first.pageCount - 1 }, (_, index) =>
-      getStatistics(workspaceId, { ...base, page: index + 1 }),
-    ),
-  );
-  return {
-    ...first,
-    items: [first, ...rest].flatMap((result) => result.items),
-    page: 0,
-    pageCount: 1,
-  };
+  });
 }
 
 export async function getStatisticsFilters(
