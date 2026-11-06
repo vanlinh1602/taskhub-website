@@ -61,6 +61,7 @@ import { StatisticsDateRangePicker } from '@/features/statistics/components';
 import {
   StateChip,
   StatusMark,
+  TaskStatusChip,
 } from '@/features/statistics/components/StateChip';
 import {
   type SelectedTask,
@@ -381,11 +382,9 @@ const ChapterRows = memo(function ChapterRowGroup({
                               {assignee}
                             </span>
                             <span className="flex flex-nowrap gap-1 whitespace-nowrap">
-                              <StateChip
-                                doneLabel={t(translations.statistics.chipDone)}
-                                icon={CheckCircle2}
-                                isDone={cell.taskStatus === 'COMPLETED'}
-                                pendingLabel={t(translations.statistics.chipNotDone)}
+                              <TaskStatusChip
+                                label={statusLabel(cell.taskStatus, t)}
+                                status={cell.taskStatus}
                               />
                               <StateChip
                                 doneLabel={t(translations.statistics.chipPaid)}

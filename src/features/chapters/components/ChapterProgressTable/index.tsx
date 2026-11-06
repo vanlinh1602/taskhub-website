@@ -1,10 +1,4 @@
-import {
-  CheckCircle2,
-  CreditCard,
-  ExternalLink,
-  Settings2,
-  Upload,
-} from 'lucide-react';
+import { CreditCard, ExternalLink, Settings2, Upload } from 'lucide-react';
 import { type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -28,11 +22,13 @@ import {
 import {
   StateChip,
   StatusMark,
+  TaskStatusChip,
 } from '@/features/statistics/components/StateChip';
 import type {
   StatisticsChapterRow,
   StatisticsResult,
 } from '@/features/statistics/types';
+import { statusLabel } from '@/features/statistics/utils/labels';
 import { translations } from '@/locales/translations';
 import { formatMoney } from '@/utils/money';
 
@@ -295,13 +291,9 @@ export function ChapterProgressTable({
                           {assignee}
                         </span>
                         <span className="flex flex-nowrap gap-1 whitespace-nowrap">
-                          <StateChip
-                            doneLabel={t(translations.statistics.chipDone)}
-                            icon={CheckCircle2}
-                            isDone={cell.taskStatus === 'COMPLETED'}
-                            pendingLabel={t(
-                              translations.statistics.chipNotDone,
-                            )}
+                          <TaskStatusChip
+                            label={statusLabel(cell.taskStatus, t)}
+                            status={cell.taskStatus}
                           />
                           <StateChip
                             doneLabel={t(translations.statistics.chipPaid)}
