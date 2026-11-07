@@ -4,10 +4,13 @@ import { cn } from '@/lib/utils';
 
 function Table({
   className,
+  containerClassName,
   ...props
-}: React.ComponentProps<'table'>): React.ReactNode {
+}: React.ComponentProps<'table'> & {
+  readonly containerClassName?: string;
+}): React.ReactNode {
   return (
-    <div className="relative w-full overflow-x-auto">
+    <div className={cn('relative w-full overflow-x-auto', containerClassName)}>
       <table
         className={cn('w-full caption-bottom text-sm', className)}
         {...props}

@@ -80,11 +80,14 @@ export function ChapterProgressTable({
     return map;
   }, [statistics]);
   const headClass =
-    'h-11 border-b border-border/70 bg-muted/60 px-4 text-xs font-bold tracking-[0.08em] whitespace-normal text-foreground uppercase border-l';
+    'sticky top-0 z-20 h-11 border-b border-l border-border/70 bg-muted px-4 text-xs font-bold tracking-[0.08em] whitespace-normal text-foreground uppercase';
 
   return (
-    <div className="max-w-full border-t border-border/70">
-      <Table className="w-max min-w-full table-fixed border-separate border-spacing-0">
+    <div className="sticky top-[4.5625rem] z-10 max-w-full border-t border-border/70 bg-card">
+      <Table
+        className="w-max min-w-full table-fixed border-separate border-spacing-0"
+        containerClassName="max-h-[calc(100svh_-_12rem)] overflow-y-auto"
+      >
         <colgroup>
           <col style={{ width: CHAPTER_COLUMN_WIDTH }} />
           {columns.map((column) => (
@@ -94,7 +97,7 @@ export function ChapterProgressTable({
         <TableHeader>
           <TableRow className="hover:bg-transparent">
             <TableHead
-              className="sticky left-0 z-30 h-11 border-r border-b border-border/70 bg-muted px-5 text-xs font-bold tracking-[0.08em] text-foreground uppercase"
+              className="sticky top-0 left-0 z-30 h-11 border-r border-b border-border/70 bg-muted px-5 text-xs font-bold tracking-[0.08em] text-foreground uppercase"
               style={{ width: CHAPTER_COLUMN_WIDTH }}
             >
               {t(translations.statistics.chapterColumn)}

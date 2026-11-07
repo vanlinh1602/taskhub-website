@@ -685,7 +685,7 @@ export default function StoryDetailPage(): ReactNode {
         </Empty>
       ) : null}
       {chapters.length ? (
-        <Card className="overflow-hidden">
+        <Card className="overflow-visible">
           <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
               <CardTitle className="text-base">
