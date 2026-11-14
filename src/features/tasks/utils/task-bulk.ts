@@ -51,7 +51,10 @@ export function canBulkChangeStatus(
   task: TaskForBulk,
   nextStatus: TaskManagerTaskStatus,
 ): boolean {
-  return task.paymentStatus !== 'PAID' && task.status !== nextStatus;
+  if (task.paymentStatus === 'PAID' || task.status === nextStatus) return false;
+  // A task can only be in progress once someone has been assigned to it.
+  if (nextStatus === 'IN_PROGRESS') return task.assigneeDiscordUserId !== null;
+  return true;
 }
 
 export function getBulkCompletableTasks<T extends TaskForBulk>(

@@ -44,6 +44,7 @@ import formatError from '@/utils/formatError';
 
 const bulkStatuses: readonly TaskManagerTaskStatus[] = [
   'READY',
+  'IN_PROGRESS',
   'BLOCKED',
   'CANCELLED',
 ];
@@ -139,6 +140,7 @@ export default function TaskBulkActionDialog({
   const statusLabels: Record<TaskManagerTaskStatus, string> = {
     BLOCKED: t(translations.management.stories.taskStatusBlocked),
     CANCELLED: t(translations.management.stories.taskStatusCancelled),
+    IN_PROGRESS: t(translations.management.stories.taskStatusInProgress),
     READY: t(translations.management.stories.taskStatusReady),
   };
   const dueAtIsInvalid = dueAt !== '' && parseDateTimeLocal(dueAt) === null;

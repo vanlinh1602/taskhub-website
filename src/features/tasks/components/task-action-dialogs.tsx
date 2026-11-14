@@ -55,6 +55,7 @@ import { formatMoney } from '@/utils/money';
 const managerTaskStatuses: readonly TaskManagerTaskStatus[] = [
   'BLOCKED',
   'READY',
+  'IN_PROGRESS',
   'CANCELLED',
 ];
 const unassignedValue = '__UNASSIGNED__';
@@ -279,7 +280,15 @@ export default function TaskActionDialogs({
                   </SelectTrigger>
                   <SelectContent>
                     {managerTaskStatuses.map((status) => (
-                      <SelectItem key={status} value={status}>
+                      <SelectItem
+                        disabled={
+                          status === 'IN_PROGRESS' &&
+                          (target.assigneeDiscordUserId === null ||
+                            taskAssignee !== target.assigneeDiscordUserId)
+                        }
+                        key={status}
+                        value={status}
+                      >
                         {getTaskStatusLabel(t, status)}
                       </SelectItem>
                     ))}
@@ -542,5 +551,7 @@ function getTaskStatusLabel(
     ? t(translations.management.stories.taskStatusBlocked)
     : status === 'READY'
       ? t(translations.management.stories.taskStatusReady)
-      : t(translations.management.stories.taskStatusCancelled);
+      : status === 'IN_PROGRESS'
+        ? t(translations.management.stories.taskStatusInProgress)
+        : t(translations.management.stories.taskStatusCancelled);
 }

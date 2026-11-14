@@ -3,7 +3,7 @@ export type TaskStatus =
 
 export type TaskManagerTaskStatus = Extract<
   TaskStatus,
-  'BLOCKED' | 'READY' | 'CANCELLED'
+  'BLOCKED' | 'READY' | 'IN_PROGRESS' | 'CANCELLED'
 >;
 
 export type PaymentStatus = 'NOT_READY' | 'PENDING' | 'PAID';
