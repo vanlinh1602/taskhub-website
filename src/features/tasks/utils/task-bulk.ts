@@ -52,8 +52,9 @@ export function canBulkChangeStatus(
   nextStatus: TaskManagerTaskStatus,
 ): boolean {
   if (task.paymentStatus === 'PAID' || task.status === nextStatus) return false;
-  // A task can only be in progress once someone has been assigned to it.
-  if (nextStatus === 'IN_PROGRESS') return task.assigneeDiscordUserId !== null;
+  // Only a ready task that already has an assignee can be started.
+  if (nextStatus === 'IN_PROGRESS')
+    return task.status === 'READY' && task.assigneeDiscordUserId !== null;
   return true;
 }
 
